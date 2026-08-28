@@ -1,6 +1,6 @@
 services:
   evolution:
-    image: atendai/evolution-api:v2.2.3
+    image: evoapicloud/evolution-api:v2.3.7
     container_name: evolution
     ports:
       - "8080:8080"

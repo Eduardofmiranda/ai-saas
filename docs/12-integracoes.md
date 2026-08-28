@@ -14,20 +14,20 @@ A Evolution API e um projeto **open-source e self-hosted** (NÃO e um servico pa
 4. O servidor retorna um `api_key` (chave de 64 caracteres hex).
 5. A instancia ativa a licenca chamando `POST /v1/activate` com assinatura `HMAC-SHA256` (exemplo abaixo) e envia *heartbeats* periodicos.
 
-> **Instalacoes em versoes anteriores (ex: `atendai/evolution-api:v2.2.3`, a imagem fixada no `docker-compose.evolution.yml`) NAO exigem ativacao** e continuam funcionando com a chave que voce define no param `AUTHENTICATION_API_KEY`.
+> **Instalacoes em versoes anteriores (ex: `evoapicloud/evolution-api:v2.3.7`, a imagem fixada no `docker-compose.evolution.yml`) NAO exigem ativacao** e continuam funcionando com a chave que voce define no param `AUTHENTICATION_API_KEY`.
 
 ### Fluxo de "instalacao" (so uma vez)
 
 1. Subir a imagem pelo Docker (feito pelo `docker-compose.evolution.yml`).
 2. **Se v2.4.0+:** ativar a licenca gratuita da instancia (guia acima) e copiar o `api_key`.
-   **Se v2.2.x:** definir `EVOLUTION_API_KEY` no `.env` (vira o `AUTHENTICATION_API_KEY` da Evolution).
+   **Se v2.3.x e anteriores:** definir `EVOLUTION_API_KEY` no `.env` (vira o `AUTHENTICATION_API_KEY` da Evolution).
 3. Criar uma **instancia** (`createFlowAi`).
 4. Escanear o QR Code com o WhatsApp que sera usado para atender.
 5. Configurar o webhook para apontar ao nosso backend.
 
 **O que e cada configuracao:**
 - `EVOLUTION_BASE_URL`: endereco da sua propria instalacao (ex: `http://localhost:8080` ou `http://evolution:8080` dentro do docker).
-- `EVOLUTION_API_KEY`: a chave de acesso da instancia — em v2.4.0+ e o `api_key` obtido na **ativacao de licenca**; em v2.2.x e a senha que VOCE define (`AUTHENTICATION_API_KEY`).
+- `EVOLUTION_API_KEY`: a chave de acesso da instancia — em v2.4.0+ e o `api_key` obtido na **ativacao de licenca**; em v2.3.x e anteriores e a senha que VOCE define (`AUTHENTICATION_API_KEY`).
 - `EVOLUTION_INSTANCE`: nome que voce deu a sua instancia (ex: `flowai`).
 
 ### Como obter o api_key (Evolution v2.4.0+)
