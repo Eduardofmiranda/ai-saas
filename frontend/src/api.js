@@ -76,4 +76,12 @@ export const api = {
   getTemplate: (id) => request("GET", `/templates/${id}`),
   useTemplate: (id) => request("POST", `/templates/${id}/use`),
   duplicateWorkflow: (id) => request("POST", `/workflows/${id}/duplicate`),
+  // Usuarios / Administracao
+  getUsers: () => request("GET", "/users/"),
+  createUser: (body) => request("POST", "/users/", body),
+  updateUser: (id, body) => request("PATCH", `/users/${id}`, body),
+  deleteUser: (id) => request("DELETE", `/users/${id}`),
+  // WhatsApp / Evolution
+  getWhatsAppStatus: () => request("GET", "/config/whatsapp"),
+  testWhatsApp: (body) => request("POST", "/config/whatsapp/test", body),
 };

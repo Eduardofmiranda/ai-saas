@@ -84,8 +84,13 @@ export default function Home() {
     <div className="layout">
       <header className="topbar">
         <div className="logo">Flow<span>AI</span></div>
+        <nav className="topnav">
+          <a href="/" className="active">Fluxos</a>
+          <a href="/knowledge">Conhecimento</a>
+          <a href="/whatsapp">WhatsApp</a>
+          {(user?.role === "owner" || user?.role === "admin") && <a href="/admin">Administração</a>}
+        </nav>
         <div className="topbar-right">
-          <a href="/knowledge" className="btn ghost">Conhecimento</a>
           <span className="user">{user?.email}</span>
           <button className="btn ghost" onClick={logout}>Sair</button>
         </div>

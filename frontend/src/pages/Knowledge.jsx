@@ -3,7 +3,7 @@ import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
 
 export default function Knowledge() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -72,8 +72,14 @@ export default function Knowledge() {
     <div className="layout">
       <header className="topbar">
         <div className="logo">Flow<span>AI</span></div>
+        <nav className="topnav">
+          <a href="/">Fluxos</a>
+          <a href="/knowledge" className="active">Conhecimento</a>
+          <a href="/whatsapp">WhatsApp</a>
+          {(user?.role === "owner" || user?.role === "admin") && <a href="/admin">Administração</a>}
+        </nav>
         <div className="topbar-right">
-          <a href="/" className="btn ghost">Fluxos</a>
+          <span className="user">{user?.email}</span>
           <button className="btn ghost" onClick={logout}>Sair</button>
         </div>
       </header>

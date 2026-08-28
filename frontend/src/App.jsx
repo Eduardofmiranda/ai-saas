@@ -4,6 +4,8 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Editor from "./pages/Editor";
 import Knowledge from "./pages/Knowledge";
+import Admin from "./pages/Admin";
+import WhatsApp from "./pages/WhatsApp";
 
 function Protected({ children }) {
   const { user, ready } = useAuth();
@@ -21,6 +23,8 @@ export default function App() {
           <Route path="/" element={<Protected><Home /></Protected>} />
           <Route path="/editor/:id" element={<Protected><Editor /></Protected>} />
           <Route path="/knowledge" element={<Protected><Knowledge /></Protected>} />
+          <Route path="/admin" element={<Protected><Admin /></Protected>} />
+          <Route path="/whatsapp" element={<Protected><WhatsApp /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

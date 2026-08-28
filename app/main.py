@@ -14,6 +14,7 @@ from app.routers.webhook_router import router as webhook_router
 from app.routers.workflow_router import router as workflow_router
 from app.routers.knowledge_router import router as knowledge_router
 from app.routers.template_router import router as template_router
+from app.routers.users_router import router as users_router
 
 app = FastAPI(title="AI SaaS - Atendimento WhatsApp")
 
@@ -37,6 +38,7 @@ app.include_router(webhook_router)
 app.include_router(workflow_router)
 app.include_router(knowledge_router)
 app.include_router(template_router)
+app.include_router(users_router)
 
 
 @app.get("/")

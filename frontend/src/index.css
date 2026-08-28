@@ -249,3 +249,91 @@ body {
 .palette-search:focus { border-color: var(--accent); outline: none; }
 .palette-list { display: flex; flex-direction: column; }
 .palette-extras { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* ---------- Navegacao topo ---------- */
+.topnav { display: flex; gap: 6px; margin-left: 8px; }
+.topnav a {
+  color: var(--muted); text-decoration: none; padding: 6px 10px;
+  border-radius: 8px; font-size: 13px; font-weight: 600;
+}
+.topnav a:hover { color: var(--text); background: var(--panel2); }
+.topnav a.active { color: var(--accent2); background: var(--panel2); }
+
+/* ---------- Administracao ---------- */
+.member-form {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; margin-bottom: 20px; display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+.member-form input, .member-form select {
+  padding: 9px 10px; background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 13px;
+}
+.member-form input:focus, .member-form select:focus { border-color: var(--accent); outline: none; }
+.member-list { display: flex; flex-direction: column; gap: 8px; }
+.member-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px;
+}
+.member-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.member-info strong { font-size: 14px; }
+.member-info .muted { font-size: 12px; }
+.member-role {
+  padding: 6px 8px; background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 12px;
+}
+.role-badge {
+  padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  background: rgba(139,147,163,.15); color: var(--muted);
+}
+.notice {
+  background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3);
+  color: #fbbf24; padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 13px;
+}
+
+/* ---------- WhatsApp ---------- */
+.whatsapp-status {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 20px; display: flex; align-items: center;
+  gap: 16px; flex-wrap: wrap;
+}
+.state-pill {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px;
+  border-radius: 20px; font-size: 13px; font-weight: 600;
+}
+.state-pill.open { background: rgba(34,197,94,.15); color: var(--green); }
+.state-pill.not_configured, .state-pill.close, .state-pill.unknown, .state-pill.error {
+  background: rgba(239,68,68,.12); color: var(--red);
+}
+.state-pill.unreachable, .state-pill.instance_not_found {
+  background: rgba(245,158,11,.12); color: #fbbf24;
+}
+.state-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 0 3px rgba(34,197,94,.25); animation: pulse 1.8s infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+.whatsapp-form {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 18px; margin-bottom: 20px;
+}
+.whatsapp-form h3 { margin: 0 0 6px; }
+.whatsapp-form h3 + .muted { margin: 0 0 16px; font-size: 13px; }
+.whatsapp-help {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 18px;
+}
+.whatsapp-help h3 { margin: 0 0 10px; }
+.whatsapp-help ol { margin: 0 0 14px; padding-left: 20px; }
+.whatsapp-help li { margin-bottom: 6px; color: var(--muted); }
+.whatsapp-help code {
+  background: var(--panel2); padding: 1px 5px; border-radius: 4px;
+  font-family: "Consolas", monospace; color: var(--accent2);
+}
+.whatsapp-help pre {
+  background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px; overflow: auto; font-size: 12px; color: #c6d0e0;
+}
+.whatsapp-form .btn-group .btn { width: auto; }
