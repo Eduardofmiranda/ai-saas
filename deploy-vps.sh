@@ -36,11 +36,17 @@ fi
 # 2. Configuracao (.env)
 # ---------------------------------------------------------------
 if [[ ! -f ".env" ]]; then
-  if [[ -f ".env.example" ]]; then
+  if [[ -f ".env.production.example" ]]; then
+    cp .env.production.example .env
+    warn "Arquivo .env criado a partir do .env.production.example."
+    warn "EDITE AGORA: nano .env  (coloque valores REAIS)"
+    warn "Preencha: DATABASE_URL (Supabase), SECRET_KEY, SECRET_ENCRYPTION_KEY,"
+    warn "         DEFAULT_AI_API_KEY (Groq), EVOLUTION_* e EVOLUTION_DATABASE_URI"
+    exit 0
+  elif [[ -f ".env.example" ]]; then
     cp .env.example .env
     warn "Arquivo .env criado a partir do .env.example."
     warn "EDITE AGORA: nano .env  (coloque valores REAIS)"
-    warn "Preencha: DATABASE_URL, SECRET_KEY, DEFAULT_AI_API_KEY, Evolution keys"
     exit 0
   else
     die ".env nao encontrado. Crie manualmente."
@@ -74,6 +80,13 @@ source .env
 log "Subindo stack com Docker Compose..."
 docker compose pull || true
 docker compose up -d --build
+
+# Evolution API (WhatsApp) - compose separado
+if [[ -f "docker-compose.evolution.yml" ]]; then
+  log "Subindo Evolution API..."
+  docker compose -f docker-compose.evolution.yml pull || true
+  docker compose -f docker-compose.evolution.yml up -d
+fi
 log "Stack iniciada."
 
 # ---------------------------------------------------------------
@@ -81,6 +94,9 @@ log "Stack iniciada."
 # ---------------------------------------------------------------
 log "Rodando migracoes (alembic)..."
 docker compose exec -T backend alembic upgrade head || warn "Migracao falhou - rode manualmente: docker compose exec backend alembic upgrade head"
+
+# Se nao tiver alembic, garante as tabelas via create_all
+docker compose exec -T backend python -c "from app.database.database import Base, engine; import app.models; Base.metadata.create_all(bind=engine)" 2>/dev/null || true
 
 # ---------------------------------------------------------------
 # 6. Verificacao

@@ -1,4 +1,7 @@
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+// API_BASE:
+// - Em producao (nginx) usamos caminho relativo (mesma origem) -> "".
+// - Em dev pode ser sobrescrito por VITE_API_BASE ou apontar para o backend.
+const API_BASE = import.meta.env.VITE_API_BASE || "";
 
 let token = localStorage.getItem("token") || "";
 let onUnauthorized = null;
