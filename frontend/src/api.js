@@ -76,6 +76,8 @@ export const api = {
   getTemplate: (id) => request("GET", `/templates/${id}`),
   useTemplate: (id) => request("POST", `/templates/${id}/use`),
   duplicateWorkflow: (id) => request("POST", `/workflows/${id}/duplicate`),
+  // Usuario atual
+  getMe: () => request("GET", "/auth/me"),
   // Usuarios / Administracao
   getUsers: () => request("GET", "/users/"),
   createUser: (body) => request("POST", "/users/", body),

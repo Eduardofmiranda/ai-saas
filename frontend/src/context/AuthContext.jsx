@@ -13,11 +13,21 @@ export function AuthProvider({ children }) {
       setToken("");
       setUser(null);
     });
-    // token ja salvo -> assume logado (o backend valida nas chamadas)
-    setReady(true);
-    if (getToken()) {
-      setUser({ token: getToken() });
+    if (!getToken()) {
+      setReady(true);
+      return;
     }
+    // token salvo -> busca usuario no backend para restaurar role/dados
+    api
+      .getMe()
+      .then((data) => {
+        setUser({ token: getToken(), ...data });
+      })
+      .catch(() => {
+        setToken("");
+        setUser(null);
+      })
+      .finally(() => setReady(true));
   }, []);
 
   async function login(username, password) {

@@ -6,6 +6,8 @@ from app.database.session import get_db
 from app.models.company import Company
 from app.models.user import User
 from app.schemas.auth_schema import LoginResponse, RegisterRequest
+from app.schemas.user_schema import UserResponse
+from app.services.deps import get_current_user
 from app.services.security import create_access_token, verify_password
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -64,3 +66,11 @@ def login(
         email=user.email,
         role=user.role,
     )
+
+
+@router.get("/me", response_model=UserResponse)
+def me(
+    current_user: User = Depends(get_current_user),
+):
+    """Retorna os dados do usuario logado (usado no reload para restaurar role)."""
+    return current_user

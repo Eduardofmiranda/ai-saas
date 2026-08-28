@@ -106,3 +106,12 @@ class TestUsers:
     def test_cannot_delete_self(self, db_session, owner):
         for c in _make(db_session, owner):
             assert c.delete(f"/users/{owner.id}").status_code == 400
+
+    def test_auth_me_returns_role(self, db_session, owner):
+        for c in _make(db_session, owner):
+            res = c.get("/auth/me")
+            assert res.status_code == 200
+            data = res.json()
+            assert data["email"] == "owner@test.com"
+            assert data["role"] == "owner"
+            assert data["company_id"] == 1
