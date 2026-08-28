@@ -8,7 +8,7 @@
 | `.env.example` | Template de variaveis de ambiente |
 | `alembic.ini` | Configuracao do Alembic (migrations) |
 | `docker-compose.yml` | Orquestracao dos containers |
-| `docker-compose.override.yml` | Overrides para desenvolvimento |
+| `docker-compose.dev.yml` | Overrides para desenvolvimento (usar `-f` explicitamente) |
 | `frontend/vite.config.js` | Configuracao do Vite (build) |
 | `frontend/nginx.conf` | Configuracao do nginx (producao) |
 

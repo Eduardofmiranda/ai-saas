@@ -1,5 +1,10 @@
-version: '3.8'
-
+# ============================================================================
+# CONFIGURACAO DE DESENVOLVIMENTO (NAO e auto-carregada em producao)
+# Use explicitamente em desenvolvimento:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+# O Compose anteriormente auto-carregava este arquivo por se chamar
+# "override"; renomeado para que `docker compose up` na VPS rode a producao.
+# ============================================================================
 services:
   backend:
     command: >

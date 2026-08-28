@@ -73,8 +73,8 @@ Servicos disponiveis:
 ## Instalacao com Docker (Desenvolvimento)
 
 ```bash
-# Usar docker-compose.override.yml (automatico)
-docker compose up -d --build
+# Usar docker-compose.dev.yml (modo dev, explicitamente)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
 
 ## Comandos Uteis

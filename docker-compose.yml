@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # NOTA: Usando Supabase como banco, o Postgres local NAO e necessario.
   # Se quiser Postgres local, descomente este servico e use o .env local.
