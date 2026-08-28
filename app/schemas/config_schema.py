@@ -33,4 +33,5 @@ class ConfigResponse(BaseModel):
     system_prompt: str | None
     evolution_base_url: str | None
     evolution_instance: str | None
+    has_evolution_key: bool
     ai_on: bool

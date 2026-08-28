@@ -42,7 +42,7 @@ async function request(method, path, body, form) {
     try {
       const data = await res.json();
       detail = data.detail || JSON.stringify(data);
-    } catch (e) {}
+    } catch {}
     const err = new Error(detail);
     err.status = res.status;
     throw err;

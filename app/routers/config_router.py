@@ -28,6 +28,7 @@ def _to_response(config) -> ConfigResponse:
         system_prompt=config.system_prompt,
         evolution_base_url=config.evolution_base_url,
         evolution_instance=config.evolution_instance,
+        has_evolution_key=bool(config.evolution_api_key),
         ai_on=config.ai_on,
     )
 
@@ -94,6 +95,14 @@ def whatsapp_status(
 
     state = "unknown"
     detail = ""
+    if not api_key or not instance:
+        return {
+            "configured": True,
+            "state": "needs_config",
+            "instance": instance,
+            "base_url": base_url,
+            "detail": "Falta a API key e/ou o nome da instância na configuração",
+        }
     if api_key and instance:
         try:
             from urllib.parse import urljoin

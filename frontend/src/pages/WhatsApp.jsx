@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 
 const STATE_LABELS = {
   not_configured: "Não configurado",
+  needs_config: "Falta chave/instância",
   open: "Conectado",
   close: "Desconectado",
   connecting: "Conectando",
@@ -157,7 +158,7 @@ export default function WhatsApp() {
             <span>Chave da API (API Key)</span>
             <input
               type="password"
-              placeholder={config?.evolution_api_key || form.evolution_api_key ? "•••••••• (deixe vazio para manter)" : "API Key da sua instância (veja o guia abaixo)"}
+              placeholder={config?.has_evolution_key || form.evolution_api_key ? "•••••••• (deixe vazio para manter)" : "API Key da sua instância (veja o guia abaixo)"}
               value={form.evolution_api_key}
               onChange={(e) => set("evolution_api_key", e.target.value)}
             />

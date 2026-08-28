@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ReactFlow,
@@ -105,22 +105,29 @@ export default function Editor() {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    api.getNodeTypes().then((r) => setNodeTypesList(r.node_types)).catch(() => {});
-    api.getWorkflow(id).then((w) => {
-      setWf(w);
-      setNodes((w.data?.nodes || []).map(normalizeNode));
-      setEdges((w.data?.edges || []).map(normalizeEdge));
-    }).catch((e) => alert("Erro ao carregar fluxo: " + e.message));
+    let cancelled = false;
+    api
+      .getNodeTypes()
+      .then((r) => r.node_types || [])
+      .catch(() => [])
+      .then((types) => {
+        setNodeTypesList(types);
+        return api.getWorkflow(id).then((w) => ({ types, w }));
+      })
+      .then(({ types, w }) => {
+        if (cancelled) return;
+        const byType = new Map(types.map((t) => [t.type, t]));
+        setWf(w);
+        setNodes((w.data?.nodes || []).map((n) =>
+          n.type === "sticky_note"
+            ? n
+            : { ...n, data: { ...n.data, label: byType.get(n.type)?.label || n.type } }
+        ));
+        setEdges((w.data?.edges || []).map((e) => ({ ...e, markerEnd: { type: MarkerType.ArrowClosed } })));
+      })
+      .catch((e) => { if (!cancelled) alert("Erro ao carregar fluxo: " + e.message); });
+    return () => { cancelled = true; };
   }, [id]);
-
-  function normalizeNode(n) {
-    if (n.type === "sticky_note") return n;
-    const spec = nodeTypesList.find((s) => s.type === n.type);
-    return { ...n, data: { ...n.data, label: spec?.label || n.type } };
-  }
-  function normalizeEdge(e) {
-    return { ...e, markerEnd: { type: MarkerType.ArrowClosed } };
-  }
 
   const onConnect = useCallback((params) => {
     setEdges((eds) => addEdge({ ...params, markerEnd: { type: MarkerType.ArrowClosed } }, eds));

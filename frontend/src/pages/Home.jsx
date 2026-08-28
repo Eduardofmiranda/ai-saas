@@ -39,7 +39,7 @@ export default function Home() {
     }
   }
 
-  async function useTemplate(templateId) {
+  async function applyTemplate(templateId) {
     try {
       const wf = await api.useTemplate(templateId);
       setShowTemplates(false);
@@ -52,7 +52,7 @@ export default function Home() {
   async function duplicate(id, e) {
     e.stopPropagation();
     try {
-      const newWf = await api.duplicateWorkflow(id);
+      await api.duplicateWorkflow(id);
       load();
     } catch (e) {
       setError("Erro ao duplicar: " + e.message);
@@ -115,7 +115,7 @@ export default function Home() {
             <p className="muted">Escolha um template para comecar rapido</p>
             <div className="templates-grid">
               {templates.map((tpl) => (
-                <div key={tpl.id} className="template-card" onClick={() => useTemplate(tpl.id)}>
+                <div key={tpl.id} className="template-card" onClick={() => applyTemplate(tpl.id)}>
                   <h4>{tpl.name}</h4>
                   <p>{tpl.description}</p>
                   <span className="tag">{tpl.category}</span>
