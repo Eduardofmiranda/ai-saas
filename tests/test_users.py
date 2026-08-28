@@ -7,7 +7,9 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database.database import Base
 from app.main import app
+from app.models.execution import Execution
 from app.models.user import User
+from app.models.workflow import Workflow
 from app.services.deps import get_current_user
 
 
@@ -115,3 +117,17 @@ class TestUsers:
             assert data["email"] == "owner@test.com"
             assert data["role"] == "owner"
             assert data["company_id"] == 1
+
+    def test_delete_workflow_with_execution(self, db_session, owner):
+        wf = Workflow(company_id=owner.company_id, name="Fluxo c/ execucao")
+        db_session.add(wf)
+        db_session.flush()
+        ex = Execution(workflow_id=wf.id, company_id=owner.company_id, status="success")
+        db_session.add(ex)
+        db_session.commit()
+
+        for c in _make(db_session, owner):
+            res = c.delete(f"/workflows/{wf.id}")
+            assert res.status_code == 200
+            assert db_session.query(Execution).filter(Execution.workflow_id == wf.id).first() is None
+            assert db_session.query(Workflow).filter(Workflow.id == wf.id).first() is None

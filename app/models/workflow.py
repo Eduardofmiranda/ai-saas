@@ -52,4 +52,8 @@ class Workflow(Base):
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     company = relationship("Company")
-    executions = relationship("Execution", back_populates="workflow")
+    executions = relationship(
+        "Execution",
+        back_populates="workflow",
+        cascade="all, delete-orphan",
+    )

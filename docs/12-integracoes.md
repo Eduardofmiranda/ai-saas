@@ -4,19 +4,59 @@
 
 ### O que e
 
-A Evolution API e um projeto **open-source e self-hosted** (NÃO e um servico pago/SaaS com inscricao). Voce mesmo instala via Docker na sua VPS e conecta no seu proprio numero de WhatsApp. **Nao ha cadastro/inscricao** no "site deles" — o unico passo manual e escanear o QR Code do WhatsApp uma vez por instancia.
+A Evolution API e um projeto **open-source e self-hosted** (NÃO e um servico pago/SaaS com inscricao). Voce mesmo instala via Docker na sua VPS e conecta no seu proprio numero de WhatsApp. E **100% gratuito** (tier `community`), sem limite de mensagens ou instancias.
 
-**Fluxo de "instalacao" (so uma vez):**
+**Licenciamento (versao 2.4.0+):** desde a v2.4.0 a Evolution exige a **ativacao de licenca gratuita** da instancia antes de servir trafego. O fluxo:
+
+1. A instancia gera um `instance_id` (UUID) e um token de registro.
+2. A instancia exibe uma URL de ativacao no terminal/manager (`https://<host>/manager/login`).
+3. O operador autentica no servidor de licencas (`license.evolutionfoundation.com.br` — Magic Link/Google/GitHub) e autoriza a instancia.
+4. O servidor retorna um `api_key` (chave de 64 caracteres hex).
+5. A instancia ativa a licenca chamando `POST /v1/activate` com assinatura `HMAC-SHA256` (exemplo abaixo) e envia *heartbeats* periodicos.
+
+> **Instalacoes em versoes anteriores (ex: `atendai/evolution-api:v2.2.3`, a imagem fixada no `docker-compose.evolution.yml`) NAO exigem ativacao** e continuam funcionando com a chave que voce define no param `AUTHENTICATION_API_KEY`.
+
+### Fluxo de "instalacao" (so uma vez)
 
 1. Subir a imagem pelo Docker (feito pelo `docker-compose.evolution.yml`).
-2. Criar uma **instancia** (`createFlowAi`) — e neste momento que o `EVOLUTION_API_KEY` e definido por VOCE.
-3. Escanear o QR Code com o WhatsApp que sera usado para atender.
-4. Configurar o webhook para apontar ao nosso backend.
+2. **Se v2.4.0+:** ativar a licenca gratuita da instancia (guia acima) e copiar o `api_key`.
+   **Se v2.2.x:** definir `EVOLUTION_API_KEY` no `.env` (vira o `AUTHENTICATION_API_KEY` da Evolution).
+3. Criar uma **instancia** (`createFlowAi`).
+4. Escanear o QR Code com o WhatsApp que sera usado para atender.
+5. Configurar o webhook para apontar ao nosso backend.
 
 **O que e cada configuracao:**
 - `EVOLUTION_BASE_URL`: endereco da sua propria instalacao (ex: `http://localhost:8080` ou `http://evolution:8080` dentro do docker).
-- `EVOLUTION_API_KEY`: uma senha que VOCE cria ao instalar (param `AUTHENTICATION_API_KEY`). Nao e dada por nenhum provedor.
+- `EVOLUTION_API_KEY`: a chave de acesso da instancia — em v2.4.0+ e o `api_key` obtido na **ativacao de licenca**; em v2.2.x e a senha que VOCE define (`AUTHENTICATION_API_KEY`).
 - `EVOLUTION_INSTANCE`: nome que voce deu a sua instancia (ex: `flowai`).
+
+### Como obter o api_key (Evolution v2.4.0+)
+
+O `api_key` (64 caracteres hex) e retornado pelo servidor de licencas apos o operador autorizar a instancia. A ativacao em si usa HMAC-SHA256 no corpo da requisicao:
+
+```python
+import hmac, hashlib, json, requests
+
+api_key = "64chars_hex..."
+payload = {
+    "instance_id": "550e8400-e29b-41d4-a716-446655440000",
+    "version": "2.4.0",
+}
+body = json.dumps(payload, separators=(",", ":"))
+sig = hmac.new(api_key.encode(), body.encode(), hashlib.sha256).hexdigest()
+
+requests.post(
+    "https://license.evolutionfoundation.com.br/v1/activate",
+    data=body,
+    headers={
+        "Content-Type": "application/json",
+        "X-API-Key": api_key,
+        "X-Signature": sig,
+    },
+)
+```
+
+> **Importante:** o corpo usado no HMAC deve ser **byte a byte identico** ao enviado na requisicao (nao reformatar o JSON entre assinar e enviar).
 
 ### Configuracao
 
@@ -27,7 +67,7 @@ EVOLUTION_API_KEY = "sua-chave"
 EVOLUTION_INSTANCE = "sua-instancia"
 ```
 
-> **Alternativa paga (opcional):** existem provedores que hospedam a Evolution API para voce (ex: hosting gerenciado), cobrando por instancia. Nesse caso voce so usa a URL e a chave que eles te passam. Para este projeto usamos a instalacao self-hosted gratuita na VPS.
+> **Alternativa paga (opcional):** existem provedores que hospedam a Evolution API para voce (ex: hosting gerenciado), cobrando por instancia. Nesse caso voce so usa a URL e a chave que eles te passam. Para este projeto usamos a instalacao self-hosted da Evolution na VPS.
 
 ### Endpoints Utilizados
 

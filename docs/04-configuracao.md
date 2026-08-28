@@ -42,7 +42,7 @@ O sistema suporta multiplos provedores de IA. A configuracao segue a ordem:
 A integracao com WhatsApp e feita via **Evolution API**. Configuracao:
 
 1. `EVOLUTION_BASE_URL`: URL da instancia da Evolution
-2. `EVOLUTION_API_KEY`: Chave de API da Evolution
+2. `EVOLUTION_API_KEY`: Chave de API da Evolution (em v2.2.x e a senha definida no instal; em 2.4.0+ e o `api_key` da ativacao de licenca)
 3. `EVOLUTION_INSTANCE`: Nome da instancia
 
 O webhook deve apontar para: `POST /webhook/whatsapp/{company_id}`

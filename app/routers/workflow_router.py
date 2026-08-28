@@ -102,6 +102,9 @@ def delete_workflow(
     db: Session = Depends(get_db),
 ):
     wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
+    # Remove execucoes vinculadas antes de apagar o fluxo (evita violacao de FK).
+    from app.models.execution import Execution
+    db.query(Execution).filter(Execution.workflow_id == wf.id).delete(synchronize_session=False)
     db.delete(wf)
     db.commit()
     return {"message": "Workflow deleted"}

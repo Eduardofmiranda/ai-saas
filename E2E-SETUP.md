@@ -1,6 +1,6 @@
 # Setup E2E - Teste Ponta a Ponta
 
-> **Sobre a Evolution API:** e um projeto **open-source e self-hosted**. Nao existe inscricao/cadastro em site deles — voce mesmo instala via Docker e conecta no seu **proprio numero de WhatsApp** escaneando um QR Code. A `apikey` nos exemplos abaixo e uma senha que VOCE escolhe ao instalar (param `AUTHENTICATION_API_KEY`), nao e fornecida por nenhum provedor.
+> **Sobre a Evolution API:** e um projeto **open-source e self-hosted** e **gratuito**. Voce instala via Docker e conecta no seu **proprio numero de WhatsApp** escaneando um QR Code. Na versao fixada no projeto (`v2.2.3`), a `apikey` dos exemplos abaixo e a senha que VOCE define no `.env` (param `AUTHENTICATION_API_KEY`). Em versoes **2.4.0+** a instancia exige a **ativacao de licenca gratuita** e o `api_key` vem do servidor de licencas da Evolution — veja `docs/12-integracoes.md`.
 
 ## 1. Subir Evolution API (Docker)
 

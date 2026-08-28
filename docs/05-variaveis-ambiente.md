@@ -31,7 +31,7 @@
 | Variavel | Default | Finalidade |
 |----------|---------|-----------|
 | `EVOLUTION_BASE_URL` | — | URL da Evolution API |
-| `EVOLUTION_API_KEY` | — | Chave de API da Evolution |
+| `EVOLUTION_API_KEY` | — | Chave de API da Evolution (v2.2.x: senha do instal; 2.4.0+: `api_key` da ativacao de licenca) |
 | `EVOLUTION_INSTANCE` | `default` | Nome da instancia |
 
 ## Frontend

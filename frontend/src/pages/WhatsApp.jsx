@@ -136,8 +136,11 @@ export default function WhatsApp() {
         <form className="whatsapp-form" onSubmit={handleSave}>
           <h3>Configuração da Evolution API</h3>
           <p className="muted">
-            A Evolution API é <strong>self-hosted e gratuita</strong>. Não há cadastro em serviço externo —
-            você mesmo instala (via Docker na sua VPS) e conecta seu número de WhatsApp escaneando o QR Code.
+            A Evolution API é <strong>self-hosted e gratuita</strong>. Você mesmo instala (via Docker na sua VPS) e
+            conecta seu número de WhatsApp escaneando o QR Code. A "API Key" é a chave de acesso da sua instância:
+            em versões recentes (2.4.0+) ela é obtida ao <strong>ativar a licença gratuita</strong> da instância no
+            servidor de licenças da Evolution; em versões antigas é a senha que você define ao instalar
+            (<code>AUTHENTICATION_API_KEY</code>).
           </p>
 
           <label className="field">
@@ -154,7 +157,7 @@ export default function WhatsApp() {
             <span>Chave da API (API Key)</span>
             <input
               type="password"
-              placeholder={config?.evolution_api_key || form.evolution_api_key ? "•••••••• (deixe vazio para manter)" : "Chave que você definiu ao instalar"}
+              placeholder={config?.evolution_api_key || form.evolution_api_key ? "•••••••• (deixe vazio para manter)" : "API Key da sua instância (veja o guia abaixo)"}
               value={form.evolution_api_key}
               onChange={(e) => set("evolution_api_key", e.target.value)}
             />
@@ -184,13 +187,18 @@ export default function WhatsApp() {
           <h3>Como conectar seu WhatsApp</h3>
           <ol>
             <li>Instale a Evolution API na sua VPS (Docker).</li>
+            <li>
+              Obtenha a <strong>API Key</strong>: em versões 2.4.0+ a instância precisa ativar a <strong>licença gratuita</strong> —
+              ela exibe uma URL de ativação; você faz login (Magic Link/Google/GitHub) e a instância recebe a chave
+              automaticamente. Em versões antigas, a chave é a senha que você define (<code>AUTHENTICATION_API_KEY</code>).
+            </li>
             <li>Crie uma instância com o mesmo nome configurado acima (ex: <code>flowai</code>).</li>
             <li>Escaneie o QR Code com o WhatsApp que vai atender.</li>
             <li>Configure o webhook da instância para apontar ao backend:</li>
           </ol>
           <pre>{`curl -X POST http://SEU_IP:8080/webhook/setFlowai \\
   -H "Content-Type: application/json" \\
-  -H "apikey: SUA_CHAVE" \\
+  -H "apikey: SUA_API_KEY" \\
   -d '{"enabled":true,"url":"http://backend:8000/webhook/whatsapp/1","events":["messages.upsert"]}'`}</pre>
         </div>
       </main>

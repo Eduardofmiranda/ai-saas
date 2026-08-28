@@ -23,9 +23,16 @@ export function AuthProvider({ children }) {
       .then((data) => {
         setUser({ token: getToken(), ...data });
       })
-      .catch(() => {
-        setToken("");
-        setUser(null);
+      .catch((err) => {
+        // Só desloga se a credencial for realmente inválida (401).
+        // Falhas transitórias (rede) ou endpoint ausente (404) não devem
+        // apagar a sessão: o backend valida o token nas chamadas protegidas.
+        if (err && err.status === 401) {
+          setToken("");
+          setUser(null);
+        } else {
+          setUser({ token: getToken() });
+        }
       })
       .finally(() => setReady(true));
   }, []);

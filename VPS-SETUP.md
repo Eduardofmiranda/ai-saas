@@ -157,7 +157,7 @@ docker compose exec backend python -c "from app.create_tables import *"
 
 ## Passo 13: Configurar Evolution API
 
-> **Antes de comecar:** a Evolution API e **open-source e self-hosted**. Nao ha inscricao/cadastro em site deles. Voce mesmo instala a imagem Docker na sua VPS e conecta no seu proprio numero de WhatsApp. O unico passo manual e escanear o QR Code uma vez. A `EVOLUTION_API_KEY` e uma senha que VOCE cria ao instalar.
+> **Antes de comecar:** a Evolution API e **open-source e self-hosted** e **gratuita**. Voce mesmo instala a imagem Docker na sua VPS e conecta no seu proprio numero de WhatsApp. Na versao atual fixada (`v2.2.3`), a `EVOLUTION_API_KEY` e a senha que VOCE define no `.env` (param `AUTHENTICATION_API_KEY`). **Em versoes 2.4.0+** a instancia exige a **ativacao de licenca gratuita** (você autoriza no site da Evolution e ela recebe o `api_key`); nesse caso, use esse `api_key` no `EVOLUTION_API_KEY`. Detalhes em `docs/12-integracoes.md`.
 
 ### Subir a Evolution (se ainda nao subiu no Passo 11):
 
