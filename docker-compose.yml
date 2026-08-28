@@ -1,22 +1,24 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: ai-saas-postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      POSTGRES_DB: ai_saas
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - ai-saas-network
+  # NOTA: Usando Supabase como banco, o Postgres local NAO e necessario.
+  # Se quiser Postgres local, descomente este servico e use o .env local.
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: ai-saas-postgres
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+  #     POSTGRES_DB: ai_saas
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - ai-saas-network
 
   redis:
     image: redis:7-alpine
@@ -37,8 +39,10 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     container_name: ai-saas-backend
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/ai_saas
+      DATABASE_URL: ${DATABASE_URL:-}
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:-changeme-in-production}
       DEFAULT_AI_PROVIDER: ${DEFAULT_AI_PROVIDER:-groq}
@@ -48,8 +52,6 @@ services:
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
       EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     ports:
@@ -64,8 +66,10 @@ services:
       dockerfile: Dockerfile.backend
     container_name: ai-saas-celery-worker
     command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=4
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/ai_saas
+      DATABASE_URL: ${DATABASE_URL:-}
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:-changeme-in-production}
       DEFAULT_AI_PROVIDER: ${DEFAULT_AI_PROVIDER:-groq}
@@ -75,8 +79,6 @@ services:
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
       EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -89,13 +91,12 @@ services:
       dockerfile: Dockerfile.backend
     container_name: ai-saas-celery-beat
     command: celery -A app.tasks.celery_app beat --loglevel=info --scheduler redbeat.RedBeatScheduler
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/ai_saas
+      DATABASE_URL: ${DATABASE_URL:-}
       REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY:-changeme-in-production}
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -116,7 +117,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
   redis_data:
 
 networks:

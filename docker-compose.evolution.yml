@@ -6,12 +6,14 @@ services:
     container_name: evolution
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
       - SERVER_URL=http://localhost:8080
-      - AUTHENTICATION_API_KEY=meu-secret-key-123
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:-change-me}
       - DATABASE_ENABLED=true
       - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=postgresql://postgres:Du297845%40%40%40@db.iedkugumqyweawhcepgt.supabase.co:5432/postgres
+      - DATABASE_CONNECTION_URI=${EVOLUTION_DATABASE_URI:-}
       - CACHE_REDIS_ENABLED=false
       - WEBHOOK_GLOBAL_ENABLED=false
       - LOG_LEVEL=WARN

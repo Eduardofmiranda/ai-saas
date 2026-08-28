@@ -77,39 +77,29 @@ cd ai-saas
 
 ## Passo 8: Criar Arquivo .env
 
+O repositorio ja vem com um exemplo pronto para producao. Use-o:
+
 ```bash
-# Copiar exemplo
-cp .env.example .env
+cp .env.production.example .env
 
 # Editar com suas configuracoes
 nano .env
 ```
 
-### Conteudo do .env para Producao:
+> **Nota:** nao use o `.env.example` para a VPS. Use o `.env.production.example`, que ja foi feito para producao com Supabase.
 
-```env
-# Database (Supabase)
-DATABASE_URL=postgresql://postgres:Du297845%40%40%40@db.iedkugumqyweawhcepgt.supabase.co:5432/postgres
+### Explicacao das variaveis mais confusas:
 
-# Redis (local)
-REDIS_URL=redis://localhost:6379/0
+| Variavel | O que faz | De onde vem |
+|----------|-----------|-------------|
+| `DATABASE_URL` | Connection string do banco PostgreSQL | **Supabase** (seguindo seu projeto). Cole a string do painel do Supabase |
+| `SECRET_KEY` | Assina os tokens JWT de login | Gere na VPS com `openssl rand -hex 32`. Nao e um valor real fixo |
+| `SECRET_ENCRYPTION_KEY` | Criptografa chaves IA/Evolution de cada empresa | Gere na VPS com `openssl rand -hex 32` |
+| `DEFAULT_AI_*` | Chave/modelo de IA padrao (Groq) | Sua chave no painel da Groq |
+| `EVOLUTION_*` | Conexao com a Evolution API (WhatsApp) | Voce define (criar instancia) |
+| `REDIS_URL` | Fila do Celery | Mantenha `redis://redis:6379/0` (servico interno do docker) |
 
-# Security (Gere uma chave nova!)
-SECRET_KEY=cole-uma-chave-secreta-aqui-openssl-rand-hex-32
-SECRET_ENCRYPTION_KEY=cole-outra-chave-secreta-aqui-openssl-rand-hex-32
-
-# AI Defaults (Groq)
-DEFAULT_AI_PROVIDER=groq
-DEFAULT_AI_MODEL=qwen/qwen3.8-27b
-DEFAULT_AI_API_KEY=sua-chave-groq-aqui
-
-# Evolution API
-EVOLUTION_BASE_URL=http://evolution:8080
-EVOLUTION_API_KEY=meu-secret-key-evolution-123
-EVOLUTION_INSTANCE=flowai
-```
-
-### Gerar Chaves Secretas:
+### Gerar Chaves Secretas (na VPS):
 
 ```bash
 # Gerar SECRET_KEY
@@ -119,129 +109,24 @@ openssl rand -hex 32
 openssl rand -hex 32
 ```
 
-## Passo 9: Criar docker-compose.yml Completo
+Cole os dois resultados no `.env` (nos campos `SECRET_KEY` e `SECRET_ENCRYPTION_KEY`).
 
-```bash
-# Criar docker-compose.yml com todos os servicos
-cat > docker-compose.yml << 'EOF'
-version: "3.8"
+## Passo 9: Subir Database com Supabase
 
-services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: postgres
-    environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      POSTGRES_DB: ai_saas
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    restart: unless-stopped
+O banco usado e o **Supabase** (nao roda Postgres local). Confirme no `.env`:
 
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
-    restart: unless-stopped
-
-  evolution:
-    image: atendai/evolution-api:v2.2.3
-    container_name: evolution
-    environment:
-      - SERVER_URL=http://localhost:8080
-      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:-meu-secret-key-123}
-      - DATABASE_ENABLED=true
-      - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/ai_saas
-      - CACHE_REDIS_ENABLED=false
-      - WEBHOOK_GLOBAL_ENABLED=false
-      - LOG_LEVEL=WARN
-    volumes:
-      - evolution_instances:/evolution/instances
-      - evolution_store:/evolution/store
-    ports:
-      - "8080:8080"
-    depends_on:
-      - postgres
-    restart: unless-stopped
-
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: backend
-    env_file:
-      - .env
-    environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/ai_saas
-      - REDIS_URL=redis://redis:6379/0
-    ports:
-      - "8000:8000"
-    depends_on:
-      - postgres
-      - redis
-    restart: unless-stopped
-
-  celery-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: celery-worker
-    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=4
-    env_file:
-      - .env
-    environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/ai_saas
-      - REDIS_URL=redis://redis:6379/0
-    depends_on:
-      - postgres
-      - redis
-    restart: unless-stopped
-
-  celery-beat:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: celery-beat
-    command: celery -A app.tasks.celery_app beat --loglevel=info
-    env_file:
-      - .env
-    environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/ai_saas
-      - REDIS_URL=redis://redis:6379/0
-    depends_on:
-      - postgres
-      - redis
-    restart: unless-stopped
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: ../Dockerfile.frontend
-    container_name: frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-    restart: unless-stopped
-
-volumes:
-  postgres_data:
-  redis_data:
-  evolution_instances:
-  evolution_store:
-EOF
+```env
+DATABASE_URL=postgresql://postgres:SUA_SENHA_SUPABASE@db.SEU_PROJETO.supabase.co:5432/postgres
 ```
 
-## Passo 10: Subir os Servicos
+O `docker-compose.yml` do repositorio ja usa essa variavel. Nada mais a fazer aqui.
+
+## Passo 10: Subir os Servicos (RAILWAY/BACKEND/FRONTEND)
+
+O repositorio ja tem todo o `docker-compose.yml`. Basta subir:
 
 ```bash
-# Build e subir
+# Build e subir (backend, celery, frontend, redis)
 docker compose up -d --build
 
 # Verificar status
@@ -251,14 +136,26 @@ docker compose ps
 docker compose logs -f backend
 ```
 
-## Passo 11: Rodar Migracoes
+## Passo 11: Subir a Evolution API (WhatsApp) separadamente
+
+A Evolution API usa um compose proprio (nao interfere no principal):
 
 ```bash
-# Criar tabelas
+# Usa o docker-compose.evolution.yml que ja esta no repositorio
+docker compose -f docker-compose.evolution.yml up -d
+
+# Verificar status
+docker compose -f docker-compose.evolution.yml ps
+```
+
+## Passo 12: Rodar Migracoes
+
+```bash
+# Criar tabelas no banco (Supabase)
 docker compose exec backend python -c "from app.create_tables import *"
 ```
 
-## Passo 12: Configurar Evolution API
+## Passo 13: Configurar Evolution API
 
 ### Criar Instancia:
 
@@ -295,7 +192,7 @@ curl -X POST http://localhost:8080/webhook/setFlowai \
   }'
 ```
 
-## Passo 13: Acessar o Sistema
+## Passo 14: Acessar o Sistema
 
 1. Acesse `http://SEU_IP`
 2. Faca cadastro (criara uma empresa automaticamente)
@@ -306,7 +203,7 @@ curl -X POST http://localhost:8080/webhook/setFlowai \
 5. Ative o workflow
 6. Envie uma mensagem no WhatsApp conectado
 
-## Passo 14: Configurar SSL (Recomendado)
+## Passo 15: Configurar SSL (Recomendado)
 
 ### Opcao 1: Cloudflare (Mais Facil)
 
@@ -392,8 +289,11 @@ docker compose ps
 
 ### Testar conexao com banco:
 
+Como o banco e o Supabase (externo), teste direto:
+
 ```bash
-docker compose exec postgres psql -U postgres -d ai_saas
+# De dentro do container do backend
+docker compose exec backend python -c "from app.database.database import engine; from sqlalchemy import text; print(engine.connect().execute(text('SELECT 1')).scalar())"
 ```
 
 ### Testar conexao com Redis:
