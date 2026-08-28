@@ -22,6 +22,7 @@ const ICONS = {
   data: "=",
   integration: "⇄",
   whatsapp: "✆",
+  core: "◆",
 };
 
 function NodeShell({ data, selected }) {
@@ -44,7 +45,7 @@ function ConditionNode({ data, selected }) {
         <Handle type="source" position={Position.Bottom} id="true" style={{ left: "30%", background: "#16a34a" }} />
         <Handle type="source" position={Position.Bottom} id="false" style={{ left: "70%", background: "#dc2626" }} />
       </div>
-      <div className="rf-node-tags"><span className="tag green">sim</span><span className="tag red">não</span></div>
+      <div className="rf-node-tags"><span className="tag green">sim</span><span className="tag red">nao</span></div>
     </div>
   );
 }
@@ -58,17 +59,34 @@ function TriggerNode({ data, selected }) {
   );
 }
 
+function StickyNote({ data, selected }) {
+  return (
+    <div className={`rf-node sticky-note ${selected ? "selected" : ""}`}>
+      <div className="sticky-header">📝 Nota</div>
+      <div className="sticky-content">{data.text || "Clique para editar..."}</div>
+    </div>
+  );
+}
+
 const nodeTypes = {
   trigger_message: TriggerNode,
   trigger_webhook: TriggerNode,
+  schedule: TriggerNode,
   condition: ConditionNode,
   ai: NodeShell,
+  ai_rag: NodeShell,
   set: NodeShell,
+  code: NodeShell,
+  loop: NodeShell,
+  aggregate: NodeShell,
   delay: NodeShell,
   http: NodeShell,
   whatsapp_send: NodeShell,
   filter: NodeShell,
   log: NodeShell,
+  execute_workflow: NodeShell,
+  wait_until_message: NodeShell,
+  sticky_note: StickyNote,
 };
 
 export default function Editor() {
@@ -84,6 +102,7 @@ export default function Editor() {
   const [runResult, setRunResult] = useState(null);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     api.getNodeTypes().then((r) => setNodeTypesList(r.node_types)).catch(() => {});
@@ -95,6 +114,7 @@ export default function Editor() {
   }, [id]);
 
   function normalizeNode(n) {
+    if (n.type === "sticky_note") return n;
     const spec = nodeTypesList.find((s) => s.type === n.type);
     return { ...n, data: { ...n.data, label: spec?.label || n.type } };
   }
@@ -107,6 +127,13 @@ export default function Editor() {
   }, [setEdges]);
 
   const onNodeClick = (_, node) => {
+    if (node.type === "sticky_note") {
+      setSelectedNode({ ...node, spec: { type: "sticky_note", fields: [
+        { key: "text", label: "Texto da nota", type: "textarea" },
+        { key: "color", label: "Cor", type: "select", options: ["#fef3c7", "#dbeafe", "#dcfce7", "#fce7f3", "#f3e8ff"] },
+      ]}});
+      return;
+    }
     const spec = nodeTypesList.find((s) => s.type === node.type);
     setSelectedNode({ ...node, spec });
   };
@@ -130,6 +157,18 @@ export default function Editor() {
     setNodes((ns) => [...ns, newNode]);
   }
 
+  function addStickyNote() {
+    const nodeId = `sticky_${Date.now()}`;
+    const colors = ["#fef3c7", "#dbeafe", "#dcfce7", "#fce7f3", "#f3e8ff"];
+    const newNode = {
+      id: nodeId,
+      type: "sticky_note",
+      position: { x: 100 + Math.random() * 100, y: 100 + Math.random() * 100 },
+      data: { text: "Nova nota...", color: colors[Math.floor(Math.random() * colors.length)] },
+    };
+    setNodes((ns) => [...ns, newNode]);
+  }
+
   function updateSelectedConfig(key, value) {
     if (!selectedNode) return;
     const updated = {
@@ -142,6 +181,7 @@ export default function Editor() {
 
   function deleteSelectedNode() {
     if (!selectedNode) return;
+    if (!confirm("Excluir este node?")) return;
     const nodeId = selectedNode.id;
     setNodes((ns) => ns.filter((n) => n.id !== nodeId));
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
@@ -188,7 +228,7 @@ export default function Editor() {
     if (!saved) { setRunning(false); return; }
     try {
       const payload = {
-        message: { text: "Olá! Preciso de ajuda com os planos." },
+        message: { text: "Ola! Preciso de ajuda com os planos." },
         customer: "5511999999999",
       };
       const ex = await api.runWorkflow(id, payload);
@@ -201,6 +241,11 @@ export default function Editor() {
   }
 
   const fields = selectedNode?.spec?.fields || [];
+
+  const filteredNodes = nodeTypesList.filter((nt) =>
+    !searchTerm || nt.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    nt.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="editor-layout">
@@ -217,9 +262,9 @@ export default function Editor() {
           <span className={`badge ${wf?.active ? "on" : "off"}`}>{wf?.active ? "Ativo" : "Inativo"}</span>
         </div>
         <div className="topbar-right">
-          <button className="btn ghost" onClick={() => navigate("/")}>← Fluxos</button>
+          <button className="btn ghost" onClick={() => navigate("/")}>Voltar</button>
           <button className="btn secondary" onClick={() => run()} disabled={saving || running}>
-            {running ? "Rodando..." : "▶ Rodar"}
+            {running ? "Rodando..." : "Rodar"}
           </button>
           <button className="btn primary" onClick={() => save()} disabled={saving || running}>
             {saving ? "Salvando..." : "Salvar"}
@@ -229,18 +274,30 @@ export default function Editor() {
 
       <div className="editor-body" ref={wrapper}>
         <aside className="palette">
-          <h4>Bloqueios</h4>
-          {nodeTypesList.map((nt) => (
-            <div key={nt.type} className="palette-item" draggable
-                 onDragStart={(e) => e.dataTransfer.setData("application/flow-node", JSON.stringify(nt))}
-                 onClick={() => addNode(nt)}>
-              <span className="rf-icon">{ICONS[nt.category] || "•"}</span>
-              <div>
-                <strong>{nt.label}</strong>
-                <p>{nt.description}</p>
+          <h4>Nodes</h4>
+          <input
+            type="text"
+            className="palette-search"
+            placeholder="Buscar node..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <div className="palette-list">
+            {filteredNodes.map((nt) => (
+              <div key={nt.type} className="palette-item" draggable
+                   onDragStart={(e) => e.dataTransfer.setData("application/flow-node", JSON.stringify(nt))}
+                   onClick={() => addNode(nt)}>
+                <span className="rf-icon">{ICONS[nt.category] || "•"}</span>
+                <div>
+                  <strong>{nt.label}</strong>
+                  <p>{nt.description}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <div className="palette-extras">
+            <button className="btn secondary small" onClick={addStickyNote}>+ Nota</button>
+          </div>
         </aside>
 
         <div className="canvas"
@@ -280,17 +337,17 @@ export default function Editor() {
         <aside className="inspector">
           {!selectedNode ? (
             <div className="empty-panel">
-              <h4>Configuração</h4>
-              <p>Clique em um nó para configurar suas propriedades.</p>
+              <h4>Configuracao</h4>
+              <p>Clique em um node para configurar suas propriedades.</p>
             </div>
           ) : (
             <>
               <div className="inspector-head">
-                <h4>{selectedNode.data.label}</h4>
+                <h4>{selectedNode.type === "sticky_note" ? "Nota" : selectedNode.data.label}</h4>
                 <button className="btn ghost small danger" onClick={deleteSelectedNode}>Excluir</button>
               </div>
               {fields.length === 0 ? (
-                <p>Este nó não possui propriedades.</p>
+                <p>Este node nao possui propriedades.</p>
               ) : (
                 fields.map((f) => (
                   <label key={f.key} className="field">
@@ -315,7 +372,7 @@ export default function Editor() {
                       <select
                         value={selectedNode.data?.[f.key] ?? ""}
                         onChange={(e) => updateSelectedConfig(f.key, e.target.value)}>
-                        <option value="">—</option>
+                        <option value="">-</option>
                         {(f.options || []).map((o) => <option key={o} value={o}>{o}</option>)}
                       </select>
                     ) : (
@@ -334,7 +391,7 @@ export default function Editor() {
 
           {runResult && (
             <div className="run-result">
-              <h4>Resultado da execução</h4>
+              <h4>Resultado da execucao</h4>
               <div className={`badge ${runResult.status === "success" ? "on" : "off"}`}>
                 Status: {runResult.status}
               </div>
@@ -342,14 +399,14 @@ export default function Editor() {
 
               {runResult.context?.logs?.length > 0 && (
                 <div className="run-logs">
-                  <h5>Log da execução</h5>
+                  <h5>Log da execucao</h5>
                   {runResult.context.logs.map((line, i) => (
                     <div key={i} className="log-line">{line}</div>
                   ))}
                 </div>
               )}
 
-              <h5>Saídas</h5>
+              <h5>Saidas</h5>
               <pre>{JSON.stringify(runResult.node_results, null, 2)}</pre>
             </div>
           )}

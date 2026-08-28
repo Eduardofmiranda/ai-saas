@@ -7,13 +7,19 @@ export default function Home() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [workflows, setWorkflows] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showTemplates, setShowTemplates] = useState(false);
 
   async function load() {
     try {
-      const data = await api.getWorkflows();
-      setWorkflows(data);
+      const [wfData, tplData] = await Promise.all([
+        api.getWorkflows(),
+        api.getTemplates(),
+      ]);
+      setWorkflows(wfData);
+      setTemplates(tplData);
       setError("");
     } catch (e) {
       setError(e.message);
@@ -30,6 +36,26 @@ export default function Home() {
       navigate(`/editor/${wf.id}`);
     } catch (e) {
       setError("Erro ao criar fluxo: " + e.message);
+    }
+  }
+
+  async function useTemplate(templateId) {
+    try {
+      const wf = await api.useTemplate(templateId);
+      setShowTemplates(false);
+      navigate(`/editor/${wf.id}`);
+    } catch (e) {
+      setError("Erro ao usar template: " + e.message);
+    }
+  }
+
+  async function duplicate(id, e) {
+    e.stopPropagation();
+    try {
+      const newWf = await api.duplicateWorkflow(id);
+      load();
+    } catch (e) {
+      setError("Erro ao duplicar: " + e.message);
     }
   }
 
@@ -67,39 +93,67 @@ export default function Home() {
 
       <main className="content">
         <div className="content-head">
-          <h2>Fluxos de automação</h2>
-          <button className="btn primary" onClick={createNew}>+ Novo fluxo</button>
+          <h2>Fluxos de automacao</h2>
+          <div className="btn-group">
+            <button className="btn secondary" onClick={() => setShowTemplates(!showTemplates)}>
+              {showTemplates ? "Fechar" : "Templates"}
+            </button>
+            <button className="btn primary" onClick={createNew}>+ Novo fluxo</button>
+          </div>
         </div>
 
-        {loading && <p className="muted">Carregando fluxos...</p>}
         {error && <div className="error">{error}</div>}
 
-        {!loading && !error && workflows.length === 0 && (
-          <div className="empty">
-            <p>Nenhum fluxo ainda.</p>
-            <p>Crie o primeiro para começar a automatizar o atendimento.</p>
-            <button className="btn primary" onClick={createNew} style={{ marginTop: 12 }}>+ Criar fluxo</button>
+        {showTemplates && (
+          <div className="templates-panel">
+            <h3>Templates prontos</h3>
+            <p className="muted">Escolha um template para comecar rapido</p>
+            <div className="templates-grid">
+              {templates.map((tpl) => (
+                <div key={tpl.id} className="template-card" onClick={() => useTemplate(tpl.id)}>
+                  <h4>{tpl.name}</h4>
+                  <p>{tpl.description}</p>
+                  <span className="tag">{tpl.category}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        <div className="wf-grid">
-          {workflows.map((wf) => (
-            <div key={wf.id} className="wf-card" onClick={() => navigate(`/editor/${wf.id}`)}>
-              <h3>{wf.name}</h3>
-              <p>{wf.description || "Sem descrição"}</p>
-              <div className="wf-meta">
-                <button
-                  className={`btn small ${wf.active ? "ghost" : "secondary"}`}
-                  onClick={(e) => toggleActive(wf, e)}
-                  title={wf.active ? "Desativar" : "Ativar"}
-                >
-                  {wf.active ? "Ativo" : "Inativo"}
-                </button>
-                <button className="btn ghost small danger" onClick={(e) => remove(wf.id, e)}>Excluir</button>
-              </div>
+        {loading && <p className="muted">Carregando fluxos...</p>}
+
+        {!loading && !error && workflows.length === 0 && !showTemplates && (
+          <div className="empty">
+            <p>Nenhum fluxo ainda.</p>
+            <p>Crie o primeiro ou escolha um template.</p>
+            <div className="btn-group" style={{ marginTop: 12 }}>
+              <button className="btn secondary" onClick={() => setShowTemplates(true)}>Templates</button>
+              <button className="btn primary" onClick={createNew}>+ Criar fluxo</button>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
+
+        {!showTemplates && (
+          <div className="wf-grid">
+            {workflows.map((wf) => (
+              <div key={wf.id} className="wf-card" onClick={() => navigate(`/editor/${wf.id}`)}>
+                <h3>{wf.name}</h3>
+                <p>{wf.description || "Sem descricao"}</p>
+                <div className="wf-meta">
+                  <button
+                    className={`btn small ${wf.active ? "ghost" : "secondary"}`}
+                    onClick={(e) => toggleActive(wf, e)}
+                    title={wf.active ? "Desativar" : "Ativar"}
+                  >
+                    {wf.active ? "Ativo" : "Inativo"}
+                  </button>
+                  <button className="btn ghost small" onClick={(e) => duplicate(wf.id, e)}>Duplicar</button>
+                  <button className="btn ghost small danger" onClick={(e) => remove(wf.id, e)}>Excluir</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

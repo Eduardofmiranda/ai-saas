@@ -69,4 +69,8 @@ export const api = {
   updateKnowledge: (id, body) => request("PATCH", `/knowledge/${id}`, body),
   deleteKnowledge: (id) => request("DELETE", `/knowledge/${id}`),
   searchKnowledge: (query, topK = 5) => request("POST", "/knowledge/search", { query, top_k: topK }),
+  getTemplates: () => request("GET", "/templates/"),
+  getTemplate: (id) => request("GET", `/templates/${id}`),
+  useTemplate: (id) => request("POST", `/templates/${id}/use`),
+  duplicateWorkflow: (id) => request("POST", `/workflows/${id}/duplicate`),
 };

@@ -107,6 +107,28 @@ def delete_workflow(
     return {"message": "Workflow deleted"}
 
 
+@router.post("/{workflow_id}/duplicate", response_model=WorkflowResponse)
+def duplicate_workflow(
+    workflow_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
+    new_wf = Workflow(
+        company_id=current_user.company_id,
+        name=f"{wf.name} (Copia)",
+        description=wf.description or "",
+        data=wf.data or {"nodes": [], "edges": []},
+        trigger_type=wf.trigger_type or "message",
+        trigger_config=wf.trigger_config or {},
+        active=False,
+    )
+    db.add(new_wf)
+    db.commit()
+    db.refresh(new_wf)
+    return new_wf
+
+
 @router.post("/{workflow_id}/run", response_model=ExecutionResponse)
 async def run_workflow(
     workflow_id: int,

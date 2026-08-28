@@ -211,3 +211,41 @@ body {
 }
 .chunk-card .muted { display: block; margin-bottom: 4px; }
 .chunk-card p { margin: 0; color: #c6d0e0; line-height: 1.5; }
+
+/* ---------- Templates ---------- */
+.templates-panel {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; margin-bottom: 20px;
+}
+.templates-panel h3 { margin: 0 0 4px; }
+.templates-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px; margin-top: 12px;
+}
+.template-card {
+  background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px; cursor: pointer; transition: border-color .15s;
+}
+.template-card:hover { border-color: var(--accent); }
+.template-card h4 { margin: 0 0 6px; font-size: 14px; }
+.template-card p { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+.btn-group { display: flex; gap: 8px; }
+
+/* ---------- Sticky Notes ---------- */
+.sticky-note {
+  min-width: 180px; max-width: 240px; background: #fef3c7; border: 2px solid #f59e0b;
+  border-radius: 8px; padding: 10px; font-size: 12px; color: #92400e;
+}
+.sticky-note.selected { box-shadow: 0 0 0 2px rgba(245,158,11,.4); }
+.sticky-header { font-weight: 600; margin-bottom: 6px; font-size: 11px; }
+.sticky-content { white-space: pre-wrap; line-height: 1.4; }
+
+/* ---------- Palette Search ---------- */
+.palette-search {
+  width: 100%; padding: 8px 10px; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+  font-size: 13px; margin-bottom: 12px;
+}
+.palette-search:focus { border-color: var(--accent); outline: none; }
+.palette-list { display: flex; flex-direction: column; }
+.palette-extras { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
