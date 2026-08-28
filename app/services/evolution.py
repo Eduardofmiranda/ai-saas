@@ -37,7 +37,9 @@ async def send_text(
 
     headers = {"Content-Type": "application/json"}
     if key:
-        headers["Authorization"] = f"Bearer {key}"
+        # Evolution usa o header "apikey" (nao Authorization Bearer).
+        # https://doc.evolution-api.com/pt/authenticate/api-key
+        headers["apikey"] = key
 
     payload = {"number": number, "text": text}
 

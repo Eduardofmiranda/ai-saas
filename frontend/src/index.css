@@ -326,6 +326,8 @@ body {
   padding: 18px;
 }
 .whatsapp-help h3 { margin: 0 0 10px; }
+.whatsapp-help h4 { margin: 18px 0 8px; font-size: 13px; text-transform: uppercase; color: var(--muted); letter-spacing: .5px; }
+.whatsapp-help h5 { margin: 12px 0 6px; font-size: 12px; text-transform: uppercase; color: var(--muted); letter-spacing: .5px; }
 .whatsapp-help ol { margin: 0 0 14px; padding-left: 20px; }
 .whatsapp-help li { margin-bottom: 6px; color: var(--muted); }
 .whatsapp-help code {

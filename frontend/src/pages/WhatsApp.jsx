@@ -184,22 +184,43 @@ export default function WhatsApp() {
         </form>
 
         <div className="whatsapp-help">
-          <h3>Como conectar seu WhatsApp</h3>
+          <h3>Como conectar seu WhatsApp (passo a passo)</h3>
+
+          <h4>Fase 1 — Instalar a Evolution e conectar o número (uma vez, fora do nosso sistema)</h4>
           <ol>
-            <li>Instale a Evolution API na sua VPS (Docker).</li>
-            <li>
-              Obtenha a <strong>API Key</strong>: em versões 2.4.0+ a instância precisa ativar a <strong>licença gratuita</strong> —
-              ela exibe uma URL de ativação; você faz login (Magic Link/Google/GitHub) e a instância recebe a chave
-              automaticamente. Em versões antigas, a chave é a senha que você define (<code>AUTHENTICATION_API_KEY</code>).
-            </li>
-            <li>Crie uma instância com o mesmo nome configurado acima (ex: <code>flowai</code>).</li>
-            <li>Escaneie o QR Code com o WhatsApp que vai atender.</li>
-            <li>Configure o webhook da instância para apontar ao backend:</li>
-          </ol>
-          <pre>{`curl -X POST http://SEU_IP:8080/webhook/setFlowai \\
+            <li>Instale a <strong>Evolution API</strong> via Docker na sua VPS (ou localmente). Feito pelo <code>docker-compose.evolution.yml</code>.</li>
+            <li>Obtenha a <strong>API Key</strong>: em versões 2.4.0+ a instância pede a <strong>ativação da licença gratuita</strong> e gera a chave; em versões antigas a chave é a senha que você define (<code>AUTHENTICATION_API_KEY</code>).</li>
+            <li><strong>Crie uma instância</strong> com o MESMO nome que você digitou acima (ex: <code>flowai</code>):
+              <pre>{`curl -X POST http://SEU_IP:8080/instance/createFlowAi \\
   -H "Content-Type: application/json" \\
   -H "apikey: SUA_API_KEY" \\
-  -d '{"enabled":true,"url":"http://backend:8000/webhook/whatsapp/1","events":["messages.upsert"]}'`}</pre>
+  -d '{"instanceName":"flowai","integration":"WHATSAPP-BAILEYS","qrcode":true}'`}</pre>
+            </li>
+            <li>No celular: WhatsApp → <strong>Aparelhos conectados</strong> → <strong>Conectar aparelho</strong> → escaneie o <strong>QR Code</strong>.</li>
+            <li>Configure o <strong>webhook</strong> da instância para apontar ao backend (é assim que as mensagens <em>entram</em>):
+              <pre>{`curl -X POST http://SEU_IP:8080/webhook/setFlowai \\
+  -H "Content-Type: application/json" \\
+  -H "apikey: SUA_API_KEY" \\
+  -d '{"enabled":true,"url":"http://SEU_BACKEND:8000/webhook/whatsapp/1","events":["messages.upsert"]}'`}</pre>
+              <span className="muted">Substitua <code>1</code> pela id da sua empresa e <code>SEU_BACKEND</code> pela URL do backend.</span>
+            </li>
+          </ol>
+
+          <h4>Fase 2 — Configurar no nosso sistema</h4>
+          <ol>
+            <li>Preencha <strong>URL</strong> (ex: <code>http://localhost:8080</code>), <strong>API Key</strong> e <strong>instância</strong> no formulário acima.</li>
+            <li>Clique em <strong>Salvar configuração</strong>.</li>
+            <li>Clique em <strong>Testar conexão</strong> — confirma se a Evolution está acessível e a chave é válida.</li>
+            <li>O <strong>Status</strong> mostra a conexão do número:
+              <ul>
+                <li><strong>Conectado</strong> → tudo certo, já pode usar.</li>
+                <li><strong>Desconectado</strong> → a instância existe, mas o celular saiu (escaneie o QR de novo).</li>
+                <li><strong>Instância não encontrada</strong> → crie a instância com esse nome na Evolution.</li>
+                <li><strong>Sem conexão com a Evolution</strong> → a Evolution não está rodando ou a URL está errada.</li>
+                <li><strong>Não configurado</strong> → você ainda não salvou nada.</li>
+              </ul>
+            </li>
+          </ol>
         </div>
       </main>
     </div>
