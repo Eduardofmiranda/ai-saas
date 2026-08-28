@@ -263,6 +263,50 @@ apt install certbot python3-certbot-nginx -y
 certbot --nginx -d seu-dominio.com
 ```
 
+## Atualizar a VPS (apos novas alteracoes no codigo)
+
+O setup completo acima e feito **apenas uma vez**. Depois disso, para trazer
+alteracoes novas (backend/frontend), basta atualizar o codigo e rebuildar —
+**sem refazer o `.env` nem redigitando as configuracoes**:
+
+```bash
+cd /opt/ai-saas
+git pull
+docker compose up -d --build
+docker compose -f docker-compose.evolution.yml up -d
+docker compose exec -T backend alembic upgrade head
+```
+
+### O que permanece intacto a cada atualizacao
+
+| Camada | Sobrevive ao `git pull`? | Motivo |
+|--------|--------------------------|--------|
+| `.env` (SECRET_KEY, SECRET_ENCRYPTION_KEY, DATABASE_URL, etc.) | Sim | `.env` e gitignored; `git pull` nao toca no arquivo |
+| Banco Supabase (usuarios, workflows, configs, chaves criptografadas) | Sim | Banco e externo (Supabase) |
+| Instancia/WhatsApp conectado na Evolution API | Sim | Container da Evolution mantem seus dados |
+
+### Regras de ouro
+
+1. **NUNCA rode `./deploy-vps.sh` de novo** se o `.env` ja existe: o script
+   regenera `SECRET_KEY` e `SECRET_ENCRYPTION_KEY` quando estao ausentes, e isso
+   **quebraria a descriptografia** das chaves IA/Evolution ja salvas no banco.
+2. **NUNCA delete o `.env`** nem a pasta de dados da Evolution
+   (`docker compose -f docker-compose.evolution.yml down -v` apaga a instancia).
+3. Se o `git pull` falhar por conflito em arquivos locais, resolva antes de
+   rodar o build (os arquivos alterados localmente sao apenas adicionais).
+
+### Rollback
+
+Se uma atualizacao quebrou algo:
+
+```bash
+cd /opt/ai-saas
+# Volte para o commit anterior (troque pelo hash desejado)
+git log --oneline -5
+git checkout <hash_do_ultimo_bom>
+docker compose up -d --build
+```
+
 ## Troubleshooting
 
 ### Ver logs de todos os servicos:
