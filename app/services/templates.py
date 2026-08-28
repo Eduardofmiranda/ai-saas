@@ -29,6 +29,7 @@ TEMPLATES = [
                     "type": "whatsapp_send",
                     "data": {
                         "label": "Enviar Resposta",
+                        "phone": "{{ data.phone }}",
                         "text": "{{ data.ai_reply }}",
                     },
                     "position": [750, 300],
@@ -76,6 +77,7 @@ TEMPLATES = [
                     "type": "whatsapp_send",
                     "data": {
                         "label": "Enviar Resposta",
+                        "phone": "{{ data.phone }}",
                         "text": "{{ data.ai_reply }}",
                     },
                     "position": [750, 300],
@@ -200,6 +202,7 @@ TEMPLATES = [
                     "type": "whatsapp_send",
                     "data": {
                         "label": "Resposta Automatica",
+                        "phone": "{{ data.phone }}",
                         "text": "Estamos fora do horario comercial. Retornaremos em breve!",
                     },
                     "position": [1000, 400],
