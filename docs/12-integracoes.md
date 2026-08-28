@@ -3,7 +3,20 @@
 ## Evolution API (WhatsApp)
 
 ### O que e
-A Evolution API e uma API para gerenciar contas WhatsApp, permitindo enviar e receber mensagens programaticamente.
+
+A Evolution API e um projeto **open-source e self-hosted** (NÃO e um servico pago/SaaS com inscricao). Voce mesmo instala via Docker na sua VPS e conecta no seu proprio numero de WhatsApp. **Nao ha cadastro/inscricao** no "site deles" — o unico passo manual e escanear o QR Code do WhatsApp uma vez por instancia.
+
+**Fluxo de "instalacao" (so uma vez):**
+
+1. Subir a imagem pelo Docker (feito pelo `docker-compose.evolution.yml`).
+2. Criar uma **instancia** (`createFlowAi`) — e neste momento que o `EVOLUTION_API_KEY` e definido por VOCE.
+3. Escanear o QR Code com o WhatsApp que sera usado para atender.
+4. Configurar o webhook para apontar ao nosso backend.
+
+**O que e cada configuracao:**
+- `EVOLUTION_BASE_URL`: endereco da sua propria instalacao (ex: `http://localhost:8080` ou `http://evolution:8080` dentro do docker).
+- `EVOLUTION_API_KEY`: uma senha que VOCE cria ao instalar (param `AUTHENTICATION_API_KEY`). Nao e dada por nenhum provedor.
+- `EVOLUTION_INSTANCE`: nome que voce deu a sua instancia (ex: `flowai`).
 
 ### Configuracao
 
@@ -13,6 +26,8 @@ EVOLUTION_BASE_URL = "http://evolution:8080"
 EVOLUTION_API_KEY = "sua-chave"
 EVOLUTION_INSTANCE = "sua-instancia"
 ```
+
+> **Alternativa paga (opcional):** existem provedores que hospedam a Evolution API para voce (ex: hosting gerenciado), cobrando por instancia. Nesse caso voce so usa a URL e a chave que eles te passam. Para este projeto usamos a instalacao self-hosted gratuita na VPS.
 
 ### Endpoints Utilizados
 
