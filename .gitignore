@@ -1,0 +1,7 @@
+venv/
+venv_quebrado/
+__pycache__/
+*.pyc
+.env
+*.db
+*.log

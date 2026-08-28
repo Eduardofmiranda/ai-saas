@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  backend:
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app
+
+  celery-worker:
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=4
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app
+
+  celery-beat:
+    command: celery -A app.tasks.celery_app beat --loglevel=info --scheduler redbeat.RedBeatScheduler
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app
+
+  frontend:
+    command: npm run dev -- --host
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE=http://localhost:8000

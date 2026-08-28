@@ -1,0 +1,29 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+python-dotenv
+pydantic
+pydantic[email]
+
+# Autenticacao (JWT)
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+
+# Criptografia de campos sensiveis (chaves por empresa)
+cryptography
+
+# HTTP client (Evolution API + LLM)
+httpx
+
+# Migrations
+alembic
+
+# Async tasks
+celery
+redis
+redbeat
+
+# Utils
+python-json-logger

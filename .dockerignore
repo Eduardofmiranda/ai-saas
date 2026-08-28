@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Tests
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Alembic
+alembic/versions/*.py
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Git
+.git/
+.gitignore
+
+# Misc
+*.md
+*.txt
+!requirements.txt
