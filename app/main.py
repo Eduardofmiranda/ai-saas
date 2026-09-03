@@ -1,7 +1,10 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-import app.models
+import app.models  # registra todos os models no Base.metadata
+from app.database.database import Base, engine
 
 from app.routers.auth_router import router as auth_router
 from app.routers.company_router import router as company_router
@@ -16,7 +19,16 @@ from app.routers.knowledge_router import router as knowledge_router
 from app.routers.template_router import router as template_router
 from app.routers.users_router import router as users_router
 
-app = FastAPI(title="AI SaaS - Atendimento WhatsApp")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Garante que todas as tabelas existam no boot.
+    # Evita depender de rodar `create_all` manualmente apos o deploy.
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
+app = FastAPI(title="AI SaaS - Atendimento WhatsApp", lifespan=lifespan)
 
 # Frontend (Vite) acessa o backend de outra porta
 app.add_middleware(

@@ -3,21 +3,37 @@
 ## Tecnologia
 
 - **Producao**: PostgreSQL 16 (**local no Docker** — container `ai-saas-postgres`)
-- **Desenvolvimento**: SQLite (automático quando `DATABASE_URL` nao configurado)
+- **Desenvolvimento**: SQLite (automatico quando `DATABASE_URL` nao configurado)
 - **ORM**: SQLAlchemy
-- **Criacao do schema**: **SQLAlchemy `Base.metadata.create_all`** (NAO Alembic)
+- **Criacao do schema**: **SQLAlchemy `Base.metadata.create_all`** (mecanismo principal)
 
-> **IMPORTANTE (confirmado em 03/09/2026):** este projeto **NAO usa Alembic
-> para versionar o schema.** O diretorio `alembic/versions` esta vazio e
-> `alembic upgrade head` nao cria as tabelas. As tabelas sao criadas por
-> `Base.metadata.create_all` (via `app/create_tables.py`).
+> **Como o schema e criado de fato (confirmado em 03/09/2026):**
 >
-> Apos subir o docker, rode:
+> 1. As **tabelas base** (`companies`, `users`, `workflows`, `executions`, etc.)
+>    sao criadas por **`Base.metadata.create_all`** via `app/create_tables.py`.
+>    O `alembic upgrade head` **NAO** cria essas tabelas.
+> 2. Existem migrations Alembic **adicionais e idempotentes** em
+>    `alembic/versions/`:
+>    - `0002_pending_flows.py` — adiciona `pending_flows` (so cria se nao existir)
+>    - `0003_knowledge.py` — adiciona `knowledge` e `knowledge_chunks`
+>
+>    Elas **assumem que as tabelas base ja existem** e apenas garantem que as
+>    tabelas `pending_flows`/`knowledge`/`knowledge_chunks` existam (checando com
+>    `inspect` e retornando sem erro se ja existirem). Na pratica sao
+>    **supérfluas** quando o `create_all` e usado, pois ele ja cria tudo.
+>
+> **Procedimento recomendado apos subir o docker (cria todas as tabelas):**
 > ```bash
 > docker compose exec backend python -c "from app.create_tables import *"
 > ```
+> (Opcional e inofensivo, roda tambem o `alembic upgrade head` depois.)
 >
-> O Supabase foi **abandonado** como banco principal devido ao problema de IPv6
+> **Historico do deploy real (03/09/2026):** na VPS, `alembic upgrade head`
+> criou apenas a tabela `alembic_version` e **nao** as tabelas base — por isso o
+> `create_all` e o caminho que de fato cria as tabelas. As tabelas foram
+> confirmadas criadas apos rodar o `create_all`.
+>
+> **Supabase:** abandonado como banco principal devido ao problema de IPv6
 > (a direct connection resolve so IPv6 e VPS sem rede IPv6 nao conecta). O
 > deploy padrao usa **Postgres local**.
 

@@ -9,6 +9,7 @@ from app.models.message import Message
 from app.models.workflow import Workflow
 from app.models.execution import Execution
 from app.models.pending_flow import PendingFlow
+from app.models.knowledge import Knowledge, KnowledgeChunk
 
 print(Base.metadata.tables.keys())
 
