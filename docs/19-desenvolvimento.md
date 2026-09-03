@@ -83,27 +83,22 @@ docker compose logs -f
 
 # Entrar no container do backend
 docker compose exec backend bash
-
-# Rodar migracoes
-docker compose exec backend alembic upgrade head
 ```
 
 ## Banco de Dados
 
-### Criar tabela manualmente (dev)
+### Criacao das tabelas (automatica)
+As tabelas sao criadas **automaticamente no boot** do backend (`lifespan` em
+`app/main.py` chama `Base.metadata.create_all`). Nao e preciso rodar `create_all`
+manualmente. Para conferir as tabelas:
+
 ```bash
-python -c "from app.create_tables import *"
+python -c "from app.database.database import engine; from sqlalchemy import inspect; print(inspect(engine).get_table_names())"
 ```
 
-### Criar migracao
-```bash
-alembic revision --autogenerate -m "descricao da mudanca"
-```
-
-### Rodar migracao
-```bash
-alembic upgrade head
-```
+> Este projeto **nao usa Alembic para o schema base** (ver docs/06). As migrations
+> em `alembic/versions/` sao adicionais/idempotentes (ex.: `knowledge`). O fluxo de
+> desenvolvimento NAO depende de `alembic upgrade head`.
 
 ## Arquivos Importantes
 

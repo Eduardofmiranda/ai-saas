@@ -39,8 +39,12 @@
 | `EVOLUTION_API_KEY` | — | Chave que o **backend** usa para autenticar na Evolution (`send_text`) |
 | `EVOLUTION_AUTH_KEY` | — | Chave injetada pelo compose como `AUTHENTICATION_API_KEY` da Evolution. **Use a MESMA de `EVOLUTION_API_KEY`** |
 | `EVOLUTION_INSTANCE` | `default` | Nome da instancia (ex.: `flowai`) |
-| `EVOLUTION_SERVER_URL` | `http://SEU_IP:8080` | URL publica usada pela Evolution para QR/callbacks |
-| `EVOLUTION_DATABASE_URI` | vazio | (Opcional) banco da Evolution. O compose aponta para um banco `evolution` separado |
+
+> **Nota (variaveis mortas):** `EVOLUTION_SERVER_URL` e `EVOLUTION_DATABASE_URI`
+> **NAO sao lidas por nenhum codigo** (backend Python ou compose). O
+> `docker-compose.evolution.yml` define `SERVER_URL` e `DATABASE_CONNECTION_URI`
+> **hardcoded no proprio arquivo** (via `POSTGRES_PASSWORD`). Voce pode remove-las
+> do `.env` sem efeito. Elas permaneciam no template por engano.
 
 ## Frontend
 

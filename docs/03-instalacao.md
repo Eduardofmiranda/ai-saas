@@ -29,10 +29,9 @@ pip install -r requirements.txt
 cp .env.example .env
 # Editar .env com suas configuracoes
 
-# 5. Criar tabelas (SQLite para dev)
-python -c "from app.create_tables import *"
-
-# 6. Iniciar o backend
+# 5. Iniciar o backend
+# (as tabelas sao criadas automaticamente no start pelo lifespan do main.py;
+#   sem DATABASE_URL usa SQLite local ./aissaas.db - ver docs/06)
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -59,10 +58,9 @@ cp .env.example .env
 # Editar .env com configuracoes de producao
 
 # 2. Subir todos os servicos
+# (as tabelas sao criadas automaticamente no boot do backend - nao precisa
+#   rodar create_all nem alembic; ver docs/06)
 docker compose up -d --build
-
-# 3. Rodar migracoes (se usando PostgreSQL)
-docker compose exec backend alembic upgrade head
 ```
 
 Servicos disponiveis:
@@ -86,11 +84,9 @@ docker compose logs -f backend
 # Entrar no container do backend
 docker compose exec backend bash
 
-# Rodar migracoes
-docker compose exec backend alembic upgrade head
-
-# Criar tabelas (SQLite)
-docker compose exec backend python -c "from app.create_tables import *"
+# (tabelas sao criadas automaticamente no boot - nao ha migracao manual)
+# Ver tabelas criadas (confirmacao):
+docker compose exec backend python -c "from app.database.database import engine; from sqlalchemy import inspect; print(inspect(engine).get_table_names())"
 
 # Rodar testes
 docker compose exec backend pytest tests/ -xvs

@@ -100,7 +100,10 @@ nano .env
 | `EVOLUTION_API_KEY` | a **chave da Evolution** (NAO a da Groq) | voce define/genera |
 | `EVOLUTION_AUTH_KEY` | a mesma da Evolution | voce define/genera |
 | `EVOLUTION_INSTANCE` | `flowai` (ou o nome que criar) | voce define |
-| `EVOLUTION_SERVER_URL` | `http://SEU_IP:8080` | IP publico da VPS |
+
+> **Nao use `EVOLUTION_SERVER_URL` nem `EVOLUTION_DATABASE_URI`** — sao variaveis
+> mortas (nao lidas por codigo; ver docs/05). O compose da Evolution define
+> `SERVER_URL`/`DATABASE_CONNECTION_URI` hardcoded.
 
 ### GERAR chaves URGENTEMENTE (importante)
 
@@ -141,17 +144,14 @@ Servicos esperados (todos `Up`/`healthy`):
 > 8000, inexistente neles) e ficavam `unhealthy` **mas rodando normalmente**.
 > Isso foi corrigido no compose com `healthcheck: disable`. Nao e erro real.
 
-## Passo 11: Criar as tabelas do banco (IMPORTANTE - nao e Alembic)
+## Passo 11: Confirmar tabelas do banco (criadado automaticamente no boot)
 
-> **Este projeto NAO usa Alembic para versionar o schema.** O `alembic/versions`
-> esta vazio e `alembic upgrade head` nao cria tabelas. As tabelas sao criadas
-> via SQLAlchemy `Base.metadata.create_all`. Rode o comando abaixo apos subir:
+> **As tabelas sao criadas automaticamente no boot do backend** (o `lifespan` em
+> `app/main.py` chama `Base.metadata.create_all`). **NAO e preciso rodar
+> `create_all` manualmente.** Este projeto NAO usa Alembic para criar o schema base
+> (`alembic/versions` tem so migrations adicionais/idempotentes). Veja docs/06.
 
-```bash
-docker compose exec backend python -c "from app.create_tables import *"
-```
-
-Confirme as tabelas:
+Apenas confira as tabelas (opcional):
 
 ```bash
 docker compose exec backend python -c "from app.database.database import engine; from sqlalchemy import inspect; print(inspect(engine).get_table_names())"
@@ -280,7 +280,6 @@ git fetch origin
 git switch -C main origin/main   # evita detached HEAD
 docker compose up -d --build
 docker compose -f docker-compose.evolution.yml up -d
-docker compose exec backend python -c "from app.create_tables import *"
 docker compose restart
 ```
 

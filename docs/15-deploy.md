@@ -14,13 +14,15 @@ cp .env.production.example .env
 
 # 2. Subir servicos (levanta postgres LOCAL + redis + backend + celery + frontend)
 docker compose up -d --build
-
-# 3. Criar as tabelas (NAO e alembic - ver docs/06)
-docker compose exec backend python -c "from app.create_tables import *"
 ```
 
 > **Banco:** o deploy usa **Postgres local** (servico `postgres` do compose,
 > volume `postgres_data`). Nao usa Supabase (ver docs/06).
+
+> **As tabelas sao criadas AUTOMATICAMENTE no boot** do backend (o `lifespan` em
+> `app/main.py` chama `Base.metadata.create_all`). Nao e preciso (nem recomendado)
+> rodar `create_all` manualmente apos subir. Nao usa Alembic para criar as tabelas
+> base (ver docs/06).
 
 **Servicos:**
 

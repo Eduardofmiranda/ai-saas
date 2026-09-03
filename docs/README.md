@@ -29,6 +29,13 @@ Plataforma de automacao de processos baseada em workflows, inspirada no n8n, foc
 | [18-troubleshooting.md](18-troubleshooting.md) | Troubleshooting |
 | [19-desenvolvimento.md](19-desenvolvimento.md) | Guia de desenvolvimento |
 
+## Guias de deploy (raiz do projeto)
+
+| Arquivo | Conteudo |
+|---------|----------|
+| [CreateVPS.md](../CreateVPS.md) | **Criacao/reinstalacao da VPS do zero** (reset completo + passo a passo com todos os comandos) |
+| [VPS-SETUP.md](../VPS-SETUP.md) | Roteiro E2E validado do deploy real |
+
 ## Como usar esta documentacao
 
 - Para entender o sistema: comece por [01-visao-geral.md](01-visao-geral.md)

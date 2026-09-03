@@ -7,11 +7,12 @@
 - **ORM**: SQLAlchemy
 - **Criacao do schema**: **SQLAlchemy `Base.metadata.create_all`** (mecanismo principal)
 
-> **Como o schema e criado de fato (confirmado em 03/09/2026):**
+> **Como as tabelas sao criadas de fato (confirmado em 03/09/2026):**
 >
 > 1. As **tabelas base** (`companies`, `users`, `workflows`, `executions`, etc.)
->    sao criadas por **`Base.metadata.create_all`** via `app/create_tables.py`.
->    O `alembic upgrade head` **NAO** cria essas tabelas.
+>    sao criadas por **`Base.metadata.create_all`**, que roda **automaticamente no
+>    boot do backend** (o `lifespan` em `app/main.py`). Nao e preciso rodar
+>    `create_all` manualmente. O `alembic upgrade head` **NAO** cria essas tabelas.
 > 2. Existem migrations Alembic **adicionais e idempotentes** em
 >    `alembic/versions/`:
 >    - `0002_pending_flows.py` — adiciona `pending_flows` (so cria se nao existir)
@@ -19,19 +20,18 @@
 >
 >    Elas **assumem que as tabelas base ja existem** e apenas garantem que as
 >    tabelas `pending_flows`/`knowledge`/`knowledge_chunks` existam (checando com
->    `inspect` e retornando sem erro se ja existirem). Na pratica sao
->    **supérfluas** quando o `create_all` e usado, pois ele ja cria tudo.
+>    `inspect` e retornando sem erro se ja existirem). Como o `create_all` do boot
+>    ja cria tudo (incluindo essas tabelas), elas sao **supérfluas** na pratica.
 >
-> **Procedimento recomendado apos subir o docker (cria todas as tabelas):**
+> **Para conferir as tabelas apos o boot (nao e necessario criar manualmente):**
 > ```bash
-> docker compose exec backend python -c "from app.create_tables import *"
+> docker compose exec backend python -c "from app.database.database import engine; from sqlalchemy import inspect; print(inspect(engine).get_table_names())"
 > ```
-> (Opcional e inofensivo, roda tambem o `alembic upgrade head` depois.)
 >
 > **Historico do deploy real (03/09/2026):** na VPS, `alembic upgrade head`
 > criou apenas a tabela `alembic_version` e **nao** as tabelas base — por isso o
-> `create_all` e o caminho que de fato cria as tabelas. As tabelas foram
-> confirmadas criadas apos rodar o `create_all`.
+> `create_all` e o caminho que de fato cria as tabelas. A mudanca para o boot
+> automatico (lifespan) elimina a necessidade do passo manual de `create_all`.
 >
 > **Supabase:** abandonado como banco principal devido ao problema de IPv6
 > (a direct connection resolve so IPv6 e VPS sem rede IPv6 nao conecta). O
@@ -180,25 +180,24 @@ Execution 1──N PendingFlow
 
 ## Migrations
 
-> Ver nota no topo: a criacao do schema e via `create_all`, nao Alembic.
-> Os passos abaixo de Alembic existem na infraestrutura, mas NAO sao usados
-> para gerar o schema atual.
+> Ver nota no topo: a criacao do schema base e via `create_all` automatico no
+> boot do backend. As migrations Alembic existem na infraestrutura, mas NAO sao
+> usadas para gerar o schema base.
 
 ```bash
-# Rodar migracoes (NAO cria as tabelas deste projeto - schema vazio)
+# Alembic NAO cria as tabelas base deste projeto (schema vazio de base)
 alembic upgrade head
 
-# Criar nova migracao
+# (raro) Gerar nova migracao Alembic adicional/idempotente
 alembic revision --autogenerate -m "descricao"
 ```
 
-## Criacao Manual (Dev / Producao) — O CAMINHO DE FATO
+## Criacao das tabelas (automatica no boot — nao e necessario rodar manual)
 
-```bash
-python -c "from app.create_tables import *"
-```
+O `lifespan` em `app/main.py` chama `Base.metadata.create_all` ao iniciar o
+backend (dev e producao). **Na primeira subida, o banco sobe com todas as
+tabelas.** Para conferir (opcional):
 
-Confirmar tabelas:
 ```bash
 docker compose exec backend python -c "from app.database.database import engine; from sqlalchemy import inspect; print(inspect(engine).get_table_names())"
 ```
