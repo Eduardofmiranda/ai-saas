@@ -2,10 +2,24 @@
 
 ## Tecnologia
 
-- **Producao**: PostgreSQL 16
+- **Producao**: PostgreSQL 16 (**local no Docker** — container `ai-saas-postgres`)
 - **Desenvolvimento**: SQLite (automático quando `DATABASE_URL` nao configurado)
 - **ORM**: SQLAlchemy
-- **Migrations**: Alembic
+- **Criacao do schema**: **SQLAlchemy `Base.metadata.create_all`** (NAO Alembic)
+
+> **IMPORTANTE (confirmado em 03/09/2026):** este projeto **NAO usa Alembic
+> para versionar o schema.** O diretorio `alembic/versions` esta vazio e
+> `alembic upgrade head` nao cria as tabelas. As tabelas sao criadas por
+> `Base.metadata.create_all` (via `app/create_tables.py`).
+>
+> Apos subir o docker, rode:
+> ```bash
+> docker compose exec backend python -c "from app.create_tables import *"
+> ```
+>
+> O Supabase foi **abandonado** como banco principal devido ao problema de IPv6
+> (a direct connection resolve so IPv6 e VPS sem rede IPv6 nao conecta). O
+> deploy padrao usa **Postgres local**.
 
 ## Tabelas
 
@@ -150,16 +164,29 @@ Execution 1──N PendingFlow
 
 ## Migrations
 
+> Ver nota no topo: a criacao do schema e via `create_all`, nao Alembic.
+> Os passos abaixo de Alembic existem na infraestrutura, mas NAO sao usados
+> para gerar o schema atual.
+
 ```bash
-# Rodar migracoes
+# Rodar migracoes (NAO cria as tabelas deste projeto - schema vazio)
 alembic upgrade head
 
 # Criar nova migracao
 alembic revision --autogenerate -m "descricao"
 ```
 
-## Criacao Manual (Dev)
+## Criacao Manual (Dev / Producao) — O CAMINHO DE FATO
 
 ```bash
 python -c "from app.create_tables import *"
 ```
+
+Confirmar tabelas:
+```bash
+docker compose exec backend python -c "from app.database.database import engine; from sqlalchemy import inspect; print(inspect(engine).get_table_names())"
+```
+
+Tabelas esperadas: `companies, company_configs, users, customers, conversations,
+messages, workflows, executions, pending_flows, knowledge, knowledge_chunks`
+(mais possivelmente `alembic_version`, inofensivo).

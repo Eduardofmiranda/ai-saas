@@ -43,7 +43,16 @@ decrypted = decrypt_field("chave-legada")  # → "chave-legada" (sem alteracao)
 
 ## Riscos Conhecidos
 
-1. **Credenciais vazadas** — Senha Supabase, chave Groq expostas no historico. **URGENTE: rotacionar antes de producao.**
+1. **Credenciais VAZADAS em logs de conversa (03/09/2026)** — Ainda em uso,
+   exigem rotacao imediata:
+   - Chave da Groq (`DEFAULT_AI_API_KEY`) — rotacionar em console.groq.com.
+   - Senha do Postgres local (`POSTGRES_PASSWORD` / `DATABASE_URL`) — `yangeme`.
+   - Chave da Evolution (`EVOLUTION_AUTH_KEY` / `EVOLUTION_API_KEY`).
+   - `SECRET_KEY` e `SECRET_ENCRYPTION_KEY` estavam **iguais** — usar valores
+     distintos e rotacionar (cuidado: rotacionar quebra a descriptografia das
+     chaves criptografadas ja salvas; planejar migracao).
+   - `REDIS_URL` ja apontou para um Redis externo (Redis Cloud) com senha exposta
+     — corrigido para o Redis interno no `.env` atual.
 2. **Rate limiting** — Nao implementado. Vulneravel a brute force.
 3. **HTTPS** — Nao configurado. Necessario para producao.
 4. **CORS** — Configurado apenas para localhost:5173 em dev. Ajustar para producao.
@@ -52,7 +61,8 @@ decrypted = decrypt_field("chave-legada")  # → "chave-legada" (sem alteracao)
 
 ## Checklist Antes de Producao
 
-- [ ] Rotacionar credenciais vazadas
+- [ ] Rotacionar **todas** as credenciais vazadas (Groq, postgres, Evolution, SECRET_*)
+- [ ] Garantir `SECRET_KEY` != `SECRET_ENCRYPTION_KEY`
 - [ ] Configurar HTTPS
 - [ ] Configurar CORS para dominio real
 - [ ] Configurar rate limiting

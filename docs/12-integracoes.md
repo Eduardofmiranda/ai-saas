@@ -20,14 +20,15 @@ A Evolution API e um projeto **open-source e self-hosted** (NÃO e um servico pa
 
 1. Subir a imagem pelo Docker (feito pelo `docker-compose.evolution.yml`).
 2. **Se v2.4.0+:** ativar a licenca gratuita da instancia (guia acima) e copiar o `api_key`.
-   **Se v2.3.x e anteriores:** definir `EVOLUTION_API_KEY` no `.env` (vira o `AUTHENTICATION_API_KEY` da Evolution).
-3. Criar uma **instancia** (`createFlowAi`).
-4. Escanear o QR Code com o WhatsApp que sera usado para atender.
-5. Configurar o webhook para apontar ao nosso backend.
+   **Se v2.3.x e anteriores (a versao fixada):** definir `EVOLUTION_AUTH_KEY` no `.env` (vira o `AUTHENTICATION_API_KEY` da Evolution) e `EVOLUTION_API_KEY` (mesma chave, usada pelo backend).
+3. Criar uma **instancia** (`POST /instance/create`, obrigatorio `integration: "WHATSAPP-BAILEYS"`).
+4. Obter o **QR** (`GET /instance/connect/{instance}`, expira em ~1min) e escanear com o WhatsApp.
+5. Configurar o **webhook** para apontar ao backend (`POST /webhook/set/{instance}`, com `"enabled": true`).
 
 **O que e cada configuracao:**
-- `EVOLUTION_BASE_URL`: endereco da sua propria instalacao (ex: `http://localhost:8080` ou `http://evolution:8080` dentro do docker).
-- `EVOLUTION_API_KEY`: a chave de acesso da instancia — em v2.4.0+ e o `api_key` obtido na **ativacao de licenca**; em v2.3.x e anteriores e a senha que VOCE define (`AUTHENTICATION_API_KEY`).
+- `EVOLUTION_BASE_URL`: endereco da instalacao — dentro do docker e `http://evolution:8080` (deve estar na **mesma rede** do backend).
+- `EVOLUTION_AUTH_KEY`: chave injetada como `AUTHENTICATION_API_KEY` da Evolution (v2.3.x = a que VOCE define). NAO e a chave da Groq.
+- `EVOLUTION_API_KEY`: a mesma chave, usada pelo **backend** para autenticar nas chamadas (`send_text`).
 - `EVOLUTION_INSTANCE`: nome que voce deu a sua instancia (ex: `flowai`).
 
 ### Como obter o api_key (Evolution v2.4.0+)
@@ -67,6 +68,15 @@ EVOLUTION_API_KEY = "sua-chave"
 EVOLUTION_INSTANCE = "sua-instancia"
 ```
 
+> **Rede:** a Evolution precisa estar na **mesma rede docker** do backend
+> (`ai-saas_ai-saas-network`). No `docker-compose.evolution.yml` ela entra nessa
+> rede via `external: true` + `name: ai-saas_ai-saas-network`. Se o backend
+> tentar `http://evolution:8080` e der "Name or service not known", a Evolution
+> esta numa rede separada.
+
+> **Compose da Evolution nao usa `env_file: .env`.** Todas as variaveis sao
+> definidas explicitamente (para nao injetar as chaves do app).
+
 > **Alternativa paga (opcional):** existem provedores que hospedam a Evolution API para voce (ex: hosting gerenciado), cobrando por instancia. Nesse caso voce so usa a URL e a chave que eles te passam. Para este projeto usamos a instalacao self-hosted da Evolution na VPS.
 
 ### Endpoints Utilizados
@@ -78,7 +88,16 @@ EVOLUTION_INSTANCE = "sua-instancia"
 
 ### Webhook
 
-**URL:** `POST /webhook/whatsapp/{company_id}`
+**URL real do backend:** `POST /webhook/whatsapp/{company_id}` (app/routers/webhook_router.py).
+
+Para configurar na Evolution (v2.3.x), o campo `"enabled": true` e obrigatorio:
+
+```bash
+KEY="$(grep '^EVOLUTION_AUTH_KEY=' .env | cut -d= -f2-)"
+curl -s -X POST http://127.0.0.1:8080/webhook/set/flowai \
+  -H "apikey: $KEY" -H 'Content-Type: application/json' \
+  -d '{"webhook":{"enabled":true,"url":"http://backend:8000/webhook/whatsapp/1","events":["MESSAGES_UPSERT","QRCODE_UPDATED","CONNECTION_UPDATE"]}}'
+```
 
 **Payload esperado (Evolution API v2):**
 ```json

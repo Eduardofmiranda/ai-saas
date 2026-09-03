@@ -1,5 +1,9 @@
 # Setup VPS Completo - E2E
 
+> **Status: VALIDADO em producao (deploy real em 03/09/2026, Hostinger).**
+> Este roteiro reflete o que de fato funciona, apos o primeiro deploy completo.
+> Passos legitimados na pratica; nada aqui e "planejado" sem confirmacao.
+
 ## Configuracao Recomendada
 
 | Recurso | Minimo | Recomendado |
@@ -8,358 +12,341 @@
 | RAM | 1 GB | 2 GB |
 | Disco | 20 GB SSD | 40 GB SSD |
 | OS | Ubuntu 22.04 LTS | Ubuntu 24.04 LTS |
-| Preco | $4-6/mes | $6-12/mes |
 
-**Provedores sugeridos:**
-- DigitalOcean ($6/mes - 1GB RAM, 25GB SSD)
-- Vultr ($6/mes - 1GB RAM, 25GB SSD)
-- Hetzner ($4.50/mes - 2 vCPU, 4GB RAM)
+**Provedores:
+- Hostinger (usado no deploy real)
+- DigitalOcean / Vultr / Hetzner (similares)
+
+> **Firewall:** nas VPS com firewall de painel (ex.: Hostinger Security >
+> Firewall), libere as portas **80**, **8080** e **22**. A porta **8080** e a da
+> Evolution API (necessaria para o QR e para acessar a API de fora). Se nao
+> liberar, a Evolution ainda funciona para o backend, mas o QR nao abre fora.
+
+---
+
+## Visao arquitetural (o que de fato se instala)
+
+| Componente | Como roda |
+|------------|-----------|
+| Frontend (React) | Nginx dentro de container `ai-saas-frontend` (porta 80) |
+| Backend (FastAPI/uvicorn) | Container `ai-saas-backend` (porta 8000) |
+| Postgres | **LOCAL** no Docker (container `ai-saas-postgres`, porta 5432 interna) |
+| Redis | Container `ai-saas-redis` (porta 6379 interna) |
+| Celery worker/beat | Containers `ai-saas-celery-worker` / `ai-saas-celery-beat` |
+| Evolution API (WhatsApp) | Container `evolution` (porta 8080), compose separado |
+
+> **Banco de dados:** o deploy usa **Postgres local do Docker** (padrao atual).
+> O Supabase foi abandonado por causa do problema de IPv6 (a "direct connection"
+> do Supabase resolve so IPv6 e VPS sem rede IPv6 nao conecta). A evolucao
+> correta esta documentada em `docs/06-banco-de-dados.md`.
 
 ---
 
 ## Passo 1: Acessar a VPS
 
 ```bash
-# Apos comprar a VPS, voce recebera um IP e senha
 ssh root@SEU_IP
 ```
 
-## Passo 2: Atualizar o Sistema
+## Passo 2-7: Base do sistema
 
 ```bash
+# Atualizar sistema
 apt update && apt upgrade -y
-```
 
-## Passo 3: Instalar Docker
-
-```bash
-# Instalar Docker
+# Instalar Docker (e Docker Compose v2 junto)
 curl -fsSL https://get.docker.com | sh
-
-# Habilitar Docker
 systemctl enable --now docker
-
-# Verificar
 docker --version
-```
-
-## Passo 4: Instalar Docker Compose
-
-```bash
-# Docker Compose ja vem junto com Docker
 docker compose version
-```
 
-## Passo 5: Instalar Git
-
-```bash
+# Instalar Git
 apt install git -y
-```
 
-## Passo 6: Criar Usuario Non-Root (Opcional)
-
-```bash
-# Criar usuario deploy
-adduser deploy
-usermod -aG docker deploy
-
-# Trocar para usuario deploy
-su - deploy
-```
-
-## Passo 7: Clonar o Repositorio
-
-```bash
+# Clonar (usa o mesmo diretorio da VPS real)
 cd /opt
 git clone https://github.com/Eduardofmiranda/ai-saas.git
 cd ai-saas
+
+# IMPORTANTE: garantir que esta no branch main acompanhando o upstream
+# (a VPS pode ficar em detached HEAD apos clone/checkout - corrigir):
+git fetch origin
+git switch -C main origin/main
 ```
 
-## Passo 8: Criar Arquivo .env
+> **Dica (evita digitas senha toda vez):** gere uma chave SSH local e copie
+> para a VPS (`ssh-keygen` local + `ssh-copy-id root@SEU_IP`). Usado no deploy real.
 
-O repositorio ja vem com um exemplo pronto para producao. Use-o:
+## Passo 8: Criar o .env
+
+Use o template de producao:
 
 ```bash
 cp .env.production.example .env
-
-# Editar com suas configuracoes
 nano .env
 ```
 
-> **Nota:** nao use o `.env.example` para a VPS. Use o `.env.production.example`, que ja foi feito para producao com Supabase.
+### Valores essenciais (o que de fato importa)
 
-### Explicacao das variaveis mais confusas:
+| Variavel | Valor correto | De onde vem |
+|----------|---------------|-------------|
+| `DATABASE_URL` | `postgresql://postgres:SUA_SENHA@postgres:5432/ai_saas` | Postgres LOCAL (host `postgres`) |
+| `POSTGRES_PASSWORD` | mesma senha do `DATABASE_URL` | voce define |
+| `REDIS_URL` | `redis://redis:6379/0` | Redis interno (MANTENHA) |
+| `SECRET_KEY` | `openssl rand -hex 32` | gerado na VPS |
+| `SECRET_ENCRYPTION_KEY` | `openssl rand -hex 32` | gerado na VPS |
+| `DEFAULT_AI_API_KEY` | chave da Groq | console.groq.com |
+| `EVOLUTION_BASE_URL` | `http://evolution:8080` | Evolution interna |
+| `EVOLUTION_API_KEY` | a **chave da Evolution** (NAO a da Groq) | voce define/genera |
+| `EVOLUTION_AUTH_KEY` | a mesma da Evolution | voce define/genera |
+| `EVOLUTION_INSTANCE` | `flowai` (ou o nome que criar) | voce define |
+| `EVOLUTION_SERVER_URL` | `http://SEU_IP:8080` | IP publico da VPS |
 
-| Variavel | O que faz | De onde vem |
-|----------|-----------|-------------|
-| `DATABASE_URL` | Connection string do banco PostgreSQL | **Supabase** (seguindo seu projeto). Cole a string do painel do Supabase |
-| `SECRET_KEY` | Assina os tokens JWT de login | Gere na VPS com `openssl rand -hex 32`. Nao e um valor real fixo |
-| `SECRET_ENCRYPTION_KEY` | Criptografa chaves IA/Evolution de cada empresa | Gere na VPS com `openssl rand -hex 32` |
-| `DEFAULT_AI_*` | Chave/modelo de IA padrao (Groq) | Sua chave no painel da Groq |
-| `EVOLUTION_*` | Conexao com a Evolution API (WhatsApp) | Voce define (criar instancia) |
-| `REDIS_URL` | Fila do Celery | Mantenha `redis://redis:6379/0` (servico interno do docker) |
-
-### Gerar Chaves Secretas (na VPS):
-
-```bash
-# Gerar SECRET_KEY
-openssl rand -hex 32
-
-# Gerar SECRET_ENCRYPTION_KEY
-openssl rand -hex 32
-```
-
-Cole os dois resultados no `.env` (nos campos `SECRET_KEY` e `SECRET_ENCRYPTION_KEY`).
-
-## Passo 9: Subir Database com Supabase
-
-O banco usado e o **Supabase** (nao roda Postgres local). Confirme no `.env`:
-
-```env
-DATABASE_URL=postgresql://postgres:SUA_SENHA_SUPABASE@db.SEU_PROJETO.supabase.co:5432/postgres
-```
-
-O `docker-compose.yml` do repositorio ja usa essa variavel. Nada mais a fazer aqui.
-
-## Passo 10: Subir os Servicos (RAILWAY/BACKEND/FRONTEND)
-
-O repositorio ja tem todo o `docker-compose.yml`. Basta subir:
+### GERAR chaves URGENTEMENTE (importante)
 
 ```bash
-# Build e subir (backend, celery, frontend, redis)
+openssl rand -hex 32   # SECRET_KEY
+openssl rand -hex 32   # SECRET_ENCRYPTION_KEY
+openssl rand -hex 32   # EVOLUTION_AUTH_KEY / EVOLUTION_API_KEY (uma chave propria)
+```
+
+> **⚠️ Regra de seguranca:** NUNCA use a chave da Groq como `EVOLUTION_API_KEY`
+> (erro comum que ocorreu no deploy real). A Groq fica so em `DEFAULT_AI_API_KEY`.
+> A Evolution tem a propria chave (`EVOLUTION_AUTH_KEY`/`EVOLUTION_API_KEY`).
+
+> **⚠️ `SECRET_KEY` e `SECRET_ENCRYPTION_KEY` NAO podem ser iguais e NAO podem
+> mudar apos salvar dados criptografados.** No deploy real ficaram iguais
+> (erro a corrigir). Gere duas chaves distintas.
+
+## Passo 9-10: Subir a stack principal
+
+```bash
 docker compose up -d --build
-
-# Verificar status
 docker compose ps
-
-# Ver logs
-docker compose logs -f backend
 ```
 
-## Passo 11: Subir a Evolution API (WhatsApp) separadamente
+Servicos esperados (todos `Up`/`healthy`):
 
-A Evolution API usa um compose proprio (nao interfere no principal):
+| Container | Health | Porta |
+|-----------|--------|-------|
+| ai-saas-postgres | healthy | 5432 (interna) |
+| ai-saas-redis | healthy | 6379 (interna) |
+| ai-saas-backend | healthy | 8000 |
+| ai-saas-frontend | healthy | 80 |
+| ai-saas-celery-worker | Up (healthcheck desabilitado) | — |
+| ai-saas-celery-beat | Up (healthcheck desabilitado) | — |
+
+> **Sobre os healthchecks `unhealthy`:** em versoes anteriores, celery-worker e
+> celery-beat herdavam o `HEALTHCHECK` do `Dockerfile.backend` (que checa a porta
+> 8000, inexistente neles) e ficavam `unhealthy` **mas rodando normalmente**.
+> Isso foi corrigido no compose com `healthcheck: disable`. Nao e erro real.
+
+## Passo 11: Criar as tabelas do banco (IMPORTANTE - nao e Alembic)
+
+> **Este projeto NAO usa Alembic para versionar o schema.** O `alembic/versions`
+> esta vazio e `alembic upgrade head` nao cria tabelas. As tabelas sao criadas
+> via SQLAlchemy `Base.metadata.create_all`. Rode o comando abaixo apos subir:
 
 ```bash
-# Usa o docker-compose.evolution.yml que ja esta no repositorio
-docker compose -f docker-compose.evolution.yml up -d
-
-# Verificar status
-docker compose -f docker-compose.evolution.yml ps
-```
-
-## Passo 12: Rodar Migracoes
-
-```bash
-# Criar tabelas no banco (Supabase)
 docker compose exec backend python -c "from app.create_tables import *"
 ```
 
-## Passo 13: Configurar Evolution API
+Confirme as tabelas:
 
-> **Antes de comecar:** a Evolution API e **open-source e self-hosted** e **gratuita**. Voce mesmo instala a imagem Docker na sua VPS e conecta no seu proprio numero de WhatsApp. Na versao atual fixada (`v2.3.7`), a `EVOLUTION_API_KEY` e a senha que VOCE define no `.env` (param `AUTHENTICATION_API_KEY`). **Em versoes 2.4.0+** a instancia exige a **ativacao de licenca gratuita** (você autoriza no site da Evolution e ela recebe o `api_key`); nesse caso, use esse `api_key` no `EVOLUTION_API_KEY`. Detalhes em `docs/12-integracoes.md`.
+```bash
+docker compose exec backend python -c "from app.database.database import engine; from sqlalchemy import inspect; print(inspect(engine).get_table_names())"
+```
 
-### Subir a Evolution (se ainda nao subiu no Passo 11):
+Deve listar: `companies, company_configs, users, customers, conversations,
+messages, workflows, executions, pending_flows, knowledge, knowledge_chunks`
+(e possivelmente `alembic_version`, que e inofensivo).
+
+## Passo 12: Subir a Evolution API (WhatsApp)
+
+A Evolution usa **compose separado** (`docker-compose.evolution.yml`). Pontos
+cruciais aprendidos no deploy real:
+
+1. **NAO usa `env_file: .env`** — todas as variaveis sao definidas
+   explicitamente no compose. Isso evita vazar as chaves do app (ex.: Groq)
+   para dentro da Evolution e conflitar com o `AUTHENTICATION_API_KEY`.
+2. **Usa `EVOLUTION_AUTH_KEY`** (do `.env`) como `AUTHENTICATION_API_KEY`.
+3. **Conecta na MESMA rede do backend** (`ai-saas_ai-saas-network`, external)
+   para que o backend alcance `http://evolution:8080`. Sem isso o WhatsApp
+   nunca conecta (foi o principal bug).
+4. `DATABASE_ENABLED=false` com `DATABASE_CONNECTION_URI` apontando para um
+   banco **separado** `evolution` (a Evolution roda o Prisma e precisa de um
+   schema vazio — se apontar para `ai_saas` que ja tem tabelas, falha com
+   P3005 "schema not empty").
+
+Subir:
 
 ```bash
 docker compose -f docker-compose.evolution.yml up -d
+docker ps | grep evolution   # deve estar Up
 ```
 
-### Criar Instancia:
+Teste de conectividade backend -> Evolution:
 
 ```bash
-# Criar instancia "flowai"
-curl -X POST http://localhost:8080/instance/createFlowAi \
-  -H "Content-Type: application/json" \
-  -H "apikey: meu-secret-key-evolution-123" \
-  -d '{
-    "instanceName": "flowai",
-    "integration": "WHATSAPP-BAILEYS",
-    "qrcode": true
-  }'
+docker exec ai-saas-backend python -c "import urllib.request; print(urllib.request.urlopen('http://evolution:8080/', timeout=5).status)"
+# Esperado: 200
 ```
 
-### Conectar WhatsApp:
+## Passo 13: Configurar a instancia e o QR
 
-1. Apos criar a instancia, voce recebera um QR Code
-2. Abra o WhatsApp no celular
-3. Va em **Aparelhos conectados** > **Conectar aparelho**
-4. Escaneie o QR Code
+> A Evolution v2.3.7 (imagem `evoapicloud/evolution-api:v2.3.7`) usa a chave que
+> voce definiu como `EVOLUTION_AUTH_KEY` para autenticar (`apikey`). NAO requer
+> ativacao de licenca (isso e so v2.4.0+).
 
-### Configurar Webhook:
+### 1) Conferir a chave da Evolution no container
 
 ```bash
-# Configurar webhook para receber mensagens
-curl -X POST http://localhost:8080/webhook/setFlowai \
-  -H "Content-Type: application/json" \
-  -H "apikey: meu-secret-key-evolution-123" \
-  -d '{
-    "enabled": true,
-    "url": "http://backend:8000/webhook/whatsapp/1",
-    "events": ["messages.upsert"]
-  }'
+docker exec evolution sh -c 'echo $AUTHENTICATION_API_KEY'
+# Deve imprimir a chave (NAO vazia)
 ```
 
-## Passo 14: Acessar o Sistema
-
-1. Acesse `http://SEU_IP`
-2. Faca cadastro (criara uma empresa automaticamente)
-3. Va em **Configuracoes** e configure:
-   - Chave IA (ja vem configurada com Groq)
-   - Evolution API (ja vem configurada)
-4. Crie um workflow ou use um template
-5. Ative o workflow
-6. Envie uma mensagem no WhatsApp conectado
-
-## Passo 15: Configurar SSL (Recomendado)
-
-### Opcao 1: Cloudflare (Mais Facil)
-
-1. Crie uma conta no Cloudflare (gratis)
-2. Adicione seu dominio
-3. Ative o proxy (nuvem laranja)
-4. O HTTPS ja funciona automaticamente
-
-### Opcao 2: Certbot (Mais Avancado)
+### 2) Criar a instancia
 
 ```bash
-# Instalar Nginx
-apt install nginx -y
-
-# Configurar Nginx
-cat > /etc/nginx/sites-available/flowai << 'EOF'
-server {
-    listen 80;
-    server_name seu-dominio.com;
-
-    location / {
-        proxy_pass http://localhost:80;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    location /api/ {
-        proxy_pass http://localhost:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    location /webhook/ {
-        proxy_pass http://localhost:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-EOF
-
-# Ativar site
-ln -s /etc/nginx/sites-available/flowai /etc/nginx/sites-enabled/
-rm /etc/nginx/sites-enabled/default
-nginx -t
-systemctl restart nginx
-
-# Instalar Certbot
-apt install certbot python3-certbot-nginx -y
-certbot --nginx -d seu-dominio.com
+KEY="$(grep '^EVOLUTION_AUTH_KEY=' .env | cut -d= -f2-)"
+curl -s -X POST http://127.0.0.1:8080/instance/create \
+  -H "apikey: $KEY" -H 'Content-Type: application/json' \
+  -d '{"instanceName":"flowai","qrcode":true,"integration":"WHATSAPP-BAILEYS"}'
 ```
 
-## Atualizar a VPS (apos novas alteracoes no codigo)
+> **`integration` e obrigatorio** na v2.3.7 — sem ele retorna
+> "Invalid integration".
 
-O setup completo acima e feito **apenas uma vez**. Depois disso, para trazer
-alteracoes novas (backend/frontend), basta atualizar o codigo e rebuildar —
-**sem refazer o `.env` nem redigitando as configuracoes**:
+### 3) Obter o QR (expira em ~1 min)
+
+```bash
+curl -s "http://127.0.0.1:8080/instance/connect/flowai" -H "apikey: $KEY" \
+  | python3 -m json.tool   # base64 -> imagem PNG do QR
+```
+
+Para salvar o PNG e abrir localmente:
 
 ```bash
 cd /opt/ai-saas
-git pull
+KEY="$(grep '^EVOLUTION_AUTH_KEY=' .env | cut -d= -f2-)"
+curl -s "http://127.0.0.1:8080/instance/connect/flowai" -H "apikey: $KEY" \
+  | python3 -c "import sys,json,base64; d=json.load(sys.stdin); b=d['qrcode']['base64'].split(',',1)[1]; open('/opt/ai-saas/qrcode.png','wb').write(base64.b64decode(b)); print('salvo')"
+```
+
+Baixe para a maquina local (`scp root@SEU_IP:/opt/ai-saas/qrcode.png .`) e
+escaneie com o celular.
+
+> **Se o QR expirar** (KeyError 'qrcode' no JSON), rode o comando `connect`
+> novamente para gerar um novo. Ele expira em ~20-60s.
+
+### 4) Escanear
+
+1. Abra o **WhatsApp** no celular
+2. **Aparelhos conectados > Conectar aparelho**
+3. Escaneie o QR (imagem PNG)
+
+### 5) Configurar o webhook (para o backend receber mensagens)
+
+```bash
+KEY="$(grep '^EVOLUTION_AUTH_KEY=' .env | cut -d= -f2-)"
+curl -s -X POST http://127.0.0.1:8080/webhook/set/flowai \
+  -H "apikey: $KEY" -H 'Content-Type: application/json' \
+  -d '{"webhook":{"enabled":true,"url":"http://backend:8000/webhook/whatsapp/1","events":["MESSAGES_UPSERT","QRCODE_UPDATED","CONNECTION_UPDATE"]}}'
+```
+
+> **`"enabled": true` e obrigatorio** — sem ele retorna 400
+> 'webhook requires property "enabled"'.
+
+> **URL do webhook:** o endpoint real do backend e
+> **`POST /webhook/whatsapp/{company_id}`** (o `company_id` da plataforma, ex.:
+> 1 = primeira empresa). `/webhook/evolution` NAO existe no codigo.
+
+## Passo 14: Acessar o sistema
+
+1. Acesse `http://SEU_IP`
+2. Faca cadastro (cria empresa automaticamente)
+3. Em **Configuracoes**, confirme a Evolution (URL `http://evolution:8080`,
+   chave da Evolution, instancia `flowai`) e a IA (Groq)
+4. Crie/ative um workflow
+5. Envie mensagem no WhatsApp conectado
+
+## Passo 15: Atualizar a VPS (apos novas alteracoes no codigo)
+
+> Apenas o setup acima e uma vez. Para trazer mudancas novas:
+
+```bash
+cd /opt/ai-saas
+git fetch origin
+git switch -C main origin/main   # evita detached HEAD
 docker compose up -d --build
 docker compose -f docker-compose.evolution.yml up -d
-docker compose exec -T backend alembic upgrade head
+docker compose exec backend python -c "from app.create_tables import *"
+docker compose restart
 ```
 
 ### O que permanece intacto a cada atualizacao
 
-| Camada | Sobrevive ao `git pull`? | Motivo |
-|--------|--------------------------|--------|
-| `.env` (SECRET_KEY, SECRET_ENCRYPTION_KEY, DATABASE_URL, etc.) | Sim | `.env` e gitignored; `git pull` nao toca no arquivo |
-| Banco Supabase (usuarios, workflows, configs, chaves criptografadas) | Sim | Banco e externo (Supabase) |
-| Instancia/WhatsApp conectado na Evolution API | Sim | Container da Evolution mantem seus dados |
+| Camada | Sobrevive? | Motivo |
+|--------|------------|--------|
+| `.env` | Sim | gitignored; `git switch` nao toca no arquivo |
+| Banco Postgres local (usuarios, workflows, configs) | Sim | volume `postgres_data` |
+| Instancia/WhatsApp conectado na Evolution | Sim | volumes `evolution_instances`/`evolution_store` |
+| Tabelas da Evolution (banco `evolution`) | Sim | mesmo volume do postgres |
 
 ### Regras de ouro
 
-1. **NUNCA rode `./deploy-vps.sh` de novo** se o `.env` ja existe: o script
-   regenera `SECRET_KEY` e `SECRET_ENCRYPTION_KEY` quando estao ausentes, e isso
-   **quebraria a descriptografia** das chaves IA/Evolution ja salvas no banco.
-2. **NUNCA delete o `.env`** nem a pasta de dados da Evolution
-   (`docker compose -f docker-compose.evolution.yml down -v` apaga a instancia).
-3. Se o `git pull` falhar por conflito em arquivos locais, resolva antes de
-   rodar o build (os arquivos alterados localmente sao apenas adicionais).
+1. **NAO rode `./deploy-vps.sh`** se o `.env` ja existe: ele regenera
+   `SECRET_KEY`/`SECRET_ENCRYPTION_KEY` se ausentes, o que **quebraria a
+   descriptografia** das chaves ja salvas no banco. (Prefira os comandos
+   manuais de update acima.)
+2. **NAO delete o `.env`** nem os volumes da Evolution
+   (`down -v` apaga a instancia/usuario).
+3. `docker compose down` (sem `-v`) apaga os **containers** mas NAO o
+   **volume** `postgres_data` — os dados sobrevivem.
+4. Se o `git switch`/`pull` falhar por conflito local, resolva antes do build.
 
 ### Rollback
 
-Se uma atualizacao quebrou algo:
-
 ```bash
 cd /opt/ai-saas
-# Volte para o commit anterior (troque pelo hash desejado)
 git log --oneline -5
 git checkout <hash_do_ultimo_bom>
 docker compose up -d --build
 ```
 
-## Troubleshooting
+## Troubleshooting (o que quebrou no deploy real)
 
-### Ver logs de todos os servicos:
+### Evolution reinicia em loop com erro de Prisma
+- `DATABASE_CONNECTION_URI resolved to empty string` → falta `EVOLUTION_AUTH_KEY`
+  no `.env` ou o compose usava `env_file` com variaveis erradas. Garanta a chave.
+- `P3005 database schema is not empty` → apontou para o banco `ai_saas` (ja tem
+  tabelas). Apontar para um banco **separado** `evolution` (veja passo 12).
 
-```bash
-docker compose logs -f
-```
+### 401 Unauthorized ao criar instancia / API
+A chave no header `apikey` nao bate com o `AUTHENTICATION_API_KEY` do container.
+Confira com `docker exec evolution sh -c 'echo $AUTHENTICATION_API_KEY'` e use a
+mesma. NAO use a chave da Groq.
 
-### Reiniciar um servico especifico:
+### Backend nao acha `evolution`
+Se `http://evolution:8080` der "Name or service not known", a Evolution nao esta
+na mesma rede do backend (`ai-saas_ai-saas-network`). Verifique o compose.
 
-```bash
-docker compose restart backend
-```
+### QR expira (KeyError 'qrcode')
+Rode `connect` de novo. Expira em ~20-60s.
 
-### Parar tudo:
+### Firewall / "nao conecta via IP"
+Libere as portas 80/8080/22 no firewall do provedor (ex.: Hostinger) e no
+firewall do SO se ativo.
 
-```bash
-docker compose down
-```
+---
 
-### Limpar tudo (cuidado!):
-
-```bash
-docker compose down -v
-```
-
-### Verificar se os servicos estao rodando:
-
-```bash
-docker compose ps
-```
-
-### Testar conexao com banco:
-
-Como o banco e o Supabase (externo), teste direto:
+## Referencia - comandos uteis
 
 ```bash
-# De dentro do container do backend
-docker compose exec backend python -c "from app.database.database import engine; from sqlalchemy import text; print(engine.connect().execute(text('SELECT 1')).scalar())"
-```
-
-### Testar conexao com Redis:
-
-```bash
+docker compose logs -f backend
+docker compose logs -f celery-worker
 docker compose exec redis redis-cli ping
-```
-
-### Verificar webhook:
-
-```bash
-# Testar se o backend esta respondendo
+docker compose exec backend python -c "from app.database.database import engine; from sqlalchemy import text; print(engine.connect().execute(text('SELECT 1')).scalar())"
 curl http://localhost:8000/
-
-# Verificar se a Evolution API esta rodando
 curl http://localhost:8080/
 ```
