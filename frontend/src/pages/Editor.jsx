@@ -14,6 +14,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { api } from "../api";
+import Header from "../components/Header";
 
 const ICONS = {
   trigger: "▶",
@@ -256,8 +257,7 @@ export default function Editor() {
 
   return (
     <div className="editor-layout">
-      <header className="topbar">
-        <div className="logo">Flow<span>AI</span></div>
+      <Header>
         <div className="ed-title">
           <input
             className="ed-name"
@@ -268,8 +268,8 @@ export default function Editor() {
           />
           <span className={`badge ${wf?.active ? "on" : "off"}`}>{wf?.active ? "Ativo" : "Inativo"}</span>
         </div>
-        <div className="topbar-right">
-          <button className="btn ghost" onClick={() => navigate("/")}>Voltar</button>
+        <div className="ed-actions">
+          <button className="btn ghost" onClick={() => navigate("/fluxos")}>Voltar</button>
           <button className="btn secondary" onClick={() => run()} disabled={saving || running}>
             {running ? "Rodando..." : "Rodar"}
           </button>
@@ -277,7 +277,7 @@ export default function Editor() {
             {saving ? "Salvando..." : "Salvar"}
           </button>
         </div>
-      </header>
+      </Header>
 
       <div className="editor-body" ref={wrapper}>
         <aside className="palette">

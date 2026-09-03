@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import { useAuth } from "../context/AuthContext";
+import Header from "../components/Header";
 
 const STATE_LABELS = {
   not_configured: "Não configurado",
@@ -15,7 +15,6 @@ const STATE_LABELS = {
 };
 
 export default function WhatsApp() {
-  const { user, logout } = useAuth();
   const [config, setConfig] = useState(null);
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -159,20 +158,7 @@ export default function WhatsApp() {
 
   return (
     <div className="layout">
-      <header className="topbar">
-        <div className="logo">Flow<span>AI</span></div>
-        <nav className="topnav">
-          <a href="/">Fluxos</a>
-          <a href="/knowledge">Conhecimento</a>
-          <a href="/whatsapp" className="active">WhatsApp</a>
-          {(user?.role === "owner" || user?.role === "admin") && <a href="/admin">Administração</a>}
-        </nav>
-        <div className="topbar-right">
-          <span className="user">{user?.email}</span>
-          <button className="btn ghost" onClick={logout}>Sair</button>
-        </div>
-      </header>
-
+      <Header />
       <main className="content">
         <div className="content-head">
           <div>

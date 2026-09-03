@@ -36,6 +36,22 @@
 - [x] Build de produção passa
 - [x] Página **WhatsApp** com status de conexão + config Evolution por empresa
 - [x] Páginas **Conhecimento** (RAG) e **Administração**
+- [x] **Componente `Header`** reutilizado em todas as páginas (elimina duplicação)
+- [x] **Dashboard pós-login** com KPIs por empresa (fluxos, conversas, execuções)
+- [x] **Gerenciador de IA** (`/ai`) — configuração de provedor, modelo, system prompt com presets
+- [x] Estilos CSS completos (kpi-grid, wa-banner, exec-bar, ai-config, role-chip, etc.)
+
+## FASE 3.1 — Modo Gerenciador de IA ✅
+- [x] Página `/ai` com toggle liga/desliga da IA
+- [x] Seleção de provedor (Groq, OpenAI, DeepSeek, Mistral, Ollama)
+- [x] Seleção de modelo por provedor
+- [x] Editor de system prompt com 4 presets de personalidade:
+  - [x] Atendente Amigável (cordial, humano)
+  - [x] Vendedor Consultivo (consultivo, não pressiona)
+  - [x] Suporte Técnico (preciso, passos numerados)
+  - [x] Recepcionista Virtual (acolhe, direciona)
+- [x] Salva via `PATCH /config/` (backend existente)
+- [x] Build validado (190 módulos, sem erros)
 
 ## FASE 4 — Deploy em Produção ✅ (concluído e validado)
 - [x] Dockerfile.backend / Dockerfile.frontend (multi-stage)

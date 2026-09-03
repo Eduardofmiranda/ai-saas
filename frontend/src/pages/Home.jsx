@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
-import { useAuth } from "../context/AuthContext";
+import Header from "../components/Header";
 
 export default function Home() {
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [workflows, setWorkflows] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -82,20 +81,7 @@ export default function Home() {
 
   return (
     <div className="layout">
-      <header className="topbar">
-        <div className="logo">Flow<span>AI</span></div>
-        <nav className="topnav">
-          <a href="/" className="active">Fluxos</a>
-          <a href="/knowledge">Conhecimento</a>
-          <a href="/whatsapp">WhatsApp</a>
-          {(user?.role === "owner" || user?.role === "admin") && <a href="/admin">Administração</a>}
-        </nav>
-        <div className="topbar-right">
-          <span className="user">{user?.email}</span>
-          <button className="btn ghost" onClick={logout}>Sair</button>
-        </div>
-      </header>
-
+      <Header />
       <main className="content">
         <div className="content-head">
           <h2>Fluxos de automacao</h2>

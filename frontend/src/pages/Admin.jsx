@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
+import Header from "../components/Header";
 
 const ROLE_LABELS = {
   owner: "Dono",
@@ -15,7 +16,7 @@ const ROLE_OPTIONS = [
 ];
 
 export default function Admin() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -83,20 +84,7 @@ export default function Admin() {
 
   return (
     <div className="layout">
-      <header className="topbar">
-        <div className="logo">Flow<span>AI</span></div>
-        <nav className="topnav">
-          <a href="/">Fluxos</a>
-          <a href="/knowledge">Conhecimento</a>
-          <a href="/whatsapp">WhatsApp</a>
-          {isManager && <a href="/admin" className="active">Administração</a>}
-        </nav>
-        <div className="topbar-right">
-          <span className="user">{user?.email}</span>
-          <button className="btn ghost" onClick={logout}>Sair</button>
-        </div>
-      </header>
-
+      <Header />
       <main className="content">
         <div className="content-head">
           <div>

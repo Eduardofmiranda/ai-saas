@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import { useAuth } from "../context/AuthContext";
+import Header from "../components/Header";
 
 export default function Knowledge() {
-  const { user, logout } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -70,20 +69,7 @@ export default function Knowledge() {
 
   return (
     <div className="layout">
-      <header className="topbar">
-        <div className="logo">Flow<span>AI</span></div>
-        <nav className="topnav">
-          <a href="/">Fluxos</a>
-          <a href="/knowledge" className="active">Conhecimento</a>
-          <a href="/whatsapp">WhatsApp</a>
-          {(user?.role === "owner" || user?.role === "admin") && <a href="/admin">Administração</a>}
-        </nav>
-        <div className="topbar-right">
-          <span className="user">{user?.email}</span>
-          <button className="btn ghost" onClick={logout}>Sair</button>
-        </div>
-      </header>
-
+      <Header />
       <main className="content">
         <div className="content-head">
           <h2>Base de Conhecimento</h2>
