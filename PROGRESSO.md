@@ -72,15 +72,17 @@
 
 ---
 
-## FASE 6 — UX do consumidor / QR na tela ⏳ (PRÓXIMA — prioridade)
+## FASE 6 — UX do consumidor / QR na tela ✅ (concluído)
 **Objetivo:** o usuário final conecta o WhatsApp **dentro da aplicação**, sem precisar do manager `:8080/manager` nem curl.
 
-- [ ] Endpoint backend `POST /config/whatsapp/connect` — busca o QR via Evolution (base64) **sem expor a API key no browser**
-- [ ] Endpoint backend `POST /config/whatsapp/disconnect` (opcional)
-- [ ] UI na página WhatsApp: botão **"Conectar WhatsApp"**
-- [ ] Renderização do **QR Code** (imagem base64) na tela
-- [ ] **Auto-renovação do QR** (expira em ~20–60s) com polling/refresh
-- [ ] Refresh automático do status para "Conectado" após escanear
+- [x] Endpoint backend `POST /config/whatsapp/setup` — cria instância automaticamente na Evolution e retorna QR
+- [x] Endpoint backend `POST /config/whatsapp/disconnect`
+- [x] Frontend simplificado: **zero configuração** — só botão "Conectar WhatsApp" + QR
+- [x] Usuário não precisa saber URL, API key nem nome da instância
+- [x] Refresh automático do status para "Conectado" após escanear
+- [x] Botão "Desconectar WhatsApp"
+
+**Nota de escala:** O modelo atual (1 instância Evolution por empresa) funciona para MVP (10-50 empresas). Para escala maior (100+), considere migrar para API oficial do WhatsApp Business ou pool de instâncias.
 
 ## FASE 7 — Limitador de IA por empresa/WhatsApp ⏳ (NOVA IDEIA — configurável)
 **Objetivo:** tornar o atendimento com IA **completamente configurável para cada ramo/empresa** (e por WhatsApp/número conectado), com **limites de uso** para controlar custo/comportamento.
