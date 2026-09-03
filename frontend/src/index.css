@@ -197,6 +197,27 @@ body {
 .knowledge-form input:focus, .knowledge-form textarea:focus {
   border-color: var(--accent); outline: none;
 }
+.knowledge-search {
+  display: flex; gap: 8px; margin-bottom: 20px;
+}
+.knowledge-search input {
+  flex: 1; padding: 9px 10px; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+  font-size: 13px;
+}
+.knowledge-search input:focus { border-color: var(--accent); outline: none; }
+.knowledge-search .btn { width: auto; }
+.search-results {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; margin-bottom: 20px;
+}
+.search-results h3 { margin: 0 0 12px; }
+.detail-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 16px;
+}
+.detail-header h3 { margin: 0 0 4px; }
+.detail-header .btn-group { flex-shrink: 0; }
 .wf-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79,124,255,.2); }
 .detail-panel {
   margin-top: 24px; background: var(--panel); border: 1px solid var(--border);
