@@ -19,6 +19,11 @@ export default defineConfig({
           target: BACKEND_TARGET,
           changeOrigin: true,
           secure: false,
+          bypass(req) {
+            if (req.headers.accept && req.headers.accept.includes('text/html')) {
+              return req.url
+            }
+          },
         },
       ])
     ),

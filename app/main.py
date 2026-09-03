@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="AI SaaS - Atendimento WhatsApp", lifespan=lifespan, redirect_slashes=False)
+app = FastAPI(title="AI SaaS - Atendimento WhatsApp", lifespan=lifespan)
 
 # Frontend (Vite) acessa o backend de outra porta
 app.add_middleware(
