@@ -1,22 +1,24 @@
 services:
-  # NOTA: Usando Supabase como banco, o Postgres local NAO e necessario.
-  # Se quiser Postgres local, descomente este servico e use o .env local.
-  # postgres:
-  #   image: postgres:16-alpine
-  #   container_name: ai-saas-postgres
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-  #     POSTGRES_DB: ai_saas
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #   networks:
-  #     - ai-saas-network
+  # Banco de dados PostgreSQL local (usado para deploy simples na VPS).
+  # NOTA: para usar o Supabase em vez do local, descomente a URL do Supabase
+  # no .env e remova/desative este servico.
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai-saas-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ai_saas
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_saas"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - ai-saas-network
 
   redis:
     image: redis:7-alpine
@@ -52,6 +54,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
     networks:
@@ -78,6 +82,8 @@ services:
       EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     networks:
       - ai-saas-network
@@ -116,6 +122,7 @@ services:
 
 volumes:
   redis_data:
+  postgres_data:
 
 networks:
   ai-saas-network:
