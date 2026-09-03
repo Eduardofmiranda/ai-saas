@@ -23,6 +23,12 @@ export default function WhatsApp() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [form, setForm] = useState({ evolution_base_url: "", evolution_api_key: "", evolution_instance: "" });
+  // Conexao via QR
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [qrBase64, setQrBase64] = useState(null);
+  const [qrError, setQrError] = useState("");
+  const [qrCountdown, setQrCountdown] = useState(0);
 
   async function load() {
     try {
@@ -95,6 +101,62 @@ export default function WhatsApp() {
 
   const state = status?.state || "not_configured";
 
+  async function handleConnect() {
+    setConnecting(true);
+    setQrError("");
+    setQrBase64(null);
+    try {
+      const res = await api.connectWhatsApp();
+      setQrBase64(res.qr_base64);
+      setQrCountdown(45);
+    } catch (e) {
+      setQrError(e.message || "Erro ao gerar QR Code");
+      // Se ja estiver conectado, recarrega o status
+      await load();
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  async function handleDisconnect() {
+    if (!window.confirm("Desconectar o WhatsApp deste número?")) return;
+    setDisconnecting(true);
+    setError("");
+    try {
+      await api.disconnectWhatsApp();
+      setQrBase64(null);
+      await load();
+      alert("WhatsApp desconectado.");
+    } catch (e) {
+      setError("Erro ao desconectar: " + e.message);
+    } finally {
+      setDisconnecting(false);
+    }
+  }
+
+  // Auto-renova e re-verifica o QR (expira em ~20-60s)
+  useEffect(() => {
+    if (!qrBase64) return;
+    if (qrCountdown <= 0) {
+      handleConnect();
+      return;
+    }
+    const refreshStatus = setInterval(async () => {
+      try {
+        const st = await api.getWhatsAppStatus();
+        if (st.state === "open") {
+          setQrBase64(null);
+          setStatus(st);
+        }
+      } catch {}
+    }, 3000);
+    const timer = setInterval(() => setQrCountdown((c) => c - 1), 1000);
+    return () => {
+      clearInterval(refreshStatus);
+      clearInterval(timer);
+    };
+  }, [qrBase64, qrCountdown]);
+
   return (
     <div className="layout">
       <header className="topbar">
@@ -131,6 +193,46 @@ export default function WhatsApp() {
             </div>
             {status?.instance && <p className="muted">Instância: {status.instance}</p>}
             {status?.detail && <p className="muted">Detalhe: {status.detail}</p>}
+          </div>
+        )}
+
+        {!loading && (
+          <div className="whatsapp-connect">
+            {state === "open" ? (
+              <>
+                <h3>WhatsApp conectado</h3>
+                <p className="muted">Seu número está pareado e recebe mensagens.</p>
+                <button className="btn secondary" onClick={handleDisconnect} disabled={disconnecting}>
+                  {disconnecting ? "Desconectando..." : "Desconectar WhatsApp"}
+                </button>
+              </>
+            ) : (
+              <>
+                <h3>Conectar seu WhatsApp</h3>
+                <p className="muted">Gere o QR Code e escaneie com o WhatsApp do seu celular (Aparelhos conectados → Conectar aparelho).</p>
+
+                {qrError && <div className="error">{qrError}</div>}
+
+                {!qrBase64 && (
+                  <button className="btn primary" onClick={handleConnect} disabled={connecting}>
+                    {connecting ? "Gerando QR..." : "Conectar WhatsApp"}
+                  </button>
+                )}
+
+                {qrBase64 && (
+                  <>
+                    <div className="qr-box">
+                      <img src={`data:image/png;base64,${qrBase64}`} alt="QR Code do WhatsApp" />
+                    </div>
+                    <p className="muted">Escanee com o WhatsApp do número que você quer conectar.</p>
+                    <div className="qr-timer">O QR expira em breve — renovando automaticamente...</div>
+                    <button className="btn ghost" onClick={handleConnect} disabled={connecting} style={{ marginTop: 8 }}>
+                      Gerar novo QR
+                    </button>
+                  </>
+                )}
+              </>
+            )}
           </div>
         )}
 

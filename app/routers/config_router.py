@@ -168,3 +168,73 @@ async def whatsapp_test(
         return {"ok": False, "reachable": True, "authenticated": False, "detail": f"HTTP {resp.status_code}"}
     except httpx.HTTPError as exc:
         return {"ok": False, "reachable": False, "authenticated": False, "detail": f"Sem conexao: {exc}"}
+
+
+def _evolve_pair(base_url: str | None, api_key: str | None, instance: str | None) -> tuple[str, str, str]:
+    """Valida e devolve (base, key, instance) para chamadas a Evolution, ou levanta HTTPException."""
+    if not base_url:
+        raise HTTPException(status_code=400, detail="Evolution nao configurada. Informe a URL da Evolution API.")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="Falta a API key da Evolution na configuração.")
+    if not instance:
+        raise HTTPException(status_code=400, detail="Falta o nome da instancia na configuração.")
+    return base_url.rstrip("/"), api_key, instance
+
+
+@router.post("/whatsapp/connect")
+def whatsapp_connect(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Gera o QR Code para conectar o WhatsApp (Ex: botao "Conectar" na UI).
+
+    Chamada a Evolution `GET /instance/connect/{instance}` e devolve o QR em
+    base64. A API key nao e exposta ao navegador (fica no backend).
+    """
+    config = get_or_create_config(db, current_user.company_id)
+    base_url, api_key, instance = _evo_config(config)
+    base, key, inst = _evolve_pair(base_url, api_key, instance)
+
+    try:
+        resp = httpx.get(f"{base}/instance/connect/{inst}", headers={"apikey": key}, timeout=30)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Sem conexao com a Evolution: {exc}")
+
+    if resp.status_code != 200:
+        raise HTTPException(status_code=resp.status_code, detail=f"Evolution retornou HTTP {resp.status_code}")
+
+    data = resp.json()
+    qr = (data.get("qrcode") or {}).get("base64")
+    if not qr:
+        # pode estar conectado ou ainda gerando o QR
+        state = (data.get("instance") or {}).get("state")
+        detail = "QR indisponível"
+        if state == "open":
+            detail = "WhatsApp já conectado."
+        raise HTTPException(status_code=409, detail=detail)
+
+    # base64 costuma vir como "data:image/png;base64,...." - devolve ja limpo
+    if "," in qr:
+        qr = qr.split(",", 1)[1]
+    return {"qr_base64": qr}
+
+
+@router.post("/whatsapp/disconnect")
+def whatsapp_disconnect(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Desconecta o WhatsApp (Ex: botao "Desconectar" na UI)."""
+    config = get_or_create_config(db, current_user.company_id)
+    base_url, api_key, instance = _evo_config(config)
+    base, key, inst = _evolve_pair(base_url, api_key, instance)
+
+    try:
+        resp = httpx.post(f"{base}/instance/logout/{inst}", headers={"apikey": key}, timeout=30)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Sem conexao com a Evolution: {exc}")
+
+    if resp.status_code not in (200, 201, 204):
+        raise HTTPException(status_code=resp.status_code, detail=f"Evolution retornou HTTP {resp.status_code}")
+
+    return {"ok": True, "detail": "WhatsApp desconectado."}

@@ -86,4 +86,6 @@ export const api = {
   // WhatsApp / Evolution
   getWhatsAppStatus: () => request("GET", "/config/whatsapp"),
   testWhatsApp: (body) => request("POST", "/config/whatsapp/test", body),
+  connectWhatsApp: () => request("POST", "/config/whatsapp/connect", {}),
+  disconnectWhatsApp: () => request("POST", "/config/whatsapp/disconnect", {}),
 };
