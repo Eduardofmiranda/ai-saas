@@ -9,7 +9,7 @@ services:
     environment:
       - SERVER_URL=${EVOLUTION_SERVER_URL:-http://2.25.122.157:8080}
       - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:-change-me}
-      - DATABASE_ENABLED=true
+      - DATABASE_ENABLED=false
       - DATABASE_PROVIDER=postgresql
       - DATABASE_CONNECTION_URI=${EVOLUTION_DATABASE_URI:-}
       - CACHE_REDIS_ENABLED=false
