@@ -224,7 +224,7 @@ def whatsapp_disconnect(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Desconecta o WhatsApp (Ex: botao "Desconectar" na UI)."""
+    """Desconecta o WhatsApp (Ex: botao 'Desconectar' na UI)."""
     config = get_or_create_config(db, current_user.company_id)
     base_url, api_key, instance = _evo_config(config)
     base, key, inst = _evolve_pair(base_url, api_key, instance)
@@ -238,3 +238,83 @@ def whatsapp_disconnect(
         raise HTTPException(status_code=resp.status_code, detail=f"Evolution retornou HTTP {resp.status_code}")
 
     return {"ok": True, "detail": "WhatsApp desconectado."}
+
+
+@router.post("/whatsapp/setup")
+def whatsapp_setup(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Configura o WhatsApp automaticamente e retorna o QR Code.
+
+    Fluxo simplificado:
+    1. Verifica se a instância já existe na Evolution
+    2. Se não existe, cria automaticamente
+    3. Retorna o QR Code para escanear
+
+    O usuário não precisa configurar nada - só scannear o QR.
+    """
+    config = get_or_create_config(db, current_user.company_id)
+    base_url, api_key, instance = _evo_config(config)
+    base, key, inst = _evolve_pair(base_url, api_key, instance)
+
+    # 1. Verificar se a instância já existe
+    instance_exists = False
+    instance_state = "unknown"
+    try:
+        resp = httpx.get(f"{base}/instance/fetchInstances", headers={"apikey": key}, timeout=15)
+        if resp.status_code == 200:
+            instances = resp.json()
+            if isinstance(instances, list):
+                for i in instances:
+                    if i.get("name") == inst:
+                        instance_exists = True
+                        instance_state = i.get("state", "unknown")
+                        break
+    except httpx.HTTPError:
+        pass
+
+    # 2. Se não existe, criar automaticamente
+    if not instance_exists:
+        try:
+            create_resp = httpx.post(
+                f"{base}/instance/create",
+                headers={"apikey": key, "Content-Type": "application/json"},
+                json={
+                    "instanceName": inst,
+                    "qrcode": True,
+                    "reject_call": False,
+                    "groups_ignore": True,
+                    "always_online": True,
+                },
+                timeout=30,
+            )
+            if create_resp.status_code not in (200, 201):
+                raise HTTPException(
+                    status_code=create_resp.status_code,
+                    detail=f"Erro ao criar instância na Evolution: {create_resp.text}"
+                )
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=502, detail=f"Sem conexao com a Evolution: {exc}")
+
+    # 3. Gerar o QR Code
+    try:
+        resp = httpx.get(f"{base}/instance/connect/{inst}", headers={"apikey": key}, timeout=30)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Sem conexao com a Evolution: {exc}")
+
+    if resp.status_code != 200:
+        raise HTTPException(status_code=resp.status_code, detail=f"Evolution retornou HTTP {resp.status_code}")
+
+    data = resp.json()
+    qr = (data.get("qrcode") or {}).get("base64")
+    if not qr:
+        state = (data.get("instance") or {}).get("state")
+        detail = "QR indisponível"
+        if state == "open":
+            detail = "WhatsApp já conectado."
+        raise HTTPException(status_code=409, detail=detail)
+
+    if "," in qr:
+        qr = qr.split(",", 1)[1]
+    return {"qr_base64": qr, "instance": inst}

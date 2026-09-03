@@ -354,6 +354,22 @@ body {
 .qr-box img { display: block; width: 230px; height: 230px; }
 .qr-timer { font-size: 12px; color: var(--muted); margin-top: 8px; }
 
+/* ---------- WhatsApp Status Card ---------- */
+.wa-status-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 24px; margin-bottom: 20px;
+}
+.wa-status-header {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.wa-connected p, .wa-connect p { margin: 0 0 8px; }
+.wa-connected .btn, .wa-connect .btn { width: auto; margin-top: 12px; }
+.qr-section { text-align: center; margin-top: 16px; }
+.qr-section .qr-box { margin-bottom: 12px; }
+.qr-section .muted { margin: 4px 0; }
+.qr-expire { font-size: 12px; margin-top: 8px !important; }
+
 /* ---------- Content head (btn nao full-width) ---------- */
 .content-head .btn { width: auto; }
 
