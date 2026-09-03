@@ -9,11 +9,6 @@ const backendPaths = [
   '/templates', '/health',
 ]
 
-function rewritePath(path) {
-  if (path.endsWith('/')) return path
-  return path + '/'
-}
-
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -24,7 +19,6 @@ export default defineConfig({
           target: BACKEND_TARGET,
           changeOrigin: true,
           secure: false,
-          rewrite: rewritePath,
         },
       ])
     ),
