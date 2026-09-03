@@ -88,6 +88,10 @@ services:
     networks:
       - ai-saas-network
     restart: unless-stopped
+    # Herda o Dockerfile.backend (que espera a porta 8000 do backend).
+    # Aqui não há porta HTTP: desabilita o healthcheck herdado.
+    healthcheck:
+      disable: true
 
   celery-beat:
     build:
@@ -106,6 +110,10 @@ services:
     networks:
       - ai-saas-network
     restart: unless-stopped
+    # Celery beat herda o healthcheck do Dockerfile.backend (porta 8000
+    # inexistente aqui). Desabilita o herdado.
+    healthcheck:
+      disable: true
 
   frontend:
     build:
@@ -116,6 +124,12 @@ services:
       - "80:80"
     depends_on:
       - backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
     networks:
       - ai-saas-network
     restart: unless-stopped
