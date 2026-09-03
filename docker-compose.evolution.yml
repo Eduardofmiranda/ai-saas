@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     environment:
-      - SERVER_URL=http://localhost:8080
+      - SERVER_URL=${EVOLUTION_SERVER_URL:-http://2.25.122.157:8080}
       - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:-change-me}
       - DATABASE_ENABLED=true
       - DATABASE_PROVIDER=postgresql
@@ -18,6 +18,13 @@ services:
     volumes:
       - evolution_instances:/evolution/instances
       - evolution_store:/evolution/store
+    networks:
+      - ai-saas-network
+
+networks:
+  ai-saas-network:
+    external: true
+    name: ai-saas_ai-saas-network
 
 volumes:
   evolution_instances:
