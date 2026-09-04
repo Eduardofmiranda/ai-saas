@@ -443,7 +443,46 @@ Evitar:
 
 ---
 
-# 20. Comunicação
+# 20. Padrão de desenvolvimento do frontend (API separada das rotas do SPA)
+
+## Contexto (lição real, 04/09/2026)
+
+Discrepância surgiu ao desenvolver a página: **em dev (Vite) funcionava, mas em
+produção (nginx) a página da API caía com "Not authenticated"**. Causa: as
+chamadas de API usavam caminho relativo direto (`/knowledge`, `/workflows`,
+`/config`, `/dashboard`, ...) que **colidiam com as rotas do frontend** (`/knowledge`,
+`/fluxos`, `/ai`, ...) no nginx. O nginx mandava `/knowledge` para o backend sem
+token → 401.
+
+## Regra fixa: TODA chamada de API usa o prefixo `/api`
+
+- O frontend chama o backend **sempre** por `API_BASE + caminho`, e em produção
+  `API_BASE = "/api"` (`frontend/src/api.js`). Nunca chamar `fetch()` com caminho
+  solto tipo `/config/...` fora do `api.js`.
+- O **nginx** é o ÚNICO-orquestrador que descarta o `/api`
+  (`location /api/ { proxy_pass http://backend:8000/; }`). O backend NÃO conhece
+  o prefixo.
+- O **Vite** em dev reencaminha `/api/*` para o backend removendo o prefixo
+  (paridade com nginx).
+- Rotas do frontend (React Router / `<a href>`) NÃO enviam token e NÃO são
+  proxiadas para o backend. Rotas de API sempre carregam `Authorization`.
+
+## Obrigações ao desenvolver/criar novas páginas
+
+1. Usar sempre `api.<método>` de `frontend/src/api.js` (não `fetch` direto).
+2. Toda chamada de API vai sob `/api/...` (definido por `API_BASE`).
+3. Nunca adicionar ao nginx proxy de caminhos de frontend (`/knowledge`, etc.)
+   sem token. Só `/api/` e `/webhook/`.
+4. Se adicionar endpoint novo no backend, expô-lo apenas sob `/api/` no nginx.
+5. Sempre rodar o **build do frontend** e os **testes do backend** antes de
+   subir. Confirmar o comportamento real em **produção** (via `curl` na VPS com
+   o caminho `/api` e token), não apenas em dev.
+6. O dev (Vite proxy) deve replicar EXATAMENTE o comportamento do nginx de
+   produção; se divergir, o dev é que está errado.
+
+---
+
+# 21. Comunicação
 
 Ao finalizar uma tarefa, informar:
 
@@ -478,7 +517,7 @@ Toda nova integração deve possuir documentação.
 
 ---
 
-# 21. Regra final
+# 22. Regra final
 
 Quando não souber algo:
 
