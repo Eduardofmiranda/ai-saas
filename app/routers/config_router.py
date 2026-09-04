@@ -125,28 +125,50 @@ def whatsapp_status(
         }
     if api_key and instance:
         try:
-            from urllib.parse import urljoin
             base = base_url.rstrip("/")
+            # 1) connectionState: estado real em memoria (instantaneo)
             resp = httpx.get(
-                f"{base}/instance/fetchInstances",
+                f"{base}/instance/connectionState/{instance}",
                 headers={"apikey": api_key},
                 timeout=10,
             )
             if resp.status_code == 200:
-                instances = resp.json() or []
-                found = next((i for i in instances if i.get("name") == instance), None)
-                if found:
-                    state = found.get("connectionStatus", "unknown")
-                    detail = found.get("disconnectionReasonCode", "")
+                data = resp.json()
+                state = data.get("state") or data.get("connectionStatus") or "unknown"
+                detail = data.get("status", "")
+            elif resp.status_code == 400:
+                body = resp.text.lower()
+                if "not connected" in body:
+                    state = "close"
+                    detail = "Instancia desconectada"
                 else:
-                    state = "instance_not_found"
-                    detail = "Instancia nao encontrada na Evolution"
+                    # fallback: busca no banco via fetchInstances
+                    raise httpx.HTTPError("fallback-fetch")
             else:
-                state = "error"
-                detail = f"HTTP {resp.status_code}"
-        except httpx.HTTPError as exc:
-            state = "unreachable"
-            detail = str(exc)
+                raise httpx.HTTPError("fallback-fetch")
+        except httpx.HTTPError:
+            # 2) fallback: fetchInstances (estado do banco, pode estar stale)
+            try:
+                resp2 = httpx.get(
+                    f"{base}/instance/fetchInstances",
+                    headers={"apikey": api_key},
+                    timeout=10,
+                )
+                if resp2.status_code == 200:
+                    instances = resp2.json() or []
+                    found = next((i for i in instances if i.get("name") == instance), None)
+                    if found:
+                        state = found.get("connectionStatus", "unknown")
+                        detail = f"banco (reason: {found.get('disconnectionReasonCode', '')})"
+                    else:
+                        state = "instance_not_found"
+                        detail = "Instancia nao encontrada na Evolution"
+                else:
+                    state = "error"
+                    detail = f"HTTP {resp2.status_code}"
+            except httpx.HTTPError as exc2:
+                state = "unreachable"
+                detail = str(exc2)
 
     return {
         "configured": True,
@@ -347,7 +369,7 @@ def whatsapp_setup(
         raise HTTPException(status_code=resp.status_code, detail=f"Evolution retornou HTTP {resp.status_code}: {resp.text[:300]}")
 
     data = resp.json()
-    qr = (data.get("qrcode") or {}).get("base64") or (data.get("qrcode") or {}).get("baseCode")
+    qr = (data.get("qrcode") or {}).get("base64") or data.get("base64") or data.get("baseCode")
     if not qr:
         state = (data.get("instance") or {}).get("state") or data.get("state", "")
         detail = f"QR indisponivel (resp keys: {list(data.keys())})"
