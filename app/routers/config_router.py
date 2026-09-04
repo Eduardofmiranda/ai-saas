@@ -308,6 +308,7 @@ def whatsapp_setup(
                 headers={"apikey": key, "Content-Type": "application/json"},
                 json={
                     "instanceName": inst,
+                    "integration": "WHATSAPP-BAILEYS",
                     "qrcode": True,
                     "reject_call": False,
                     "groups_ignore": True,
