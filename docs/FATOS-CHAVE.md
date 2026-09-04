@@ -72,9 +72,9 @@
 | `SECRET_ENCRYPTION_KEY` | `openssl rand -hex 32` (distinto) |
 | `DEFAULT_AI_API_KEY` | chave da Groq |
 | `EVOLUTION_BASE_URL` | `http://evolution:8080` |
-| `EVOLUTION_API_KEY` | chave da **Evolution** (NAO a Groq) |
+| `EVOLUTION_API_KEY` | chave da **Evolution** (NAO a Groq) — **igual** a `EVOLUTION_AUTH_KEY` |
 | `EVOLUTION_AUTH_KEY` | mesma da Evolution (tambem usada p/ webhook HMAC) |
-| `EVOLUTION_INSTANCE` | `flowai` |
+| `EVOLUTION_INSTANCE` | fallback global; padrao por empresa: `inst-<company_id>` (auto) |
 | `ALLOWED_ORIGINS` | dominio de producao |
 
 > Referencia completa: `docs/05-variaveis-ambiente.md`.
@@ -102,9 +102,11 @@
 cd /opt/ai-saas
 git fetch origin
 git switch -C main origin/main
-docker compose up -d --build
+# rebuild + RECREATE (restart NAO reaplica .env — ver AGENTS.md §7):
+docker compose up -d --build backend celery-worker celery-beat
+docker compose up -d --no-deps --force-recreate backend celery-worker celery-beat
 docker compose -f docker-compose.evolution.yml up -d
-docker compose restart
+docker compose restart frontend
 ```
 
 - O `.env` da VPS **NAO e tocado** pelo git (gitignored).
@@ -128,7 +130,9 @@ for u in db.query(User).all():
     print(u.id, u.email, u.company_id)
 "
 
-# WhatsApp conectado?
-curl -s http://127.0.0.1:8080/instance/connectionState/flowai \
+# WhatsApp conectado? (instancia e por empresa: inst-<company_id>)
+curl -s http://127.0.0.1:8080/instance/connectionState/inst-2 \
   -H "apikey: $(grep '^EVOLUTION_AUTH_KEY=' .env | cut -d= -f2-)"
+# ou via backend (usa a instancia da empresa logada):
+# curl -s http://localhost:8000/config/whatsapp -H "Authorization: Bearer $TOKEN"
 ```

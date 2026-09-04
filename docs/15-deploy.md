@@ -65,7 +65,7 @@ rsync -avz --exclude '.git' . usuario@servidor:/opt/ai-saas/
 ## Variaveis de Ambiente (Producao)
 
 Obrigatórias:
-- `DATABASE_URL` (PostgreSQL local: `postgresql://postgres:SENHA@postgres:5432/ai_saas`)
+- `DATABASE_URL` (producao = **Supabase via pooler IPv4**: `postgresql://postgres.<ref>:SENHA@aws-0-<regiao>.pooler.supabase.com:5432/postgres`; o Postgres local e so fallback)
 - `POSTGRES_PASSWORD` (mesma senha do `DATABASE_URL`)
 - `SECRET_KEY`
 - `SECRET_ENCRYPTION_KEY` (distinto de `SECRET_KEY`)

@@ -29,7 +29,7 @@ A Evolution API e um projeto **open-source e self-hosted** (NÃO e um servico pa
 - `EVOLUTION_BASE_URL`: endereco da instalacao — dentro do docker e `http://evolution:8080` (deve estar na **mesma rede** do backend).
 - `EVOLUTION_AUTH_KEY`: chave injetada como `AUTHENTICATION_API_KEY` da Evolution (v2.3.x = a que VOCE define). NAO e a chave da Groq.
 - `EVOLUTION_API_KEY`: a mesma chave, usada pelo **backend** para autenticar nas chamadas (`send_text`).
-- `EVOLUTION_INSTANCE`: nome que voce deu a sua instancia (ex: `flowai`).
+- `EVOLUTION_INSTANCE`: default automatico por empresa (`inst-<company_id>`, criada pelo `POST /config/whatsapp/setup` com `integration: "WHATSAPP-BAILEYS"`). O env `EVOLUTION_INSTANCE` e so fallback global — nao compartilhar uma instancia entre empresas.
 
 ### Como obter o api_key (Evolution v2.4.0+)
 
@@ -89,6 +89,11 @@ EVOLUTION_INSTANCE = "sua-instancia"
 ### Webhook
 
 **URL real do backend:** `POST /webhook/whatsapp/{company_id}` (app/routers/webhook_router.py).
+
+> **Planejado (escala):** configurar esse webhook **automaticamente** no
+> `POST /config/whatsapp/setup` (hoje e manual via `POST /webhook/set/{instance}`).
+> Com isso, nova empresa escaneia o QR e ja recebe mensagens, sem nenhum passo
+> manual. Nao implementado ainda — nao afirmar que existe.
 
 Para configurar na Evolution (v2.3.x), o campo `"enabled": true` e obrigatorio:
 

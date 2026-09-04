@@ -61,13 +61,18 @@
 | `EVOLUTION_BASE_URL` | `http://evolution:8080` | URL da Evolution API (dentro do docker, hostname `evolution`) |
 | `EVOLUTION_API_KEY` | — | Chave que o **backend** usa para autenticar na Evolution (`send_text`) |
 | `EVOLUTION_AUTH_KEY` | — | Chave para autenticar o **webhook** (`evolution-auth` header) e usada pelo compose como `AUTHENTICATION_API_KEY`. **Use a MESMA de `EVOLUTION_API_KEY`** |
-| `EVOLUTION_INSTANCE` | `default` | Nome da instancia (ex.: `flowai`) |
+| `EVOLUTION_INSTANCE` | `inst-<company_id>` por empresa | Fallback global de instancia. O backend resolve por empresa (`inst-<company_id>`, auto-provisionada no setup); o env so e usado se a empresa nao tiver instancia (ex.: envio via `conversation_service`). Nao usar instancia unica global em multi-tenant |
+| `EVOLUTION_DATABASE_ENABLED` | `false` | Uso do banco em runtime pela Evolution (dados ficam nos volumes quando `false`) |
+| `EVOLUTION_DATABASE_PROVIDER` | `postgresql` | Provider do banco operacional (exigido no startup pelo entrypoint oficial) |
+| `EVOLUTION_DATABASE_CONNECTION_URI` | postgres local (`postgres:5432/evolution`) | Override p/ Supabase em escala: `postgresql://<user>:<pass>@<pooler>:5432/evolution` |
 
-> **Nota (variaveis mortas):** `EVOLUTION_SERVER_URL` e `EVOLUTION_DATABASE_URI`
-> **NAO sao lidas por nenhum codigo** (backend Python ou compose). O
-> `docker-compose.evolution.yml` define `SERVER_URL` e `DATABASE_CONNECTION_URI`
-> **hardcoded no proprio arquivo** (via `POSTGRES_PASSWORD`). Voce pode remove-las
-> do `.env` sem efeito. Elas permaneciam no template por engano.
+> **Nota:** `EVOLUTION_SERVER_URL` **NAO e lida por nenhum codigo** (o
+> `docker-compose.evolution.yml` define `SERVER_URL` no proprio arquivo). Ja
+> `DATABASE_CONNECTION_URI` **e configuravel** via `EVOLUTION_DATABASE_CONNECTION_URI`
+> (default: postgres local com `${POSTGRES_PASSWORD}`). Nunca remover
+> `DATABASE_PROVIDER`/`DATABASE_CONNECTION_URI` do compose: o entrypoint oficial
+> exige provider valido + banco acessivel no startup (`exit 1` caso contrario,
+> mesmo com `DATABASE_ENABLED=false`).
 
 ## Frontend
 

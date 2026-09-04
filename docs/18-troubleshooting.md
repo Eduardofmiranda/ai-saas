@@ -1,38 +1,57 @@
 # 18 — Troubleshooting
 
-> Abaixo estao problemas **reais encontrados/enfrentados no deploy de 03/09/2026**
-> e suas solucoes definitivas. Ver tambem `VPS-SETUP.md` (roteiro E2E).
+> Abaixo estao problemas **reais encontrados/enfrentados nos deploys de 03/09/2026
+> e 04/09/2026** e suas solucoes definitivas. Ver tambem `VPS-SETUP.md` (roteiro E2E)
+> e `AGENTS.md` §7 (paridade `.env` x container) e §13 (Evolution).
 
 ## Problemas do Deploy Real
 
 ### Evolution reinicia em loop com erro do Prisma
 
-**Erro:** `DATABASE_CONNECTION_URI resolved to empty string` ou
+**Erro:** `P1000: Authentication failed ... credentials for postgres are not valid`
+(04/09/2026), ou `DATABASE_CONNECTION_URI resolved to empty string`, ou
 `P3005 The database schema is not empty`.
 
-**Causa:** (1) chave `AUTHENTICATION_API_KEY` vazia/no compose com `env_file` que
-vazava variaveis erradas; (2) apontar a Evolution para o banco `ai_saas` (que ja
-tem as tabelas do app) -> o Prisma da Evolution reclama de schema nao vazio.
+**Causa (04/09/2026, fato verificado):** o entrypoint oficial da imagem
+(`deploy_database.sh`) **exige** `DATABASE_PROVIDER` valido + banco **acessivel**
+no startup e da `exit 1` caso contrario — mesmo com `DATABASE_ENABLED=false`.
+No caso real, o `.env` tinha `POSTGRES_PASSWORD` novo, mas o hash armazenado no
+postgres local era de senha antiga: `psql` local passava (via `trust`/socket) e
+`psycopg2`/Prisma via rede Docker falhava. Outras causas: (1) chave
+`AUTHENTICATION_API_KEY` vazia/no compose com `env_file` que vazava variaveis
+erradas; (2) apontar a Evolution para o banco `ai_saas` (que ja tem as tabelas
+do app) -> o Prisma da Evolution reclama de schema nao vazio.
 
 **Solucao:**
 - `docker-compose.evolution.yml` **nao usa `env_file`**; define tudo explicito.
 - `AUTHENTICATION_API_KEY=${EVOLUTION_AUTH_KEY}` (chave propria, no `.env`).
+- **NUNCA remover** `DATABASE_PROVIDER`/`DATABASE_CONNECTION_URI` do compose
+  (sem provider → `Error: Database provider invalid` + `exit 1`).
 - `DATABASE_ENABLED=false` com `DATABASE_CONNECTION_URI` apontando para um banco
   **separado** `evolution` (`postgresql://postgres:…@postgres:5432/evolution`).
+- Se `P1000` com senha aparentemente certa, validar **via rede** (ex.: `psycopg2`
+  a partir do backend) e realinhar o hash: `ALTER USER postgres WITH PASSWORD
+  '<POSTGRES_PASSWORD do .env>';` + `--force-recreate` (restart NAO reaplica env).
 
 ### 401 Unauthorized ao criar instancia / acessar API da Evolution
 
 **Erro:** `{"status":401,"error":"Unauthorized"}`.
 
 **Causa:** a chave do header `apikey` nao bate com o `AUTHENTICATION_API_KEY` do
-container (ex.: usada a chave da Groq por engano, ou `EVOLUTION_AUTH_KEY` ja estava
-com outra valor quando reiniciou o container).
+container. Regra fixa: `EVOLUTION_AUTH_KEY` (container) e `EVOLUTION_API_KEY`
+(backend) devem ter o **mesmo valor** no `.env` (04/09/2026: estavam diferentes
+e o setup falhava; o status chegava a responder mas o `POST /instance/create`
+dava 401). Outras causas: usada a chave da Groq por engano, ou container
+recriado com `.env` antigo (`restart` NAO reaplica env).
 
-**Solucao:**
+**Solucao (sem expor secrets — comparar hashes, nunca imprimir chaves):**
 ```bash
-docker exec evolution sh -c 'echo $AUTHENTICATION_API_KEY'
+A=$(grep '^EVOLUTION_AUTH_KEY=' .env | cut -d= -f2-); B=$(grep '^EVOLUTION_API_KEY=' .env | cut -d= -f2-); [ "$A" = "$B" ] && echo "IGUAIS" || echo "DIFERENTES"
+docker compose exec backend printenv EVOLUTION_API_KEY | md5sum
+docker inspect evolution --format '{{range .Config.Env}}{{println .}}{{end}}' | grep AUTHENTICATION_API_KEY | md5sum
 ```
-Use exatamente esse valor no header `apikey`. NAO use a chave da Groq.
+Se divergir: iguale no `.env` (mantenha o `AUTH_KEY`, copie p/ `API_KEY`) e
+`docker compose up -d --no-deps --force-recreate backend celery-worker`. NAO use a chave da Groq.
 
 ### "Invalid integration" ao criar instancia
 
@@ -40,7 +59,9 @@ Use exatamente esse valor no header `apikey`. NAO use a chave da Groq.
 
 **Causa:** a v2.3.7 exige o campo `integration` no `POST /instance/create`.
 
-**Solucao:** `-d '{"instanceName":"flowai","integration":"WHATSAPP-BAILEYS","qrcode":true}'`.
+**Solucao:** `-d '{"instanceName":"<inst>","integration":"WHATSAPP-BAILEYS","qrcode":true}'`.
+O `POST /config/whatsapp/setup` do backend ja envia `integration` automaticamente
+e provisiona a instancia por empresa (`inst-<company_id>`) — prefira o setup.
 
 ### Webhook da Evolution retorna 400 "webhook requires property enabled"
 
@@ -48,9 +69,14 @@ Use exatamente esse valor no header `apikey`. NAO use a chave da Groq.
 
 ### Backend nao encontra `evolution` (Name or service not known)
 
-**Causa:** a Evolution roda em rede docker separada da do backend.
+**Causa (04/09/2026, fato verificado):** na maioria das vezes o container
+`evolution` estava **parado** (`Exited`, sem `restart` policy) — e nao em rede
+errada. O compose da Evolution e separado (`docker-compose.evolution.yml`); o
+container aparece como "orphan" no compose principal, o que e normal.
 
-**Solucao:** conectar a Evolution a `ai-saas_ai-saas-network` (external) no
+**Solucao:** checar `docker ps -a --filter name=evolution` primeiro. Se `Exited`,
+`docker compose -f docker-compose.evolution.yml up -d` (volumes preservam a
+sessao). A rede deve ser `ai-saas_ai-saas-network` (external) no
 `docker-compose.evolution.yml`. Validar:
 ```bash
 docker exec ai-saas-backend python -c "import urllib.request; print(urllib.request.urlopen('http://evolution:8080/', timeout=5).status)"
@@ -62,8 +88,9 @@ docker exec ai-saas-backend python -c "import urllib.request; print(urllib.reque
 **Causa:** o QR e valido por ~20-60s; os endpoints `qrcode`/`connect` variam na
 v2.3.7 (`GET /instance/connect/{instance}`), e o painel nao fica em `/dashboard`.
 
-**Solucao:** rodar de novo `GET /instance/connect/flowai` (header `apikey`) e
-decodificar o `base64` para PNG imediatamente, antes de expirar.
+**Solucao:** rodar de novo `POST /config/whatsapp/setup` (gera a instancia
+`inst-<company_id>` + QR) ou `GET /instance/connect/<instancia-da-empresa>`
+(header `apikey`) e decodificar o `base64` para PNG imediatamente, antes de expirar.
 
 ### Containers `unhealthy` mas rodando (celery)
 
