@@ -7,6 +7,7 @@ from app.config import get_secret
 from app.database.session import get_db
 from app.models.user import User
 from app.schemas.config_schema import ConfigResponse, ConfigUpdate
+from app.services import llm
 from app.services.config_service import get_or_create_config
 from app.services.deps import get_current_user
 from app.services.field_crypto import decrypt_field, encrypt_field
@@ -63,6 +64,47 @@ def update_config(
     db.commit()
     db.refresh(config)
     return _to_response(config)
+
+
+@router.post("/ai/test")
+async def ai_test(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Testa a configuracao de IA da empresa chamando o provedor com um prompt curto.
+
+    Usa a mesma resolucao do fluxo real (config da empresa -> .env -> default):
+    provider/modelo/chave/base_url. Nao persiste nada.
+    """
+    config = get_or_create_config(db, current_user.company_id)
+
+    provider = config.ai_provider or get_secret("DEFAULT_AI_PROVIDER") or "groq"
+    model = config.ai_model or get_secret("DEFAULT_AI_MODEL")
+    api_key = decrypt_field(config.ai_api_key) or get_secret("DEFAULT_AI_API_KEY")
+    base_url = decrypt_field(config.ai_base_url) or get_secret("DEFAULT_AI_BASE_URL")
+
+    resolved = llm._resolve(provider, model, api_key, base_url)
+
+    try:
+        reply = await llm.generate_reply(
+            system_prompt="Voce e um teste de conectividade.",
+            history=[{"role": "user", "content": "Responda apenas com: PONG"}],
+            provider=provider,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            timeout=30,
+        )
+    except llm.LLMError as exc:
+        return {"ok": False, "provider": resolved["provider"], "model": resolved["model"], "detail": str(exc)}
+
+    return {
+        "ok": True,
+        "provider": resolved["provider"],
+        "model": resolved["model"],
+        "reply": reply[:200],
+        "detail": f"IA respondeu via {resolved['provider']} com {resolved['model']}.",
+    }
 
 
 # ---------------------------------------------------------------------------

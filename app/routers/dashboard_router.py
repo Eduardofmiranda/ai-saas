@@ -57,6 +57,15 @@ def get_dashboard(
         .count()
     )
 
+    pending_conversations = (
+        db.query(Conversation)
+        .filter(
+            Conversation.company_id == company_id,
+            Conversation.status == "pending_agent",
+        )
+        .count()
+    )
+
     messages = (
         db.query(Message)
         .join(Conversation, Message.conversation_id == Conversation.id)
@@ -90,6 +99,7 @@ def get_dashboard(
         "customers": customers,
         "conversations": conversations,
         "open_conversations": open_conversations,
+        "pending_conversations": pending_conversations,
         "closed_conversations": closed_conversations,
         "messages": messages,
         "workflows_total": workflows_total,

@@ -46,13 +46,13 @@ async def handle_incoming_message(
         db.add(customer)
         db.flush()
 
-    # 3) Encontra ou cria a conversa aberta
+    # 3) Encontra ou cria a conversa ativa (open ou aguardando humano)
     conversation = (
         db.query(Conversation)
         .filter(
             Conversation.company_id == company_id,
             Conversation.customer_id == customer.id,
-            Conversation.status == "open",
+            Conversation.status.in_(["open", "pending_agent"]),
         )
         .order_by(Conversation.id.desc())
         .first()
@@ -177,13 +177,13 @@ async def handle_incoming_workflow(
         db.add(customer)
         db.flush()
 
-    # 3) Conversa aberta
+    # 3) Conversa ativa (open ou aguardando humano)
     conversation = (
         db.query(Conversation)
         .filter(
             Conversation.company_id == company_id,
             Conversation.customer_id == customer.id,
-            Conversation.status == "open",
+            Conversation.status.in_(["open", "pending_agent"]),
         )
         .order_by(Conversation.id.desc())
         .first()

@@ -47,6 +47,7 @@ export default function Header({ children }) {
             </span>
           )}
         </span>
+        <button className="btn ghost" onClick={() => navigate("/conta")}>Senha</button>
         <button className="btn ghost" onClick={logout}>Sair</button>
       </div>
     </header>

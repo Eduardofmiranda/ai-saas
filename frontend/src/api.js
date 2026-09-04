@@ -58,6 +58,13 @@ export const api = {
   login: (username, password) =>
     request("POST", "/auth/login", undefined, { username, password }),
   register: (body) => request("POST", "/auth/register", body),
+  getMe: () => request("GET", "/auth/me"),
+  changePassword: (body) => request("POST", "/auth/change-password", body),
+  refreshToken: (refreshToken) =>
+    request("POST", "/auth/refresh", { refresh_token: refreshToken }),
+  forgotPassword: (email) => request("POST", "/auth/forgot-password", { email }),
+  resetPassword: (token, newPassword) =>
+    request("POST", "/auth/reset-password", { token, new_password: newPassword }),
   getWorkflows: () => request("GET", "/workflows/"),
   getWorkflow: (id) => request("GET", `/workflows/${id}`),
   createWorkflow: (body) => request("POST", "/workflows/", body),
@@ -69,6 +76,7 @@ export const api = {
   getExecutions: (id) => request("GET", `/workflows/${id}/executions`),
   getConfig: () => request("GET", "/config/"),
   updateConfig: (body) => request("PATCH", "/config/", body),
+  testAI: () => request("POST", "/config/ai/test"),
   getDashboard: () => request("GET", "/dashboard/"),
   getKnowledge: () => request("GET", "/knowledge/"),
   getKnowledgeDetail: (id) => request("GET", `/knowledge/${id}`),
@@ -80,8 +88,6 @@ export const api = {
   getTemplate: (id) => request("GET", `/templates/${id}`),
   useTemplate: (id) => request("POST", `/templates/${id}/use`),
   duplicateWorkflow: (id) => request("POST", `/workflows/${id}/duplicate`),
-  // Usuario atual
-  getMe: () => request("GET", "/auth/me"),
   // Usuarios / Administracao
   getUsers: () => request("GET", "/users/"),
   createUser: (body) => request("POST", "/users/", body),

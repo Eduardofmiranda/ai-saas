@@ -4,7 +4,7 @@ import Header from "../components/Header";
 import KnowledgeSummaryCard from "../components/KnowledgeSummaryCard";
 
 const PROVIDERS = [
-  { value: "groq", label: "Groq", hint: "Rápido e gratuito (Llama, Mixtral)" },
+  { value: "groq", label: "Groq", hint: "Rápido e gratuito (GPT-OSS, Qwen)" },
   { value: "openai", label: "OpenAI", hint: "GPT-4o, GPT-4o-mini" },
   { value: "deepseek", label: "DeepSeek", hint: "Custo-benefício" },
   { value: "mistral", label: "Mistral", hint: "Europeu, rápido" },
@@ -48,7 +48,7 @@ Seja breve mas calorosa. Encaminhe dúvidas específicas para o setor correto.`,
 ];
 
 const MODELS = {
-  groq: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
+  groq: ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b", "qwen/qwen3.8-27b"],
   openai: ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"],
   deepseek: ["deepseek-chat", "deepseek-reasoner"],
   mistral: ["mistral-large-latest", "mistral-small-latest"],
@@ -61,14 +61,13 @@ export default function AI() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [testMsg, setTestMsg] = useState("");
   const [testResult, setTestResult] = useState(null);
   const [testing, setTesting] = useState(false);
 
   const [form, setForm] = useState({
     ai_on: false,
     ai_provider: "groq",
-    ai_model: "llama-3.3-70b-versatile",
+    ai_model: MODELS.groq[0],
     system_prompt: "",
   });
 
@@ -76,11 +75,17 @@ export default function AI() {
     api
       .getConfig()
       .then((cfg) => {
+        const prov = cfg.ai_provider || "groq";
+        const available = MODELS[prov] || [];
+        // Se o modelo salvo nao existe mais (ex.: mixtral-8x7b-32768 descontinuado),
+        // cai para um modelo valido do provedor — sem reescrever nada no banco.
+        const effectiveModel =
+          available.includes(cfg.ai_model) ? cfg.ai_model : (available[0] || "");
         setConfig(cfg);
         setForm({
           ai_on: cfg.ai_on ?? false,
-          ai_provider: cfg.ai_provider || "groq",
-          ai_model: cfg.ai_model || "llama-3.3-70b-versatile",
+          ai_provider: prov,
+          ai_model: cfg.ai_model || effectiveModel,
           system_prompt: cfg.system_prompt || "",
         });
       })
@@ -109,19 +114,16 @@ export default function AI() {
   }
 
   async function handleTest() {
-    if (!testMsg.trim()) return;
     setTesting(true);
     setTestResult(null);
+    setError("");
     try {
-      const config = await api.getConfig();
-      const res = await api.testWhatsApp({
-        base_url: config.evolution_base_url,
-        api_key: config.evolution_api_key,
-        instance: config.evolution_instance,
-      });
-      setTestResult({ ok: res.ok, detail: "Configuração da IA testada com sucesso." });
-    } catch {
-      setTestResult({ ok: false, detail: "Erro ao testar. Verifique as configurações." });
+      const res = await api.testAI();
+      if (res.ok) {
+        setTestResult({ ok: true, detail: `${res.detail} Resposta: "${res.reply}"` });
+      } else {
+        setTestResult({ ok: false, detail: res.detail || "Erro ao testar a IA." });
+      }
     } finally {
       setTesting(false);
     }
@@ -210,6 +212,17 @@ export default function AI() {
                 ))}
               </select>
             </label>
+          </div>
+
+          <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
+            <button className="btn ghost" onClick={handleTest} disabled={testing}>
+              {testing ? "Testando..." : "Testar resposta da IA"}
+            </button>
+            {testResult && (
+              <span className={testResult.ok ? "success-msg" : "error"} style={{ flex: 1 }}>
+                {testResult.detail}
+              </span>
+            )}
           </div>
         </div>
 

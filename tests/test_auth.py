@@ -1,5 +1,11 @@
 import pytest
-from app.services.security import hash_password, verify_password, create_access_token, decode_access_token
+from app.services.security import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    create_refresh_token,
+    decode_access_token,
+)
 
 
 class TestSecurity:
@@ -23,3 +29,15 @@ class TestSecurity:
     def test_token_invalid_returns_none(self):
         assert decode_access_token("token.invalido.aqui") is None
         assert decode_access_token("") is None
+
+    def test_refresh_token_is_tagged_refresh(self):
+        token = create_refresh_token("user123")
+        payload = decode_access_token(token)
+        assert payload is not None
+        assert payload["sub"] == "user123"
+        assert payload["type"] == "refresh"
+
+    def test_access_token_is_tagged_access(self):
+        token = create_access_token("user123")
+        payload = decode_access_token(token)
+        assert payload["type"] == "access"

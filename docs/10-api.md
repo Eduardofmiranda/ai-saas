@@ -9,7 +9,11 @@ Base URL: `http://localhost:8000`
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
 | POST | `/auth/register` | Cadastro (cria empresa) | Nao |
-| POST | `/auth/login` | Login | Nao |
+| POST | `/auth/login` | Login (`form-urlencoded`; retorna access + refresh) | Nao |
+| POST | `/auth/refresh` | Renova access token com refresh token (rotacionado) | Nao |
+| POST | `/auth/change-password` | Altera a propria senha (senha atual + nova) | JWT |
+| POST | `/auth/forgot-password` | Envia link de reset por email (503 sem SMTP; 10/min) | Nao |
+| POST | `/auth/reset-password` | Redefine senha com token (uso unico) | Nao |
 
 ### Company
 
@@ -24,6 +28,7 @@ Base URL: `http://localhost:8000`
 |--------|-----|-----------|------|
 | GET | `/config/` | Busca configuracoes da empresa | JWT |
 | PATCH | `/config/` | Atualiza configuracoes | JWT |
+| POST | `/config/ai/test` | Testa a config de IA (chama o provedor; nao persiste) | JWT |
 
 ### WhatsApp (por empresa)
 
@@ -48,14 +53,22 @@ Base URL: `http://localhost:8000`
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
 | GET | `/conversations/` | Lista conversas da empresa (cliente, ultima mensagem, contagem, ordenado por `updated_at` desc) | JWT |
-| GET | `/conversations/filter/?status=open` | Filtra por status (`open`/`closed`) | JWT |
+| GET | `/conversations/filter/?status=open` | Filtra por status (`open`, `pending_agent`, `closed`) | JWT |
 | GET | `/conversations/{id}` | Busca conversa (dados enriquecidos) | JWT |
 | PATCH | `/conversations/{id}` | Atualiza status da conversa (`{ "status": "closed" }`) | JWT |
 | DELETE | `/conversations/{id}` | Exclui conversa | JWT |
 
 **Resposta enriquecida** (`_to_response` em `app/routers/conversation_router.py`):
 `id, company_id, customer_id, status, created_at, updated_at, customer`
-({id, name, phone}), `last_message`, `last_message_at`, `message_count`.
+({id, name, phone}), `last_message`, `last_message_at`, `message_count`,
+`transfers` (lista de `ConversationTransferResponse`: id, action, actor_type, user_name, created_at).
+
+Status possiveis: `open` (ativa), `pending_agent` (aguardando humano — handoff),
+`closed` (fechada).
+
+A atualizacao de status (`PATCH`) registra automaticamente um `ConversationTransfer`
+(qundo aplicavel): `pending_agent→open` = **assumed**, `open/pending_agent→closed` =
+**closed**, `closed→open` = **reopened**.
 
 ### Messages
 
@@ -76,7 +89,7 @@ Base URL: `http://localhost:8000`
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
-| GET | `/dashboard/stats` | Estatisticas da empresa | JWT |
+| GET | `/dashboard/` | Metricas da empresa: companies, customers, conversations (`open_conversations`, `pending_conversations`, `closed_conversations`), messages, workflows, executions | JWT |
 
 ### Workflows
 

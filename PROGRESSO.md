@@ -152,13 +152,13 @@
 - [ ] Progresso de upload no frontend
 - [ ] Limite de tamanho por arquivo (configuravel)
 
-### 8.3 — Handoff Humano
-- [ ] Status de conversa `"pending_agent"` (novo valor no enum)
-- [ ] Node `transfer_to_agent` no registry
-- [ ] Notificacao quando conversa precisa de atendimento humano
-- [ ] Visualizacao de conversas pendentes no Dashboard
-- [ ] Botao "Assumir conversa" para agente humano
-- [ ] Historico de transferencias (quem assumiu, quando)
+### 8.3 — Handoff Humano ✅
+- [x] Status de conversa `"pending_agent"` (novo valor no enum)
+- [x] Node `transfer_to_agent` no registry
+- [x] Notificacao quando conversa precisa de atendimento humano (pill/aba Aguardando no inbox + banner no Dashboard)
+- [x] Visualizacao de conversas pendentes no Dashboard
+- [x] Botao "Assumir conversa" para agente humano
+- [x] Historico de transferencias (quem assumiu, quando) — tabela `conversation_transfers`
 
 ### 8.4 — Horario de Atendimento
 - [ ] Model `BusinessHours` (empresa, dias, hora_inicio, hora_fim, timezone)
@@ -183,12 +183,12 @@
 - [ ] Executions: `skip`/`limit` + filtro por status/data
 - [ ] Frontend: componentes de paginacao em todas as listas
 
-### 8.7 — Senha e Sessao
-- [ ] Endpoint `POST /auth/change-password` (senha atual + nova senha)
-- [ ] Endpoint `POST /auth/forgot-password` (envia email com link de reset)
-- [ ] Endpoint `POST /auth/reset-password` (token + nova senha)
-- [ ] Endpoint `POST /auth/refresh` (renovar access token)
-- [ ] Infraestrutura de email (SendGrid, Resend, ou SMTP)
+### 8.7 — Senha e Sessao ✅
+- [x] Endpoint `POST /auth/change-password` (senha atual + nova senha)
+- [x] Endpoint `POST /auth/forgot-password` (envia email com link de reset)
+- [x] Endpoint `POST /auth/reset-password` (token + nova senha)
+- [x] Endpoint `POST /auth/refresh` (renovar access token com refresh token rotacionado)
+- [x] Infraestrutura de email (SMTP: Host/Port/User/Password/From) + token de reset com uso unico
 
 ---
 
@@ -220,7 +220,9 @@
 - [ ] Fallback quando limite atingido (mensagem padrao, encerrar, avisar humano)
 - [ ] Aplicar limites em `conversation_service` e nodes `ai`/`ai_rag`
 - [ ] UI de configuracao dos limites (pagina Admin)
+- [ ] Tornar completamente configuravel usuarios e niveis de acesso ao painel de conversas
 - [ ] Dashboard de uso/consumo
+
 
 ### 9.2 — Dashboard Avancado
 - [ ] Graficos de volume de conversas (por dia/semana/mes)

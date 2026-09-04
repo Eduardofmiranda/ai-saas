@@ -9,6 +9,8 @@ import Knowledge from "./pages/Knowledge";
 import Admin from "./pages/Admin";
 import WhatsApp from "./pages/WhatsApp";
 import Conversations from "./pages/Conversations";
+import Account from "./pages/Account";
+import ResetPassword from "./pages/ResetPassword";
 
 function Protected({ children }) {
   const { user, ready } = useAuth();
@@ -23,9 +25,11 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-<Route path="/" element={<Protected><Dashboard /></Protected>} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/" element={<Protected><Dashboard /></Protected>} />
           <Route path="/fluxos" element={<Protected><Home /></Protected>} />
           <Route path="/conversas" element={<Protected><Conversations /></Protected>} />
+          <Route path="/conta" element={<Protected><Account /></Protected>} />
           <Route path="/editor/:id" element={<Protected><Editor /></Protected>} />
           <Route path="/ai" element={<Protected><AI /></Protected>} />
           <Route path="/editor/:id" element={<Protected><Editor /></Protected>} />

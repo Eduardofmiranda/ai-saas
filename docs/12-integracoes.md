@@ -176,12 +176,18 @@ def build_history(messages) -> list[dict]:
 
 | Provider | Base URL | Modelos |
 |----------|---------|---------|
-| Groq | `https://api.groq.com/openai/v1` | llama-3.3-70b-versatile, qwen3.8-27b, etc. |
+| Groq | `https://api.groq.com/openai/v1` | openai/gpt-oss-120b, openai/gpt-oss-20b, qwen/qwen3.6-27b, qwen/qwen3.8-27b |
 | OpenAI | `https://api.openai.com/v1` | gpt-4o, gpt-4o-mini, etc. |
 | DeepSeek | `https://api.deepseek.com` | deepseek-chat, etc. |
 | Mistral | `https://api.mistral.ai/v1` | mistral-large, etc. |
 | Ollama | `http://localhost:11434/v1` | llama3, etc. |
 | Mock | — | Retorna echo (para testes) |
+
+> **Importante (Groq/2026-09-04):** `mixtral-8x7b-32768` foi **descontinuado**;
+> `llama-3.3-70b-versatile` e `llama-3.1-8b-instant` sao enterprise-only. A lista
+> acima contem os modelos self-serve vigentes. Se uma empresa tem salvo um modelo
+> antigo em `company_configs.ai_model`, o valor do banco **tem prioridade** sobre
+> `DEFAULT_AI_MODEL` do `.env` — corrigir o registro ou salvar na pagina `/ai`.
 
 ### Adaptador
 

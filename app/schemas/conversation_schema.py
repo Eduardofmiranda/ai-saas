@@ -1,7 +1,8 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from app.schemas.conversation_transfer_schema import ConversationTransferResponse
 from app.schemas.customer_schema import CustomerResponse
 
 
@@ -24,6 +25,7 @@ class ConversationResponse(BaseModel):
     last_message: Optional[str] = None
     last_message_at: object | None = None
     message_count: int = 0
+    transfers: list[ConversationTransferResponse] = Field(default_factory=list)
 
     class Config:
         from_attributes = True

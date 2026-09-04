@@ -47,19 +47,22 @@ referencial, nao dictado de produto.
   (`Dashboard.jsx`) — sem duracao, sem filtro, sem retry, sem tempo real.
 
 ### 2.2 Manychat — Inbox
-- **Planejado:** inbox unificado com filtros de estado (aberta/fechada/todas),
-  filtro **nao lida** e ordenacao (mais recente/mais antigo).
+- **Implementado:** inbox com filtros de estado (todas/abertas/aguardando humano/fechadas)
+  e ordenacao por `updated_at` (mais recente primeiro).
+- **Planejado:** filtro **nao lida** e ordenacao secundaria (mais antigo).
 - **Planejado:** pastas/etiquetas (**labels**) com filtro por etiqueta.
 - **Parcial/Planejado:** respostas rapidas (**canned responses**) — mensagens
   pre-salvas para o atendente.
 - **Planejado:** notas internas por conversa.
-- **Planejado:** atribuicao de conversa a um atendente (handoff).
+- **Implementado (basico):** atribuicao de conversa a atendente (handoff):
+  node `transfer_to_agent` seta status `pending_agent`, botao "Assumir conversa"
+  no inbox, historico de transferencias (quem assumiu, quando) em `conversation_transfers`.
 - **Planejado:** analise do atendente — tempo de primeira resposta, tempo de
   encerramento, conversas atribuidas x encerradas, volume diario por agente.
 
 ### 2.3 Chatwoot — Inbox/Suporte
-- **Planejado:** layout de inbox com lista de conversas + conversa ativa +
-  contexto do cliente (checkbox tres painéis — veja §3).
+- **Implementado:** layout de inbox com lista de conversas + conversa ativa +
+  contexto do cliente (tres paineis — `Conversations.jsx`).
 - **Planejado:** atalhos de teclado e **command bar** (cmd+K) para navegacao.
 - **Planejado:** abas por atendente (minhas / nao atribuidas / todas) + bulk actions.
 - **Planejado:** **horario comercial** + auto-responder fora do horario.

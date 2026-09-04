@@ -49,7 +49,9 @@ export default function Dashboard() {
   const cards = [
     ["Fluxos", data?.workflows_total || 0, "workflows", `/fluxos`],
     ["Fluxos ativos", data?.workflows_active || 0, "ativos", null],
-    ["Conversas", data?.conversations || 0, "abertas", `/conversas`],
+    ["Conversas", data?.conversations || 0,
+      (data?.pending_conversations || 0) > 0 ? `${data.pending_conversations} aguardando` : "abertas",
+      `/conversas`],
     ["Clientes", data?.customers || 0, "cadastrados", null],
     ["Mensagens", data?.messages || 0, "trocadas", null],
     ["Execuções", data?.executions_total || 0, "totais", null],
@@ -87,6 +89,18 @@ export default function Dashboard() {
             {waOpen ? "Gerenciar" : "Conectar"}
           </button>
         </div>
+
+        {(data?.pending_conversations || 0) > 0 && (
+          <div className="notice" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ flex: 1 }}>
+              <strong>{data.pending_conversations} conversa(s)</strong> aguardando atendimento humano.
+              Assuma no inbox para responder manualmente.
+            </span>
+            <button className="btn secondary small" onClick={() => navigate("/conversas")}>
+              Ver conversas
+            </button>
+          </div>
+        )}
 
         {isEmpty ? (
           <div className="empty dash-empty">

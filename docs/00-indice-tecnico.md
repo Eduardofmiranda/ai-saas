@@ -50,10 +50,12 @@ ai-saas/
 │   │   ├── company.py
 │   │   ├── company_config.py
 │   │   ├── conversation.py
+│   │   ├── conversation_transfer.py
 │   │   ├── customer.py
 │   │   ├── execution.py
 │   │   ├── knowledge.py
 │   │   ├── message.py
+│   │   ├── password_reset_token.py
 │   │   ├── pending_flow.py
 │   │   ├── user.py
 │   │   └── workflow.py
@@ -62,6 +64,7 @@ ai-saas/
 │   │   ├── company_schema.py
 │   │   ├── config_schema.py
 │   │   ├── conversation_schema.py
+│   │   ├── conversation_transfer_schema.py
 │   │   ├── customer_schema.py
 │   │   ├── dashboard_schema.py
 │   │   ├── execution_schema.py
@@ -86,6 +89,7 @@ ai-saas/
 │   │   ├── config_service.py
 │   │   ├── conversation_service.py
 │   │   ├── deps.py
+│   │   ├── email_service.py
 │   │   ├── embedding.py
 │   │   ├── evolution.py
 │   │   ├── field_crypto.py
@@ -109,9 +113,11 @@ ai-saas/
 │   ├── test_config.py
 │   ├── test_crypto.py
 │   ├── test_evolution.py
+│   ├── test_handoff.py
 │   ├── test_inbox.py
 │   ├── test_knowledge.py
 │   ├── test_nodes_registry.py
+│   ├── test_password.py
 │   ├── test_sprint3_nodes.py
 │   ├── test_users.py
 │   └── test_workflow_engine.py
@@ -128,12 +134,14 @@ ai-saas/
 │   │   └── pages/
 │   │       ├── Admin.jsx
 │   │       ├── AI.jsx
+│   │       ├── Account.jsx
 │   │       ├── Conversations.jsx
 │   │       ├── Dashboard.jsx
 │   │       ├── Editor.jsx
 │   │       ├── Home.jsx
 │   │       ├── Knowledge.jsx
 │   │       ├── Login.jsx
+│   │       ├── ResetPassword.jsx
 │   │       └── WhatsApp.jsx
 │   ├── package.json
 │   ├── vite.config.js
@@ -144,7 +152,9 @@ ai-saas/
 │   ├── script.py.mako
 │   └── versions/
 │       ├── 0002_pending_flows.py
-│       └── 0003_knowledge.py
+│       ├── 0003_knowledge.py
+│       ├── 0004_conversation_transfers.py
+│       └── 0005_password_reset_tokens.py
 ├── docker-compose.yml
 ├── docker-compose.dev.yml
 ├── docker-compose.evolution.yml

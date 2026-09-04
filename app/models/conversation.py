@@ -59,3 +59,9 @@ class Conversation(Base):
     customer = relationship("Customer")
 
     messages = relationship("Message", back_populates="conversation", order_by="Message.id")
+
+    transfers = relationship(
+        "ConversationTransfer",
+        back_populates="conversation",
+        order_by="ConversationTransfer.id",
+    )

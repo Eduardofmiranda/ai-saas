@@ -19,7 +19,25 @@
 | `SECRET_ENCRYPTION_KEY` | Derivada de SECRET_KEY | Chave para criptografia de campos sensiveis |
 | `ALGORITHM` | `HS256` | Algoritmo JWT |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` (24h) | Tempo de expiracao do token |
+| `REFRESH_TOKEN_EXPIRE_MINUTES` | `10080` (7 dias) | Tempo de validade do refresh token (renovacao em `POST /auth/refresh`) |
 | `ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Origens CORS permitidas (lista separada por virgula). Em producao, defina o dominio real |
+
+## Sessao, Recuperacao de Senha e Email (SMTP)
+
+> `POST /auth/forgot-password` responde **503** enquanto `SMTP_HOST`/`SMTP_FROM`
+> nao estiverem configurados (nao simula envio). Em producao, defina `FRONTEND_URL`
+> para o dominio publico (base usada no link do email de reset).
+
+| Variavel | Default | Finalidade |
+|----------|---------|-----------|
+| `FRONTEND_URL` | `http://localhost:5173` | Base publica do frontend usada no link de recuperacao de senha |
+| `SMTP_HOST` | — (desativa email) | Host do servidor SMTP |
+| `SMTP_PORT` | `587` | Porta do SMTP |
+| `SMTP_USER` | — | Usuario SMTP (opcional) |
+| `SMTP_PASSWORD` | — | Senha SMTP (opcional; nunca versionar) |
+| `SMTP_FROM` | — (desativa email) | Remetente (`From`) dos emails |
+| `SMTP_USE_TLS` | `true` | Habilitar STARTTLS |
+| `PASSWORD_RESET_TOKEN_EXPIRE_MINUTES` | `60` | Validade do token de reset (minutos) |
 
 ## CORS
 
@@ -45,9 +63,14 @@
 | Variavel | Default | Finalidade |
 |----------|---------|-----------|
 | `DEFAULT_AI_PROVIDER` | `groq` | Provedor padrao de IA |
-| `DEFAULT_AI_MODEL` | `qwen/qwen3.8-27b` | Modelo padrao |
+| `DEFAULT_AI_MODEL` | `qwen/qwen3.8-27b` | Modelo padrao (fallback global; a config da empresa em `company_configs.ai_model` **tem prioridade**) |
 | `DEFAULT_AI_API_KEY` | — | Chave de API do provedor padrao (Groq). **NAO reutilizar como Evolution API key** |
 | `DEFAULT_AI_BASE_URL` | — | URL base do provedor (auto-resolvido) |
+
+> **Modelos Groq descontinuados (2026-09-04):** `mixtral-8x7b-32768` nao existe mais.
+> Self-serve vigentes: `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `qwen/qwen3.6-27b`,
+> `qwen/qwen3.8-27b`. Se `company_configs.ai_model` ainda tiver um modelo antigo gravado,
+> somente o `DEFAULT_AI_MODEL` nao resolve — atualize o registro (ou salve na pagina `/ai`).
 
 ## WhatsApp / Evolution API
 

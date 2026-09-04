@@ -60,7 +60,9 @@
 - Todos os routers de dados protegidos com `get_current_user` + isolamento
   por `company_id`.
 - Webhook Evolution valida header `evolution-auth` (HMAC).
-- Rate limiting (slowapi): 5/min no login e registro.
+- Rate limiting (slowapi): 5/min no login e registro; 10/min no `forgot-password`.
+- Sessao: access 24h + **refresh token rotacionado** (`/auth/refresh`, `type=refresh`).
+- Recuperacao de senha: link por email (SMTP; 503 se nao configurado), token com hash SHA-256 + uso unico.
 - CORS via `ALLOWED_ORIGINS` (env).
 
 ## 6. Variaveis de ambiente essenciais (producao)

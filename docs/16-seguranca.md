@@ -9,11 +9,20 @@
 
 ### JWT
 - Tokens assinados com HS256
-- Expiracao: 24 horas (configuravel via `ACCESS_TOKEN_EXPIRE_MINUTES`)
-- Payload: user_id, company_id, role
+- **Access token** expira em 24 horas (`ACCESS_TOKEN_EXPIRE_MINUTES`)
+- **Refresh token** expira em 7 dias (`REFRESH_TOKEN_EXPIRE_MINUTES`) com claim `type=refresh`;
+  usado apenas em `POST /auth/refresh` (rotacionado); access token nao e aceito como refresh (401)
+- Payload: user_id, company_id, role, type
 - **`SECRET_KEY` obrigatoria no startup** — se nao estiver definida no
   ambiente, o aplicativo **nao inicia** (exibe erro e sai com `sys.exit(1)`).
   Nao existe mais valor fallback `"dev-secret"`.
+
+### Recuperacao de Senha
+- `POST /auth/forgot-password` gera token aleatorio; apenas o **hash SHA-256** e persistido
+- Token de reset e de **uso unico** (`used_at`) e expira em `PASSWORD_RESET_TOKEN_EXPIRE_MINUTES` (default 60)
+- Resposta generica para email conhecido/desconhecido (anti-enumeracao)
+- Sem SMTP configurado, `forgot-password` retorna **503** (nao simula envio)
+- `POST /auth/forgot-password` com rate limit de **10/min**
 
 ### Credenciais Criptografadas
 - `ai_api_key` e `evolution_api_key` criptografadas com **Fernet** (AES-128-CBC + HMAC-SHA256)
@@ -58,6 +67,7 @@ Todos os routers que manipulam dados sao protegidos por `Depends(get_current_use
 - Implementado via **slowapi** (adicionado ao `requirements.txt`).
 - Login: **5 tentativas/minuto** por IP.
 - Registro: **5 tentativas/minuto** por IP.
+- Recuperacao de senha (`forgot-password`): **10 tentativas/minuto** por IP.
 - Resposta padrao de excesso: HTTP **429** com mensagem em portugues.
 - O import e condicional (via `try/except ImportError`), entao o app funciona
   mesmo se slowapi nao estiver instalado (apenas sem rate limiting).

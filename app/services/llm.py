@@ -4,7 +4,7 @@ Todos os provedores suportados usam a API de chat "OpenAI-compativel"
 (endpoint POST /chat/completions). Isso permite trocar de IA de forma trivial
 apenas alterando a configuracao da empresa (provider, model, key, base_url).
 
-Padrao barato (default): Groq com Llama 3.3 70B.
+Padrao barato (default): Groq com GPT-OSS 120B.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ import httpx
 PROVIDER_DEFAULTS: dict[str, dict] = {
     "groq": {
         "base_url": "https://api.groq.com/openai/v1",
-        "model": "llama-3.3-70b-versatile",
+        "model": "openai/gpt-oss-120b",
     },
     "openai": {
         "base_url": "https://api.openai.com/v1",
@@ -49,7 +49,7 @@ def _resolve(provider: str | None, model: str | None, api_key: str | None, base_
     defaults = PROVIDER_DEFAULTS.get((provider or "").lower(), {})
     return {
         "provider": (provider or "groq").lower(),
-        "model": model or defaults.get("model") or "llama-3.3-70b-versatile",
+        "model": model or defaults.get("model") or "openai/gpt-oss-120b",
         "api_key": api_key or defaults.get("api_key") or "",
         "base_url": (base_url or defaults.get("base_url") or "").rstrip("/"),
     }

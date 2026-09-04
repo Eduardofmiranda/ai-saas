@@ -546,6 +546,7 @@ body {
 }
 .inbox-status { flex-shrink: 0; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; }
 .inbox-status-open { background: rgba(34,197,94,.15); color: var(--green); }
+.inbox-status-pending_agent { background: rgba(245,158,11,.15); color: #fbbf24; }
 .inbox-status-closed { background: rgba(139,147,163,.15); color: var(--muted); }
 
 /* Painel 2: thread */

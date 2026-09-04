@@ -15,6 +15,7 @@
 | Filtro | `filter` | Filtra dados do contexto |
 | Log | `log` | Registra mensagem nos logs |
 | Aguardar mensagem | `wait_until_message` | Pausa ate proxima mensagem do cliente |
+| Transferir para humano | `transfer_to_agent` | Marca conversa como pendente de atendimento humano (handoff) |
 | IA RAG | `ai_rag` | Busca na base de conhecimento e responde com IA |
 | Codigo | `code` | Executa Python customizado |
 | Loop | `loop` | Itera sobre uma lista |
@@ -96,6 +97,12 @@
 - **Saida:** `waiting`
 - **Comportamento:** Pausa execucao, salva PendingFlow, retoma quando cliente enviar proxima mensagem
 
+### transfer_to_agent
+- **Categoria:** whatsapp
+- **Entrada:** Qualquer
+- **Saida:** `transferred` (bool), `conversation_id`
+- **Comportamento:** Seta `Conversation.status` para `pending_agent` e registra um `ConversationTransfer` (action=`transfer_requested`, actor_type=`workflow`). Se a conversa ja esta `pending_agent`, apenas registra log e retorna `transferred=true` sem regravar.
+
 ### ai_rag
 - **Icone:** Brain (lilas)
 - **Entrada:** Qualquer
@@ -129,3 +136,4 @@ Todos os nos possuem o campo `on_error`:
 | filter | #f97316 (laranja) |
 | log | #6b7280 (cinza escuro) |
 | wait_until_message | #ef4444 (vermelho) |
+| transfer_to_agent | #22c55e (verde, whatsapp) |

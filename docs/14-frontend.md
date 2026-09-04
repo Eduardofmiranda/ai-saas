@@ -14,13 +14,24 @@
 ### `/login`
 - Formulario de login (email + senha)
 - Link para cadastro
+- Link "Esqueci minha senha" -> submete `POST /auth/forgot-password` (mostra mensagem generica)
 - Redireciona para `/` apos login
 
-### `/` (Home)
-- Dashboard com estatisticas (placeholders)
-- Lista de workflows com toggle ativar/desativar
-- Botao "Novo Workflow"
-- Logout
+### `/reset-password`
+- Rota **publica** (sem necessidade de sessao)
+- Le `?token=` da URL, confirma novas senhas e chama `POST /auth/reset-password`
+- Apos sucesso, navega para `/login`
+
+### `/conta`
+- Rota protegida
+- Formulario para alterar a senha (`POST /auth/change-password`)
+
+### `/` (Dashboard)
+- Metricas da empresa (KPIs) e status WhatsApp/Evolution.
+- Se existem conversas pendentes (`pending_conversations > 0`), exibe um **banner de alerta**
+  (`.notice`) com botao que navega para `/conversas`.
+- Botao "Novo fluxo" para criar workflow.
+- Barra de progresso de execucoes (sucesso vs erro).
 
 ### `/editor/:id`
 - Editor visual de workflows
@@ -41,19 +52,28 @@
 ### `/conversas` (Inbox — 3 paineis)
 - **Implementado** (Fase 9.0, primeira parte).
 - Layout em 3 paineis (padrao do mercado: lista | thread | contexto do cliente).
-- **Painel 1 — Lista:** busca por nome/telefone, abas (Todas/Abertas/Fechadas),
-  avatar, status (`open`/`closed`), preview + horario da ultima mensagem.
+- **Painel 1 — Lista:** busca por nome/telefone, abas (Todas/Abertas/Aguardando/Fechadas),
+  avatar, status (`open`/`pending_agent`/`closed`), preview + horario da ultima mensagem.
   Ordena por `updated_at` (mais recente primeiro). Dados de
   `GET /conversations/`.
 - **Painel 2 — Thread + resposta:** historico de mensagens com bolhas distintas
   (cliente/bot/agent) e envio de **resposta manual** por `Enter` ou botao
-  (`POST /messages/conversation/{id}/reply`). Botao para fechar/reabrir conversa
-  (`PATCH /conversations/{id}`).
+  (`POST /messages/conversation/{id}/reply`). Botao contextual:
+  **Assumir conversa** (quando status=`pending_agent`, PATCH → `open`),
+  Fechar conversa (open→closed) ou Reabrir conversa (closed→open).
 - **Painel 3 — Contexto:** nome, telefone, status, inicio e total de mensagens do
-  cliente.
+  cliente + **Histórico de transferências** (action, quem agiu, quando).
 - **Polling:** atualiza a lista e as mensagens da conversa selecionada a cada 8s.
 
 Pagina: `frontend/src/pages/Conversations.jsx`. Rota `/conversas` em `App.jsx`.
+
+### `/ai`
+- Configuracao de IA por empresa: provedor, modelo (`GET/PATCH /config/`), prompts e presets.
+- **Modelos Groq vigentes:** openai/gpt-oss-120b, openai/gpt-oss-20b, qwen/qwen3.6-27b, qwen/qwen3.8-27b.
+  Se o modelo salvo nao existir mais (ex.: `mixtral-8x7b-32768`), o campo cai
+  automaticamente para um modelo valido (nao reescreve o banco ate "Salvar").
+- Botao **"Testar resposta da IA"** -> `POST /config/ai/test` (chama o provedor com
+  a config atual — provider/modelo/chave — e mostra a resposta real).
 
 ## Estrutura de Componentes
 

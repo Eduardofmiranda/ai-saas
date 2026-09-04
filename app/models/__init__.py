@@ -8,3 +8,5 @@ from app.models.workflow import Workflow
 from app.models.execution import Execution
 from app.models.pending_flow import PendingFlow
 from app.models.knowledge import Knowledge, KnowledgeChunk
+from app.models.conversation_transfer import ConversationTransfer
+from app.models.password_reset_token import PasswordResetToken

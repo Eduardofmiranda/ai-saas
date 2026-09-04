@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import Header from "../components/Header";
 
-const STATUS_LABELS = { open: "Aberta", closed: "Fechada" };
+const STATUS_LABELS = { open: "Aberta", pending_agent: "Aguardando humano", closed: "Fechada" };
+const TRANSFER_LABELS = {
+  transfer_requested: "Atendimento humano solicitado",
+  assumed: "assumiu a conversa",
+  closed: "fechou a conversa",
+  reopened: "reabriu a conversa",
+};
 const POLL_MS = 8000;
 
 function relativeTime(iso) {
@@ -121,7 +127,12 @@ export default function Conversations() {
 
   async function toggleStatus() {
     if (!selectedConv) return;
-    const next = selectedConv.status === "open" ? "closed" : "open";
+    const next =
+      selectedConv.status === "pending_agent"
+        ? "open"
+        : selectedConv.status === "open"
+          ? "closed"
+          : "open";
     try {
       await api.updateConversation(selectedConv.id, { status: next });
       const list = await api.getConversations();
@@ -134,6 +145,7 @@ export default function Conversations() {
   const ql = q.trim().toLowerCase();
   const filtered = conversations.filter((c) => {
     if (tab === "open" && c.status !== "open") return false;
+    if (tab === "pending" && c.status !== "pending_agent") return false;
     if (tab === "closed" && c.status !== "closed") return false;
     if (ql) {
       const hay = `${c.customer?.name || ""} ${c.customer?.phone || ""}`.toLowerCase();
@@ -142,7 +154,8 @@ export default function Conversations() {
     return true;
   });
   const openCount = conversations.filter((c) => c.status === "open").length;
-  const closedCount = conversations.length - openCount;
+  const pendingCount = conversations.filter((c) => c.status === "pending_agent").length;
+  const closedCount = conversations.filter((c) => c.status === "closed").length;
 
   return (
     <div className="layout">
@@ -172,6 +185,9 @@ export default function Conversations() {
               </button>
               <button className={`inbox-tab ${tab === "open" ? "active" : ""}`} onClick={() => setTab("open")}>
                 Abertas ({openCount})
+              </button>
+              <button className={`inbox-tab ${tab === "pending" ? "active" : ""}`} onClick={() => setTab("pending")}>
+                Aguardando ({pendingCount})
               </button>
               <button className={`inbox-tab ${tab === "closed" ? "active" : ""}`} onClick={() => setTab("closed")}>
                 Fechadas ({closedCount})
@@ -229,7 +245,11 @@ export default function Conversations() {
                     <span className="muted">{formatPhone(selectedConv.customer?.phone)}</span>
                   </div>
                   <button className="btn ghost small" onClick={toggleStatus}>
-                    {selectedConv.status === "open" ? "Fechar conversa" : "Reabrir conversa"}
+                    {selectedConv.status === "pending_agent"
+                      ? "Assumir conversa"
+                      : selectedConv.status === "open"
+                        ? "Fechar conversa"
+                        : "Reabrir conversa"}
                   </button>
                 </header>
 
@@ -299,6 +319,27 @@ export default function Conversations() {
                   <span className="muted">Mensagens</span>
                   <span>{selectedConv.message_count}</span>
                 </div>
+                <div className="inbox-ctx-head">Histórico de transferências</div>
+                {(selectedConv.transfers || []).length === 0 ? (
+                  <p className="muted" style={{ fontSize: 12, padding: "4px 12px 8px" }}>
+                    Sem registros de transferência.
+                  </p>
+                ) : (
+                  <div className="inbox-ctx-transfers">
+                    {[...(selectedConv.transfers || [])]
+                      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                      .map((t) => (
+                        <div key={t.id} className="inbox-ctx-row">
+                          <span className="muted">
+                            {t.action === "transfer_requested"
+                              ? "Atendimento humano solicitado"
+                              : `${t.user_name || "Atendente"} ${TRANSFER_LABELS[t.action] || t.action}`}
+                          </span>
+                          <span>{dateTime(t.created_at)}</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </>
             ) : (
               <div className="inbox-placeholder small">

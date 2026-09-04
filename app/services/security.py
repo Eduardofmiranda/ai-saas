@@ -34,10 +34,22 @@ def verify_password(raw_password: str, password_hash: str) -> bool:
 
 
 def create_access_token(subject: str, extra: dict | None = None) -> str:
+    return _create_token(subject, extra, token_type="access")
+
+
+def create_refresh_token(subject: str, extra: dict | None = None) -> str:
+    """Token de longa duracao para renovar o access token (claim `type: refresh`)."""
+    return _create_token(subject, extra, token_type="refresh")
+
+
+def _create_token(subject: str, extra: dict | None = None, *, token_type: str = "access") -> str:
     algorithm = get_secret("ALGORITHM", "HS256")
-    minutes = int(get_secret("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
+    if token_type == "refresh":
+        minutes = int(get_secret("REFRESH_TOKEN_EXPIRE_MINUTES", "10080"))
+    else:
+        minutes = int(get_secret("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
     expire = datetime.now(timezone.utc) + timedelta(minutes=minutes)
-    payload = {"sub": subject, "exp": expire}
+    payload = {"sub": subject, "type": token_type, "exp": expire}
     if extra:
         payload.update(extra)
     return jwt.encode(payload, _SECRET_KEY, algorithm=algorithm)

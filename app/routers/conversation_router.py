@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.database.session import get_db
 from app.models.conversation import Conversation
+from app.models.conversation_transfer import ConversationTransfer
 from app.models.user import User
 from app.schemas.conversation_schema import (
     ConversationCreate,
@@ -34,13 +35,29 @@ def _to_response(conversation: Conversation) -> dict:
         "last_message": last.content if last else None,
         "last_message_at": last.created_at if last else None,
         "message_count": len(messages),
+        "transfers": conversation.transfers or [],
     }
+
+
+def _transfer_action(old: str, new: str) -> str | None:
+    """Mapeia uma transicao de status para o registro de transferencia."""
+    transitions = {
+        ("pending_agent", "open"): "assumed",
+        ("pending_agent", "closed"): "closed",
+        ("open", "closed"): "closed",
+        ("closed", "open"): "reopened",
+    }
+    return transitions.get((old, new))
 
 
 def _get_conversation(db: Session, conversation_id: int, company_id: int) -> Conversation:
     conversation = (
         db.query(Conversation)
-        .options(selectinload(Conversation.customer), selectinload(Conversation.messages))
+        .options(
+            selectinload(Conversation.customer),
+            selectinload(Conversation.messages),
+            selectinload(Conversation.transfers),
+        )
         .filter(
             Conversation.id == conversation_id,
             Conversation.company_id == company_id,
@@ -75,7 +92,11 @@ def get_conversations(
 ):
     conversations = (
         db.query(Conversation)
-        .options(selectinload(Conversation.customer), selectinload(Conversation.messages))
+        .options(
+            selectinload(Conversation.customer),
+            selectinload(Conversation.messages),
+            selectinload(Conversation.transfers),
+        )
         .filter(Conversation.company_id == current_user.company_id)
         .order_by(Conversation.updated_at.desc())
         .all()
@@ -90,7 +111,9 @@ def filter_conversations(
     db: Session = Depends(get_db),
 ):
     query = db.query(Conversation).options(
-        selectinload(Conversation.customer), selectinload(Conversation.messages)
+        selectinload(Conversation.customer),
+        selectinload(Conversation.messages),
+        selectinload(Conversation.transfers),
     )
     query = query.filter(Conversation.company_id == current_user.company_id)
     if status:
@@ -118,6 +141,20 @@ def update_conversation(
 ):
     conversation = _get_conversation(db, conversation_id, current_user.company_id)
 
+    old_status = conversation.status
+    if data.status != old_status:
+        action = _transfer_action(old_status, data.status)
+        if action:
+            db.add(
+                ConversationTransfer(
+                    conversation_id=conversation.id,
+                    company_id=conversation.company_id,
+                    actor_type="user",
+                    user_id=current_user.id,
+                    user_name=current_user.name or current_user.email or "Atendente",
+                    action=action,
+                )
+            )
     conversation.status = data.status
     db.commit()
     db.refresh(conversation)

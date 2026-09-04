@@ -17,6 +17,8 @@ import json
 import re
 
 from app.config import get_secret
+from app.models.conversation import Conversation
+from app.models.conversation_transfer import ConversationTransfer
 from app.services import llm
 from app.services.nodes.context import NodeError
 from app.services.nodes.rag_node import run_rag_node
@@ -332,6 +334,49 @@ async def _run_schedule(ctx, node):
     return {"outputs": {"triggered": True}}
 
 
+async def _run_transfer_to_agent(ctx, node):
+    """Sinaliza a conversa atual como aguardando atendimento humano (handoff)."""
+    conv_id = ctx.data.get("conversation_id") or (ctx.data.get("conversation") or {}).get("id")
+    if conv_id is not None:
+        try:
+            conv_id = int(conv_id)
+        except (TypeError, ValueError):
+            conv_id = None
+
+    transferred = False
+    if not conv_id:
+        ctx.log("nenhuma conversation_id no contexto para transferir")
+    else:
+        conv = (
+            ctx.db.query(Conversation)
+            .filter(
+                Conversation.id == conv_id,
+                Conversation.company_id == ctx.company_id,
+            )
+            .first()
+        )
+        if not conv:
+            ctx.log(f"conversa {conv_id} nao encontrada para transferencia")
+        else:
+            if conv.status != "pending_agent":
+                conv.status = "pending_agent"
+                ctx.db.add(
+                    ConversationTransfer(
+                        conversation_id=conv.id,
+                        company_id=conv.company_id,
+                        actor_type="workflow",
+                        action="transfer_requested",
+                    )
+                )
+                ctx.db.commit()
+                ctx.log(f"conversa {conv.id} transferida para atendimento humano (pending_agent)")
+            else:
+                ctx.log(f"conversa {conv.id} ja estava em pending_agent")
+            transferred = True
+
+    return {"outputs": {"transferred": transferred, "conversation_id": conv_id or ""}}
+
+
 # ---------------------------------------------------------------
 # Definicoes dos tipos (metadata para o editor + run)
 # ---------------------------------------------------------------
@@ -389,6 +434,10 @@ NODE_TYPES: dict[str, dict] = {
     "wait_until_message": {
         "type": "wait_until_message",
         **_make_node("Aguardar mensagem", "whatsapp", "Pausa o fluxo ate o cliente enviar a proxima mensagem.", [], _run_wait_until_message),
+    },
+    "transfer_to_agent": {
+        "type": "transfer_to_agent",
+        **_make_node("Transferir para humano", "whatsapp", "Marca a conversa como aguardando atendimento humano (handoff).", [], _run_transfer_to_agent),
     },
     "ai": {
         "type": "ai",

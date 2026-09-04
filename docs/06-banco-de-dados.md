@@ -17,6 +17,8 @@
 >    `alembic/versions/`:
 >    - `0002_pending_flows.py` — adiciona `pending_flows` (so cria se nao existir)
 >    - `0003_knowledge.py` — adiciona `knowledge` e `knowledge_chunks`
+>    - `0004_conversation_transfers.py` — adiciona `conversation_transfers`
+>    - `0005_password_reset_tokens.py` — adiciona `password_reset_tokens`
 >
 >    Elas **assumem que as tabelas base ja existem** e apenas garantem que as
 >    tabelas `pending_flows`/`knowledge`/`knowledge_chunks` existam (checando com
@@ -98,16 +100,39 @@
 | id | Integer | PK, index |
 | company_id | Integer | FK -> companies.id, NOT NULL |
 | customer_id | Integer | FK -> customers.id, NOT NULL |
-| status | String | default "open" |
+| status | String | default "open"; valores: `open` (ativa), `pending_agent` (aguardando humano, handoff), `closed` (fechada) |
 | created_at | DateTime(timezone) | |
 | updated_at | DateTime(timezone) | |
+
+### conversation_transfers
+| Coluna | Tipo | Constraints |
+|--------|------|------------|
+| id | Integer | PK, index |
+| conversation_id | Integer | FK -> conversations.id, NOT NULL, index |
+| company_id | Integer | FK -> companies.id, NOT NULL, index |
+| actor_type | String | `workflow` (node transfer_to_agent) ou `user` (atendente) |
+| user_id | Integer | nullable |
+| user_name | String | snapshot do nome do atendente |
+| action | String | `transfer_requested` / `assumed` / `closed` / `reopened` |
+| created_at | DateTime(timezone) | |
+
+### password_reset_tokens
+| Coluna | Tipo | Constraints |
+|--------|------|------------|
+| id | Integer | PK, index |
+| user_id | Integer | FK -> users.id, NOT NULL, index |
+| company_id | Integer | FK -> companies.id, NOT NULL, index |
+| token_hash | String | SHA-256 do token aleatorio (nunca o raw), NOT NULL, index |
+| expires_at | DateTime(timezone) | NOT NULL |
+| used_at | DateTime(timezone) | nullable (uso unico) |
+| created_at | DateTime(timezone) | |
 
 ### messages
 | Coluna | Tipo | Constraints |
 |--------|------|------------|
 | id | Integer | PK, index |
 | conversation_id | Integer | FK -> conversations.id, NOT NULL |
-| sender_type | String | NOT NULL ("customer" ou "bot") |
+| sender_type | String | NOT NULL ("customer", "bot" ou "agent") |
 | content | Text | NOT NULL |
 | wa_message_id | String | default "", index |
 | created_at | DateTime(timezone) | |
@@ -217,5 +242,7 @@ docker compose exec backend python -c "from app.database.database import engine;
 ```
 
 Tabelas esperadas: `companies, company_configs, users, customers, conversations,
-messages, workflows, executions, pending_flows, knowledge, knowledge_chunks`
-(mais possivelmente `alembic_version`, inofensivo).
+conversation_transfers, messages, workflows, executions, pending_flows, knowledge, knowledge_chunks`
+(mais possivelmente `alembic_version`, inofensivo). `password_reset_tokens` passa a
+existir automaticamente no boot seguinte ao deploy (o `create_all` do `lifespan` em
+`app/main.py` cria somente as tabelas ainda inexistentes).

@@ -6,6 +6,7 @@ class DashboardResponse(BaseModel):
     customers: int
     conversations: int
     open_conversations: int
+    pending_conversations: int
     closed_conversations: int
     messages: int
     workflows_total: int
