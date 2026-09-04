@@ -2,6 +2,9 @@
 
 > ⭐ **Comece por `docs/FATOS-CHAVE.md`** — fixa os fatos principais do projeto
 > (banco de producao = Supabase, usuario por cadastro, credenciais, etc.).
+>
+> 📊 **Estudo de UX:** `docs/20-estudo-painel-mercado.md` — analise de plataformas
+> de referencia e proposta de redesenho do painel (Fase 9.0).
 
 ## Resumo do Projeto
 
@@ -121,6 +124,8 @@ ai-saas/
 │   │   │   └── AuthContext.jsx
 │   │   └── pages/
 │   │       ├── Admin.jsx
+│   │       ├── AI.jsx
+│   │       ├── Dashboard.jsx
 │   │       ├── Editor.jsx
 │   │       ├── Home.jsx
 │   │       ├── Knowledge.jsx

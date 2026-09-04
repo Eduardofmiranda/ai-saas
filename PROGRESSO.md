@@ -195,14 +195,15 @@
 ## FASE 9 — Intelligence & Analytics ⏳
 
 ### 9.0 — Redesenho do Painel + Estudo de Mercado ⏳
-- [ ] **Estudo de mercado**: analisar paineis/dashboards de plataformas concorrentes e
+- [x] **Estudo de mercado**: analisar paineis/dashboards de plataformas concorrentes e
       de referencia (n8n, Zendesk, Intercom, Manychat, Chatwoot, Tidio, Freshdesk,
       Evolution/manager, HubSpot, Drift, Birdeye etc.) — coletar ideias de UX, layout,
       componentes e fluxos que vale adotar
-- [ ] Levantar o que essas plataformas mostram no dashboard inicial, como organizam a
+- [x] Levantar o que essas plataformas mostram no dashboard inicial, como organizam a
       navegacao, quais KPIs destacam e os padroes de listagem/inbox
-- [ ] Consolidar um documento de ideias/insights (em `docs/`) seguindo a regra de
+- [x] Consolidar um documento de ideias/insights (em `docs/`) seguindo a regra de
       documentacao (implementado/parcial/planejado/desconhecido)
+      -> `docs/20-estudo-painel-mercado.md`
 - [ ] Propor o redesenho do painel atual (hoje muito simples): navegacao, cards, layout
 - [ ] Implementar a estrutura/navegacao do novo painel
 - [ ] Implementar as telas/componentes priorizados pelo estudo
