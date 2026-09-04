@@ -29,6 +29,15 @@
 - Inspector (editar node selecionado)
 - Salvar / Rodar / Logs
 
+### `/whatsapp`
+- Status de conexao WhatsApp/Evolution por empresa
+- `Conectar WhatsApp` -> `POST /config/whatsapp/setup` (gera QR base64)
+- `Desconectar` -> `POST /config/whatsapp/disconnect`
+- **Auto-refresh (polling):** a pagina consulta `GET /config/whatsapp` a cada
+  **3s enquanto o QR esta visivel** (escaneando) e **10s caso contrario**, de modo
+  que o status muda sozinho para "Conectado" apos o escaneamento, sem F5.
+  Ao detectar `state: "open"`, o QR e limpo automaticamente.
+
 ## Estrutura de Componentes
 
 ```

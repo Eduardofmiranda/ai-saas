@@ -173,6 +173,28 @@ pip install -r requirements.txt
 3. `EVOLUTION_INSTANCE` existe na Evolution?
 4. Webhook esta configurado na Evolution?
 
+**Sintoma:** status fica `unknown` / app nao reconhece conexao feita pelo manager.
+
+**Causa:** estado da Evolution em memoria (`connectionState`) x banco
+(`fetchInstances`) podem divergir apos logout/conexao manual pelo manager.
+
+**Resultado (ja corrigido):** o backend le `connectionState` primeiro e usa
+`fetchInstances` como fallback; quando `connectionState` responde 400
+`"not connected"`, trata como `close`.
+
+**Sintoma:** `QR indisponivel (resp keys: [...])` ao conectar.
+
+**Causa:** a Evolution v2.x retorna o QR no campo `base64` do **nivel raiz** da
+resposta de `GET /instance/connect/{instance}` (nao em `qrcode.base64`).
+O setup ja le `data.base64` direto. Se reproduzir, conferir as `resp keys`
+retornadas no erro.
+
+**Sintoma:** `Erro ao desconectar: Evolution retornou HTTP 400`.
+
+**Explicacao:** e o comportamento correto de `DELETE /instance/logout/{instance}`
+quando a instancia **ja esta desconectada** (`"not connected"`). O backend trata
+400 `"not connected"` como sucesso (`ok`). Nao e erro.
+
 ### Frontend nao conecta ao backend
 
 **Erro:** `Failed to fetch`

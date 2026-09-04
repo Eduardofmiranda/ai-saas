@@ -25,6 +25,16 @@ Base URL: `http://localhost:8000`
 | GET | `/config/` | Busca configuracoes da empresa | JWT |
 | PATCH | `/config/` | Atualiza configuracoes | JWT |
 
+### WhatsApp (por empresa)
+
+| Metodo | URL | Descricao | Auth |
+|--------|-----|-----------|------|
+| GET | `/config/whatsapp` | Estado da conexao WhatsApp/Evolution | JWT |
+| POST | `/config/whatsapp/setup` | Cria instancia (se preciso) e retorna QR base64 | JWT |
+| POST | `/config/whatsapp/connect` | Gera QR para uma instancia existente | JWT |
+| POST | `/config/whatsapp/disconnect` | Desconecta (logout) a instancia | JWT |
+| POST | `/config/whatsapp/test` | Testa alcance/credenciais da Evolution | JWT |
+
 ### Customers
 
 | Metodo | URL | Descricao | Auth |

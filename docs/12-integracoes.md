@@ -79,12 +79,41 @@ EVOLUTION_INSTANCE = "sua-instancia"
 
 > **Alternativa paga (opcional):** existem provedores que hospedam a Evolution API para voce (ex: hosting gerenciado), cobrando por instancia. Nesse caso voce so usa a URL e a chave que eles te passam. Para este projeto usamos a instalacao self-hosted da Evolution na VPS.
 
-### Endpoints Utilizados
+### Endpoints Utilizados (backend -> Evolution)
 
 | Metodo | URL | Finalidade |
 |--------|-----|-----------|
+| GET | `{base}/instance/connectionState/{instance}` | Estado real em memoria (status) |
+| GET | `{base}/instance/fetchInstances` | Lista instancias do banco (fallback de status, checagem no setup) |
+| POST | `{base}/instance/create` | Criar instancia (`integration: WHATSAPP-BAILEYS` obrigatorio) |
+| GET | `{base}/instance/connect/{instance}` | Obter QR (resposta traz `base64` no nivel raiz) |
+| DELETE | `{base}/instance/logout/{instance}` | Desconectar (logout) |
 | POST | `{base}/message/sendText/{instance}` | Enviar mensagem de texto |
-| POST | `{base}/chat/sendText/{instance}` | Alternativa para envio |
+
+### Detalhe do status (GET /config/whatsapp)
+
+O backend resolve o estado por empresa em `app/routers/config_router.py:whatsapp_status`:
+
+1. **connectionState** (tempo real, em memoria) — fonte preferida.
+2. **fetchInstances** — fallback quando o `connectionState` responde 400/nao 200
+   ou quando o estado continua `unknown` (usa `connectionStatus` do banco, que
+   pode estar stale).
+
+> **Por que nao so connectionState:** a Evolution mantém o estado em memoria e
+> o `fetchInstances` reflete o banco — os dois divergem apos logout manual pelo
+> manager. A leitura combinada cobre ambos.
+
+### Detalhe do desconectar (POST /config/whatsapp/disconnect)
+
+`app/routers/config_router.py:whatsapp_disconnect` usa `DELETE /instance/logout/{instance}`.
+Tratamentos de respostas ja desconhecidas como sucesso:
+
+- **404** — instancia nao existe na Evolution (ja desconectada/removida).
+- **400** com `"not connected"` — instancia existe mas ja esta desconectada.
+
+> **Importante (fato verificado):** `POST` em `/instance/logout` retorna **404**
+> e `GET /instance/logout?instanceName=...` nao existe. O unico contrato valido
+> e `DELETE /instance/logout/{instance}`.
 
 ### Webhook
 
@@ -95,13 +124,15 @@ EVOLUTION_INSTANCE = "sua-instancia"
 > Com isso, nova empresa escaneia o QR e ja recebe mensagens, sem nenhum passo
 > manual. Nao implementado ainda — nao afirmar que existe.
 
-Para configurar na Evolution (v2.3.x), o campo `"enabled": true` e obrigatorio:
+Para configurar na Evolution (v2.3.x), o campo `"enabled": true` e obrigatorio.
+Use o nome de instancia da empresa (`inst-<company_id>`) e o `company_id` real na
+URL do webhook:
 
 ```bash
 KEY="$(grep '^EVOLUTION_AUTH_KEY=' .env | cut -d= -f2-)"
-curl -s -X POST http://127.0.0.1:8080/webhook/set/flowai \
+curl -s -X POST http://127.0.0.1:8080/webhook/set/inst-2 \
   -H "apikey: $KEY" -H 'Content-Type: application/json' \
-  -d '{"webhook":{"enabled":true,"url":"http://backend:8000/webhook/whatsapp/1","events":["MESSAGES_UPSERT","QRCODE_UPDATED","CONNECTION_UPDATE"]}}'
+  -d '{"webhook":{"enabled":true,"url":"http://backend:8000/webhook/whatsapp/2","events":["MESSAGES_UPSERT","QRCODE_UPDATED","CONNECTION_UPDATE"]}}'
 ```
 
 **Payload esperado (Evolution API v2):**
