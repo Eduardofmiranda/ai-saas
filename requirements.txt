@@ -1,29 +1,32 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-psycopg2-binary
-python-dotenv
-pydantic
-pydantic[email]
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+sqlalchemy==2.0.41
+psycopg2-binary==2.9.10
+python-dotenv==1.1.0
+pydantic==2.11.3
+pydantic[email]==2.11.3
 
 # Autenticacao (JWT)
-python-jose[cryptography]
-passlib[bcrypt]
-python-multipart
+python-jose[cryptography]==3.4.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.20
 
 # Criptografia de campos sensiveis (chaves por empresa)
-cryptography
+cryptography==45.0.4
 
 # HTTP client (Evolution API + LLM)
-httpx
+httpx==0.28.1
 
 # Migrations
-alembic
+alembic==1.15.2
 
 # Async tasks
-celery
-redis
-redbeat
+celery==5.5.2
+redis==6.2.0
+redbeat==2.1.0
+
+# Rate limiting
+slowapi==0.1.9
 
 # Utils
-python-json-logger
+python-json-logger==3.3.0

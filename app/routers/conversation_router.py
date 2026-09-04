@@ -5,11 +5,13 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.models.conversation import Conversation
+from app.models.user import User
 from app.schemas.conversation_schema import (
     ConversationCreate,
     ConversationResponse,
     ConversationUpdate,
 )
+from app.services.deps import get_current_user
 
 router = APIRouter(
     prefix="/conversations",
@@ -20,10 +22,11 @@ router = APIRouter(
 @router.post("/", response_model=ConversationResponse)
 def create_conversation(
     conversation: ConversationCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     new_conversation = Conversation(
-        company_id=conversation.company_id,
+        company_id=current_user.company_id,
         customer_id=conversation.customer_id,
     )
     db.add(new_conversation)
@@ -33,18 +36,13 @@ def create_conversation(
 
 
 @router.get("/", response_model=list[ConversationResponse])
-def get_conversations(db: Session = Depends(get_db)):
-    return db.query(Conversation).all()
-
-
-@router.get("/company/{company_id}", response_model=list[ConversationResponse])
-def get_company_conversations(
-    company_id: int,
+def get_conversations(
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     return (
         db.query(Conversation)
-        .filter(Conversation.company_id == company_id)
+        .filter(Conversation.company_id == current_user.company_id)
         .all()
     )
 
@@ -52,9 +50,12 @@ def get_company_conversations(
 @router.get("/filter/", response_model=list[ConversationResponse])
 def filter_conversations(
     status: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Conversation)
+    query = db.query(Conversation).filter(
+        Conversation.company_id == current_user.company_id
+    )
     if status:
         query = query.filter(Conversation.status == status)
     return query.all()
@@ -63,11 +64,15 @@ def filter_conversations(
 @router.get("/{conversation_id}", response_model=ConversationResponse)
 def get_conversation(
     conversation_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     conversation = (
         db.query(Conversation)
-        .filter(Conversation.id == conversation_id)
+        .filter(
+            Conversation.id == conversation_id,
+            Conversation.company_id == current_user.company_id,
+        )
         .first()
     )
     if not conversation:
@@ -79,11 +84,15 @@ def get_conversation(
 def update_conversation(
     conversation_id: int,
     data: ConversationUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     conversation = (
         db.query(Conversation)
-        .filter(Conversation.id == conversation_id)
+        .filter(
+            Conversation.id == conversation_id,
+            Conversation.company_id == current_user.company_id,
+        )
         .first()
     )
     if not conversation:
@@ -98,11 +107,15 @@ def update_conversation(
 @router.delete("/{conversation_id}")
 def delete_conversation(
     conversation_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     conversation = (
         db.query(Conversation)
-        .filter(Conversation.id == conversation_id)
+        .filter(
+            Conversation.id == conversation_id,
+            Conversation.company_id == current_user.company_id,
+        )
         .first()
     )
     if not conversation:

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -13,8 +13,19 @@ from app.services.security import create_access_token, verify_password
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
+def _rate_limit_login():
+    """Aplica rate limit no login se slowapi estiver disponivel."""
+    try:
+        from app.main import limiter
+        return limiter.limit("5/minute")
+    except (ImportError, AttributeError):
+        return lambda func: func
+
+
+@_rate_limit_login()
 @router.post("/register", response_model=LoginResponse)
 def register(
+    request: Request,
     data: RegisterRequest,
     db: Session = Depends(get_db),
 ):
@@ -48,8 +59,10 @@ def register(
     )
 
 
+@_rate_limit_login()
 @router.post("/login", response_model=LoginResponse)
 def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):

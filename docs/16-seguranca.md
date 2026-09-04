@@ -9,8 +9,11 @@
 
 ### JWT
 - Tokens assinados com HS256
-- Expiracao: 24 horas
+- Expiracao: 24 horas (configuravel via `ACCESS_TOKEN_EXPIRE_MINUTES`)
 - Payload: user_id, company_id, role
+- **`SECRET_KEY` obrigatoria no startup** — se nao estiver definida no
+  ambiente, o aplicativo **nao inicia** (exibe erro e sai com `sys.exit(1)`).
+  Nao existe mais valor fallback `"dev-secret"`.
 
 ### Credenciais Criptografadas
 - `ai_api_key` e `evolution_api_key` criptografadas com **Fernet** (AES-128-CBC + HMAC-SHA256)
@@ -25,10 +28,49 @@ decrypted = decrypt_field("enc:gAAAAABh...")  # → "minha-chave"
 decrypted = decrypt_field("chave-legada")  # → "chave-legada" (sem alteracao)
 ```
 
+### Autenticacao Obrigatoria em Todos os Routers de Dados
+Todos os routers que manipulam dados sao protegidos por `Depends(get_current_user)`:
+
+- `conversation_router.py` — todos os endpoints
+- `message_router.py` — todos os endpoints
+- `company_router.py` — todos os endpoints
+- `customer_router.py` — todos os endpoints
+- `workflow_router.py` — ja protegido
+- `knowledge_router.py` — ja protegido
+- `config_router.py` — ja protegido
+- `dashboard_router.py` — ja protegido
+- `users_router.py` — ja protegido
+
 ### Isolamento Multi-tenant
-- Todas as queries filtram por `company_id`
+- Todas as queries filtram por `company_id` do usuario logado
 - Usuario so ve dados da propria empresa
 - `company_id` extraido do token JWT
+- Acesso cross-tenant retorna **403** (ex.: acessar `/{company_id}` de outra empresa)
+
+### Webhook com Autenticacao
+- O webhook `POST /webhook/whatsapp/{company_id}` valida o header
+  **`evolution-auth`** contra `EVOLUTION_AUTH_KEY` (comparacao via
+  `hmac.compare_digest` para evitar timing attacks).
+- Requisicao sem header valido retorna **401**.
+- Isso impede injecao de mensagens falsas por terceiros.
+
+### Rate Limiting
+- Implementado via **slowapi** (adicionado ao `requirements.txt`).
+- Login: **5 tentativas/minuto** por IP.
+- Registro: **5 tentativas/minuto** por IP.
+- Resposta padrao de excesso: HTTP **429** com mensagem em portugues.
+- O import e condicional (via `try/except ImportError`), entao o app funciona
+  mesmo se slowapi nao estiver instalado (apenas sem rate limiting).
+
+### CORS via Ambiente
+- Origens permitidas configuradas pela env var `ALLOWED_ORIGINS`
+  (lista separada por virgula).
+- Default seguro: `http://localhost:5173,http://127.0.0.1:5173`.
+- Permite configurar o dominio real de producao sem alterar codigo.
+
+### Healthcheck
+- Endpoint `GET /health` retorna `{"status": "healthy"}`.
+- Util para monitoramento / healthcheck no Docker.
 
 ### Validacao de Entrada
 - Pydantic valida todos os inputs
@@ -39,32 +81,29 @@ decrypted = decrypt_field("chave-legada")  # → "chave-legada" (sem alteracao)
 - Erros retornam `{detail: "mensagem"}`
 - SQL errors tratados (duplicate key)
 - 401 para nao autenticado
-- 403 para nao autorizado
+- 403 para nao autorizado (cross-tenant)
+- 429 para rate limit
 
-## Riscos Conhecidos
+## Riscos Conhecidos / Pendentes
 
-1. **Credenciais VAZADAS em logs de conversa (03/09/2026)** — Ainda em uso,
-   exigem rotacao imediata:
-   - Chave da Groq (`DEFAULT_AI_API_KEY`) — rotacionar em console.groq.com.
-   - Senha do Postgres local (`POSTGRES_PASSWORD` / `DATABASE_URL`) — `yangeme`.
-   - Chave da Evolution (`EVOLUTION_AUTH_KEY` / `EVOLUTION_API_KEY`).
-   - `SECRET_KEY` e `SECRET_ENCRYPTION_KEY` estavam **iguais** — usar valores
-     distintos e rotacionar (cuidado: rotacionar quebra a descriptografia das
-     chaves criptografadas ja salvas; planejar migracao).
-   - `REDIS_URL` ja apontou para um Redis externo (Redis Cloud) com senha exposta
-     — corrigido para o Redis interno no `.env` atual.
-2. **Rate limiting** — Nao implementado. Vulneravel a brute force.
-3. **HTTPS** — Nao configurado. Necessario para producao.
-4. **CORS** — Configurado apenas para localhost:5173 em dev. Ajustar para producao.
-5. **Injection** — SQLAlchemy usa queries parametrizadas (protegido contra SQL injection).
-6. **XSS** — React escapa por padrao. Nao usa dangerouslySetInnerHTML.
+1. **HTTPS** — **Nao configurado** (IP sem dominio). Necessario para producao.
+   Considerar Caddy, nginx + Let's Encrypt, ou Cloudflare Tunnel.
+2. **Confirmacao de rotacao na VPS** — As credenciais foram rotacionadas no
+   `.env` local, mas a **rotacao real nos servicos (Groq, Postgres da VPS,
+   Evolution) e confirmacao de que o WhatsApp continua conectado** devem ser
+   feitas manualmente na VPS.
+3. **Injection** — SQLAlchemy usa queries parametrizadas (protegido contra SQL injection).
+4. **XSS** — React escapa por padrao. Nao usa dangerouslySetInnerHTML.
 
 ## Checklist Antes de Producao
 
-- [ ] Rotacionar **todas** as credenciais vazadas (Groq, postgres, Evolution, SECRET_*)
-- [ ] Garantir `SECRET_KEY` != `SECRET_ENCRYPTION_KEY`
+- [x] Rotacionar credenciais vazadas **no `.env` local** (Groq marcada para troca manual)
+- [ ] Confirmar rotacao na VPS (Groq console, Postgres da VPS, Evolution) e WhatsApp conectado
+- [x] Garantir `SECRET_KEY` != `SECRET_ENCRYPTION_KEY` (valores distintos)
 - [ ] Configurar HTTPS
-- [ ] Configurar CORS para dominio real
-- [ ] Configurar rate limiting
+- [x] Proteger todos os routers com autenticacao (multi-tenant)
+- [x] Validar autenticacao do webhook Evolution
+- [x] Configurar rate limiting (login/registro)
+- [x] Configurar CORS via `ALLOWED_ORIGINS`
 - [ ] Remover dados sensiveis dos logs
 - [ ] Revisar permissoes de acesso

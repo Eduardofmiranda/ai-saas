@@ -1,10 +1,21 @@
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
 from jose import JWTError, jwt
 
 from app.config import get_secret
+
+
+_SECRET_KEY = get_secret("SECRET_KEY")
+if not _SECRET_KEY:
+    print(
+        "\n[FATAL] SECRET_KEY nao esta configurado no ambiente.\n"
+        "Defina a variavel SECRET_KEY no .env antes de iniciar o servidor.\n",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 def hash_password(raw_password: str) -> str:
@@ -23,20 +34,18 @@ def verify_password(raw_password: str, password_hash: str) -> bool:
 
 
 def create_access_token(subject: str, extra: dict | None = None) -> str:
-    secret = get_secret("SECRET_KEY", "dev-secret")
     algorithm = get_secret("ALGORITHM", "HS256")
     minutes = int(get_secret("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
     expire = datetime.now(timezone.utc) + timedelta(minutes=minutes)
     payload = {"sub": subject, "exp": expire}
     if extra:
         payload.update(extra)
-    return jwt.encode(payload, secret, algorithm=algorithm)
+    return jwt.encode(payload, _SECRET_KEY, algorithm=algorithm)
 
 
 def decode_access_token(token: str) -> dict | None:
-    secret = get_secret("SECRET_KEY", "dev-secret")
     algorithm = get_secret("ALGORITHM", "HS256")
     try:
-        return jwt.decode(token, secret, algorithms=[algorithm])
+        return jwt.decode(token, _SECRET_KEY, algorithms=[algorithm])
     except JWTError:
         return None

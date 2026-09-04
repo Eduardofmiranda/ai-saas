@@ -1,8 +1,10 @@
 import asyncio
+import hmac
 
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, BackgroundTasks, Request, HTTPException
 from sqlalchemy.orm import Session
 
+from app.config import get_secret
 from app.database.session import SessionLocal
 from app.services import evolution
 from app.services.conversation_service import handle_incoming_workflow
@@ -26,6 +28,21 @@ def _run_pipeline(company_id: int, phone: str, text: str, wa_message_id: str) ->
         db.close()
 
 
+def _verify_webhook_auth(request: Request) -> None:
+    """Valida a autenticacao do webhook da Evolution API.
+
+    A Evolution API envia a chave de autenticacao no header 'evolution-auth'.
+    Se EVOLUTION_AUTH_KEY estiver configurado, valida o header.
+    """
+    auth_key = get_secret("EVOLUTION_AUTH_KEY")
+    if not auth_key:
+        return
+
+    received = request.headers.get("evolution-auth", "")
+    if not hmac.compare_digest(received, auth_key):
+        raise HTTPException(status_code=401, detail="Webhook authentication failed")
+
+
 @router.post("/whatsapp/{company_id}")
 async def whatsapp_webhook(
     company_id: int,
@@ -37,6 +54,8 @@ async def whatsapp_webhook(
     Configure o webhook da instancia da Evolution para apontar para
     POST /webhook/whatsapp/{company_id} (o id da empresa da plataforma).
     """
+    _verify_webhook_auth(request)
+
     try:
         payload = await request.json()
     except Exception:

@@ -16,7 +16,7 @@ e a própria Evolution API (WhatsApp). Troca de IA sem tocar em código (adapter
 ### Backend
 ```powershell
 # 1) criar as tabelas
-venv\Scripts\python.exe app\create_tables.py
+venv\Scripts\python.exe app.create_tables.py
 
 # 2) subir a API
 venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000

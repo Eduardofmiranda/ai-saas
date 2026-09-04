@@ -2,7 +2,6 @@ from pydantic import BaseModel
 
 
 class ConversationCreate(BaseModel):
-    company_id: int
     customer_id: int
 
 

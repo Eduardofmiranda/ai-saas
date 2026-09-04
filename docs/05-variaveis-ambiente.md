@@ -4,8 +4,11 @@
 
 | Variavel | Finalidade | Exemplo |
 |----------|-----------|---------|
-| `DATABASE_URL` | URL de conexao com o banco | `postgresql://postgres:senha@postgres:5432/ai_saas` (host `postgres` = servico do docker-compose) |
+| `DATABASE_URL` | URL de conexao com o banco | Producao: `postgresql://postgres:senha@postgres:5432/ai_saas` (host `postgres` = servico do docker-compose). Dev local: `sqlite:///./aissaas.db` |
 | `SECRET_KEY` | Chave secreta para JWT e derivacao de criptografia | `openssl rand -hex 32` |
+
+> **Importante:** `SECRET_KEY` e **obrigatoria** no startup. Sem ela, o servidor
+> nao inicia (exibe erro e encerra). Nao existe mais valor fallback.
 
 ## Opcionais (com defaults)
 
@@ -16,6 +19,26 @@
 | `SECRET_ENCRYPTION_KEY` | Derivada de SECRET_KEY | Chave para criptografia de campos sensiveis |
 | `ALGORITHM` | `HS256` | Algoritmo JWT |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` (24h) | Tempo de expiracao do token |
+| `ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Origens CORS permitidas (lista separada por virgula). Em producao, defina o dominio real |
+
+## CORS
+
+- Controlado por `ALLOWED_ORIGINS` (lista separada por virgula).
+- Nao e mais hardcoded no codigo.
+- Exemplo producao: `ALLOWED_ORIGINS=https://app.minhaempresa.com`
+
+## Seed de Usuario de Teste (desenvolvimento local)
+
+> **Atencao:** O seed roda **apenas** quando `SEED_DEFAULT_USER` esta habilitado
+> E o banco nao possui nenhum usuario. Em producao, NAO defina `SEED_DEFAULT_USER`.
+
+| Variavel | Default | Finalidade |
+|----------|---------|-----------|
+| `SEED_DEFAULT_USER` | — | Habilita o seed (`true`/`1`/`yes`) |
+| `SEED_USER_EMAIL` | `teste@flowai.com` | Email do usuario de teste |
+| `SEED_USER_PASSWORD` | `teste123` | Senha do usuario de teste |
+| `SEED_USER_NAME` | `Usuario Teste` | Nome do usuario de teste |
+| `SEED_COMPANY_NAME` | `Empresa Teste` | Nome da empresa de teste |
 
 ## IA (Defaults Globais)
 
@@ -37,7 +60,7 @@
 |----------|---------|-----------|
 | `EVOLUTION_BASE_URL` | `http://evolution:8080` | URL da Evolution API (dentro do docker, hostname `evolution`) |
 | `EVOLUTION_API_KEY` | — | Chave que o **backend** usa para autenticar na Evolution (`send_text`) |
-| `EVOLUTION_AUTH_KEY` | — | Chave injetada pelo compose como `AUTHENTICATION_API_KEY` da Evolution. **Use a MESMA de `EVOLUTION_API_KEY`** |
+| `EVOLUTION_AUTH_KEY` | — | Chave para autenticar o **webhook** (`evolution-auth` header) e usada pelo compose como `AUTHENTICATION_API_KEY`. **Use a MESMA de `EVOLUTION_API_KEY`** |
 | `EVOLUTION_INSTANCE` | `default` | Nome da instancia (ex.: `flowai`) |
 
 > **Nota (variaveis mortas):** `EVOLUTION_SERVER_URL` e `EVOLUTION_DATABASE_URI`
@@ -60,3 +83,4 @@
 4. **NUNCA** coloque secrets em arquivos versionados (git)
 5. **NAO use a chave da Groq como `EVOLUTION_API_KEY`** — sao chaves diferentes
 6. O `docker-compose.evolution.yml` **nao usa `env_file`** — vazar variaveis do app para a Evolution causa conflitos no `AUTHENTICATION_API_KEY`
+7. **`SEED_DEFAULT_USER`**: habilitar apenas em desenvolvimento local. Em producao, NAO definir.
