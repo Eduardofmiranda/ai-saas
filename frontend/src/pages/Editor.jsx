@@ -272,6 +272,9 @@ export default function Editor() {
         </div>
         <div className="ed-actions">
           <button className="btn ghost" onClick={() => navigate("/fluxos")}>Voltar</button>
+          <button className={wf?.active ? "btn ghost" : "btn secondary"} onClick={() => save(!wf?.active)} disabled={saving || running}>
+            {wf?.active ? "Desativar" : "Ativar"}
+          </button>
           <button className="btn secondary" onClick={() => run()} disabled={saving || running}>
             {running ? "Rodando..." : "Rodar"}
           </button>

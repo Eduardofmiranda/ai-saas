@@ -72,3 +72,17 @@ Templates suportam interpolecao com `{{ }}`:
 "Nome: {{ data.customer.name }}"
 "Telefone: {{ data.customer.phone }}"
 ```
+
+## Ativacao de fluxos por mensagem
+
+### Implementado
+
+Para cada empresa, apenas um workflow com trigger_type igual a message deve ficar
+ativo. Ao ativar outro fluxo desse tipo pela API ou pelo editor, o sistema
+desativa automaticamente os demais fluxos de mensagem da mesma empresa.
+
+Isso evita que uma mensagem recebida escolha um fluxo conforme a ordem do banco.
+Workflows manual, webhook e cron nao sao alterados por essa regra.
+
+Na tela de fluxos, um aviso aparece quando houver uma configuracao antiga com
+mais de um fluxo de mensagem ativo. Basta ativar o fluxo principal desejado para

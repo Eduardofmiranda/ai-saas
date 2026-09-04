@@ -19,14 +19,20 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [wa, setWa] = useState(null);
+  const [config, setConfig] = useState(null);
+  const [workflows, setWorkflows] = useState([]);
+  const [knowledge, setKnowledge] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    Promise.all([api.getDashboard(), api.getWhatsAppStatus()])
-      .then(([d, w]) => {
+    Promise.all([api.getDashboard(), api.getWhatsAppStatus(), api.getConfig(), api.getWorkflows(), api.getKnowledge()])
+      .then(([d, w, c, flows, kb]) => {
         setData(d);
         setWa(w);
+        setConfig(c);
+        setWorkflows(flows);
+        setKnowledge(kb);
         setError("");
       })
       .catch((e) => setError(e.message || "Erro ao carregar painel"))
@@ -45,6 +51,13 @@ export default function Dashboard() {
   const waState = wa?.state || "not_configured";
   const waOpen = waState === "open";
   const isEmpty = (data?.workflows_total || 0) === 0;
+  const activeMessageFlows = workflows.filter((flow) => flow.active && flow.trigger_type === "message");
+  const readiness = [
+    ["WhatsApp", waOpen, waOpen ? "Conectado" : "Conecte a instancia", "/whatsapp"],
+    ["IA", Boolean(config?.ai_on), config?.ai_on ? `${config.resolved_ai_provider} ativo` : "Ative a IA", "/ai"],
+    ["Fluxo", activeMessageFlows.length === 1, activeMessageFlows.length === 1 ? "1 fluxo de mensagem ativo" : `${activeMessageFlows.length} fluxos de mensagem ativos`, "/fluxos"],
+    ["Conhecimento", knowledge.length > 0, knowledge.length > 0 ? `${knowledge.length} fonte(s) disponivel(is)` : "Opcional: adicione fontes", "/knowledge"],
+  ];
 
   const cards = [
     ["Fluxos", data?.workflows_total || 0, "workflows", `/fluxos`],
@@ -89,6 +102,20 @@ export default function Dashboard() {
             {waOpen ? "Gerenciar" : "Conectar"}
           </button>
         </div>
+
+        <section className="readiness-panel">
+          <div className="readiness-head">
+            <div><h3>Pronto para operar</h3><p>Verifique os itens essenciais da automacao.</p></div>
+          </div>
+          <div className="readiness-grid">
+            {readiness.map(([label, ready, detail, to]) => (
+              <button key={label} className={`readiness-item ${ready ? "ready" : "attention"}`} onClick={() => navigate(to)}>
+                <strong>{ready ? "OK" : "!"} {label}</strong>
+                <span>{detail}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
         {(data?.pending_conversations || 0) > 0 && (
           <div className="notice" style={{ display: "flex", alignItems: "center", gap: 12 }}>

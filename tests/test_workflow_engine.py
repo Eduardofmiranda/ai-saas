@@ -3,6 +3,10 @@ import asyncio
 from app.services.workflow_engine import execute_workflow, resume_workflow, WaitForMessage
 from app.services.nodes.registry import list_node_types
 from app.models.pending_flow import PendingFlow
+from app.models.user import User
+from app.models.workflow import Workflow
+from app.routers.workflow_router import update_workflow
+from app.schemas.workflow_schema import WorkflowUpdate
 
 
 class TestWorkflowEngine:
@@ -162,3 +166,41 @@ class TestWorkflowEngine:
         execution = await execute_workflow(db_session, workflow=wf, payload=mock_payload, config=config)
         assert execution.status == "success"
         assert "apos delay" in execution.node_results.get("ai_reply", "")
+
+def test_activating_message_workflow_deactivates_other_message_workflows(db_session, company):
+    user = User(
+        company_id=company.id,
+        name="Owner",
+        email="owner@example.com",
+        password_hash="not-used-in-this-unit-test",
+        role="admin",
+    )
+    previous = Workflow(
+        company_id=company.id,
+        name="Previous message workflow",
+        trigger_type="message",
+        active=True,
+    )
+    target = Workflow(
+        company_id=company.id,
+        name="Target message workflow",
+        trigger_type="message",
+        active=False,
+    )
+    manual = Workflow(
+        company_id=company.id,
+        name="Manual workflow",
+        trigger_type="manual",
+        active=True,
+    )
+    db_session.add_all([user, previous, target, manual])
+    db_session.commit()
+
+    update_workflow(target.id, WorkflowUpdate(active=True), user, db_session)
+    db_session.refresh(previous)
+    db_session.refresh(target)
+    db_session.refresh(manual)
+
+    assert target.active is True
+    assert previous.active is False
+    assert manual.active is True

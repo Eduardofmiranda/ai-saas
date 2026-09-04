@@ -79,6 +79,7 @@ export default function Home() {
     }
   }
 
+  const activeMessageFlows = workflows.filter((wf) => wf.active && wf.trigger_type === "message");
   return (
     <div className="layout">
       <Header />
@@ -94,6 +95,12 @@ export default function Home() {
         </div>
 
         {error && <div className="error">{error}</div>}
+
+        {activeMessageFlows.length > 1 && (
+          <div className="notice">
+            Existem {activeMessageFlows.length} fluxos de mensagem ativos. Ative o fluxo principal desejado para desativar os demais.
+          </div>
+        )}
 
         {showTemplates && (
           <div className="templates-panel">

@@ -88,6 +88,25 @@ def update_workflow(
 ):
     wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
     updates = data.model_dump(exclude_unset=True)
+
+    # Uma mensagem recebida deve ter um unico fluxo principal. O motor executa
+    # apenas um trigger "message" por empresa; manter varios ativos tornava o
+    # resultado dependente da ordem do banco e confundia a operacao.
+    will_activate_message = updates.get("active") is True and (
+        updates.get("trigger_type", wf.trigger_type) == "message"
+    )
+    if will_activate_message:
+        (
+            db.query(Workflow)
+            .filter(
+                Workflow.company_id == current_user.company_id,
+                Workflow.id != wf.id,
+                Workflow.trigger_type == "message",
+                Workflow.active.is_(True),
+            )
+            .update({Workflow.active: False}, synchronize_session=False)
+        )
+
     for field, value in updates.items():
         setattr(wf, field, value)
     db.commit()
