@@ -218,7 +218,7 @@ export default function Knowledge() {
         {!loading && items.length === 0 && !showForm && !searchResults && (
           <div className="empty">
             <h3>Nenhum documento ainda</h3>
-            <p>Adicione documentos para sua IA usar como referência nas respostas.</p>
+            <p>Adicione documentos para sua IA usar como referência. Você pode configurar o comportamento da IA em <strong>IA → Personalidade</strong>.</p>
             <button className="btn primary" onClick={() => setShowForm(true)}>
               + Adicionar primeiro documento
             </button>

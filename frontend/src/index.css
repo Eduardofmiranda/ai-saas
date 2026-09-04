@@ -486,6 +486,17 @@ body {
   gap: 14px;
 }
 
+/* KnowledgeSummaryCard - remover junto com o componente */
+.ai-kb-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px; margin-bottom: 20px;
+}
+.ai-kb-summary h4 { margin: 0 0 6px; font-size: 15px; }
+.ai-kb-summary p { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+.ai-kb-stats { font-size: 13px; font-weight: 600; color: var(--accent); }
+.ai-kb-summary .btn { white-space: nowrap; }
+
 .success-msg {
   background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3);
   color: var(--green); padding: 12px 14px; border-radius: 8px; margin-bottom: 16px;

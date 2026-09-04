@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import Header from "../components/Header";
+import KnowledgeSummaryCard from "../components/KnowledgeSummaryCard";
 
 const PROVIDERS = [
   { value: "groq", label: "Groq", hint: "Rápido e gratuito (Llama, Mixtral)" },
@@ -210,6 +211,9 @@ export default function AI() {
             </label>
           </div>
         </div>
+
+        {/* Base de Conhecimento */}
+        <KnowledgeSummaryCard />
 
         {/* Personalidade da IA */}
         <div className="ai-config">
