@@ -166,7 +166,8 @@ def extract_webhook_message(body) -> dict:
     # Retorna: {"phone": str, "text": str, "wa_message_id": str}
 
 def build_history(messages) -> list[dict]:
-    # Converte mensagens do banco para formato LLM
+    # Converte mensagens do banco para formato LLM.
+    # bot/agent -> "assistant"; customer/user -> "user".
 ```
 
 ## LLM Providers

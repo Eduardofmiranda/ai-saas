@@ -93,4 +93,11 @@ export const api = {
   connectWhatsApp: () => request("POST", "/config/whatsapp/connect", {}),
   setupWhatsApp: () => request("POST", "/config/whatsapp/setup", {}),
   disconnectWhatsApp: () => request("POST", "/config/whatsapp/disconnect", {}),
+  // Inbox / Conversas
+  getConversations: () => request("GET", "/conversations/"),
+  getConversation: (id) => request("GET", `/conversations/${id}`),
+  updateConversation: (id, body) => request("PATCH", `/conversations/${id}`, body),
+  getConversationMessages: (id) => request("GET", `/messages/conversation/${id}`),
+  replyToConversation: (conversationId, content) =>
+    request("POST", `/messages/conversation/${conversationId}/reply`, { content }),
 };

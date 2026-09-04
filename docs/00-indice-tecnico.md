@@ -109,6 +109,7 @@ ai-saas/
 │   ├── test_config.py
 │   ├── test_crypto.py
 │   ├── test_evolution.py
+│   ├── test_inbox.py
 │   ├── test_knowledge.py
 │   ├── test_nodes_registry.py
 │   ├── test_sprint3_nodes.py
@@ -120,11 +121,14 @@ ai-saas/
 │   │   ├── main.jsx
 │   │   ├── api.js
 │   │   ├── index.css
+│   │   ├── components/
+│   │   │   └── Header.jsx
 │   │   ├── context/
 │   │   │   └── AuthContext.jsx
 │   │   └── pages/
 │   │       ├── Admin.jsx
 │   │       ├── AI.jsx
+│   │       ├── Conversations.jsx
 │   │       ├── Dashboard.jsx
 │   │       ├── Editor.jsx
 │   │       ├── Home.jsx

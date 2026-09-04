@@ -38,20 +38,45 @@
   que o status muda sozinho para "Conectado" apos o escaneamento, sem F5.
   Ao detectar `state: "open"`, o QR e limpo automaticamente.
 
+### `/conversas` (Inbox — 3 paineis)
+- **Implementado** (Fase 9.0, primeira parte).
+- Layout em 3 paineis (padrao do mercado: lista | thread | contexto do cliente).
+- **Painel 1 — Lista:** busca por nome/telefone, abas (Todas/Abertas/Fechadas),
+  avatar, status (`open`/`closed`), preview + horario da ultima mensagem.
+  Ordena por `updated_at` (mais recente primeiro). Dados de
+  `GET /conversations/`.
+- **Painel 2 — Thread + resposta:** historico de mensagens com bolhas distintas
+  (cliente/bot/agent) e envio de **resposta manual** por `Enter` ou botao
+  (`POST /messages/conversation/{id}/reply`). Botao para fechar/reabrir conversa
+  (`PATCH /conversations/{id}`).
+- **Painel 3 — Contexto:** nome, telefone, status, inicio e total de mensagens do
+  cliente.
+- **Polling:** atualiza a lista e as mensagens da conversa selecionada a cada 8s.
+
+Pagina: `frontend/src/pages/Conversations.jsx`. Rota `/conversas` em `App.jsx`.
+
 ## Estrutura de Componentes
 
 ```
 src/
 ├── App.jsx              # Rotas
 ├── main.jsx             # Entry point
-├── api.js               # API client (fetch wrapper)
+├── api.js               # API client (fetch wrapper, prefixo /api)
 ├── index.css            # Estilos globais
+├── components/
+│   └── Header.jsx       # Navegacao do topo (Painel, Fluxos, Conversas, IA, ...)
 ├── context/
 │   └── AuthContext.jsx  # Context de autenticacao
 └── pages/
-    ├── Login.jsx        # Pagina de login
-    ├── Home.jsx         # Dashboard + lista de workflows
-    └── Editor.jsx       # Editor visual de workflows
+    ├── Login.jsx        # Login
+    ├── Dashboard.jsx    # Painel inicial (KPIs + status WhatsApp)
+    ├── Home.jsx         # Lista de workflows (Fluxos)
+    ├── Conversations.jsx# Inbox 3 paineis
+    ├── Editor.jsx       # Editor visual de workflows
+    ├── AI.jsx           # Configuracao/manage de IA
+    ├── Knowledge.jsx    # Base de conhecimento (RAG)
+    ├── Admin.jsx        # Administracao / usuarios
+    └── WhatsApp.jsx     # Conexao WhatsApp/Evolution
 ```
 
 ## API Client (`api.js`)

@@ -1,4 +1,8 @@
+from typing import Optional
+
 from pydantic import BaseModel
+
+from app.schemas.customer_schema import CustomerResponse
 
 
 class ConversationCreate(BaseModel):
@@ -14,6 +18,12 @@ class ConversationResponse(BaseModel):
     company_id: int
     customer_id: int
     status: str
+    created_at: object | None = None
+    updated_at: object | None = None
+    customer: Optional[CustomerResponse] = None
+    last_message: Optional[str] = None
+    last_message_at: object | None = None
+    message_count: int = 0
 
     class Config:
         from_attributes = True

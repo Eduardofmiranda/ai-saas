@@ -21,3 +21,7 @@ class MessageResponse(BaseModel):
 
 class MessageUpdate(BaseModel):
     content: str
+
+
+class MessageReply(BaseModel):
+    content: str

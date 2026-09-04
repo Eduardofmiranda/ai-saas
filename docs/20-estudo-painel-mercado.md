@@ -117,14 +117,19 @@ Colunas colapsaveis. Para telas menores, as colunas viram modais/abas.
 - **Parcial:** paginas de Conhecimento (RAG), IA, Admin, WhatsApp.
 
 ### Lacunas claras (planejado — maiores oportunidades)
-1. **Sem inbox de conversas** — nao ha tela para o atendente ver e responder
-   conversas em um painel (hoje: automatico via IA, sem visual humano).
-2. **Sem filtros/paginacao** em todas as listas (`.all()` estruturado §8.6).
+1. **Inbox de conversas** — **AGORA IMPLEMENTADO** (primeira parte da Fase 9.0):
+   pagina `/conversas` em 3 paineis (lista | thread com resposta manual | contexto
+   do cliente), `Conversations.jsx`. Endpoints: `GET /conversations/` enriquecido
+   + `POST /messages/conversation/{id}/reply`. Respostas manuais gravadas como
+   `sender_type="agent"`.
+2. **Sem filtros/paginacao real** em todas as listas — o inbox ja tem busca+filtro
+   de status por ticket, mas outras listas seguem `.all()` (estruturado §8.6).
 3. **Sem historico de execucoes detalhado** (entrada/saida por node, retry).
 4. **Sem periodo/tendencia** nos KPIs (so totais).
 5. **Sem observabilidade de atividades/canais em tempo real**.
 6. **Navegacao simples** (topnav) — sem sidebar/command bar/atalhos.
-7. **Sem contexto do cliente** (perfil, historico, notas) na interface.
+7. **Sem contexto do cliente aprofundado** (notas, historico amplo) — o painel 3
+   mostra o basico (nome/telefone/status/inicio/mensagens).
 8. **Sem respostas rapidas / etiquetas / atribuicao humana.**
 
 ---
@@ -132,9 +137,10 @@ Colunas colapsaveis. Para telas menores, as colunas viram modais/abas.
 ## 5. Priorizacao sugerida (roadmap do redesenho)
 
 Prioridade alta (maior valor percebido p/ atendimento humano):
-- **Inbox de conversas (tres painéis)** — ver e responder conversas.
-- **Historico de execucoes** com entrada/saida por node + retry.
-- **Filtros + paginacao** em listas.
+- **Inbox de conversas (tres painéis)** — **IMPLEMENTADO** (pagina `/conversas`,
+  resposta manual via `POST /messages/conversation/{id}/reply`).
+- **Historico de execucoes** com entrada/saida por node + retry (proximo).
+- **Filtros + paginacao** eficientes em listas.
 - **KPIs com periodo e tendencia** no Dashboard.
 
 Prioridade media:

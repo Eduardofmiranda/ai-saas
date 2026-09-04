@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 
 const NAV = [
   ["/fluxos", "Fluxos"],
+  ["/conversas", "Conversas"],
   ["/ai", "IA"],
   ["/knowledge", "Conhecimento"],
   ["/whatsapp", "WhatsApp"],

@@ -49,7 +49,7 @@ export default function Dashboard() {
   const cards = [
     ["Fluxos", data?.workflows_total || 0, "workflows", `/fluxos`],
     ["Fluxos ativos", data?.workflows_active || 0, "ativos", null],
-    ["Conversas", data?.conversations || 0, "abertas", null],
+    ["Conversas", data?.conversations || 0, "abertas", `/conversas`],
     ["Clientes", data?.customers || 0, "cadastrados", null],
     ["Mensagens", data?.messages || 0, "trocadas", null],
     ["Execuções", data?.executions_total || 0, "totais", null],

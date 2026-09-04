@@ -64,10 +64,14 @@ def _normalize_phone(phone: str) -> str:
 
 
 def build_history(messages: list) -> list[dict]:
-    """Converte mensagens do banco em historico para o LLM."""
+    """Converte mensagens do banco em historico para o LLM.
+
+    bot/agent sao saidas do assistente (IA ou atendente humano); o restante
+    (customer/user) e tratado como mensagem do usuario.
+    """
     history = []
     for msg in messages:
-        role = "assistant" if msg.sender_type == "bot" else "user"
+        role = "assistant" if msg.sender_type in ("bot", "agent") else "user"
         history.append({"role": role, "content": msg.content})
     return history
 

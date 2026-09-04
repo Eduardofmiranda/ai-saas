@@ -47,16 +47,23 @@ Base URL: `http://localhost:8000`
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
-| GET | `/conversations/` | Lista conversas (filtro por customer_id) | JWT |
-| GET | `/conversations/{id}` | Busca conversa com mensagens | JWT |
-| POST | `/conversations/{id}/close` | Fecha conversa | JWT |
+| GET | `/conversations/` | Lista conversas da empresa (cliente, ultima mensagem, contagem, ordenado por `updated_at` desc) | JWT |
+| GET | `/conversations/filter/?status=open` | Filtra por status (`open`/`closed`) | JWT |
+| GET | `/conversations/{id}` | Busca conversa (dados enriquecidos) | JWT |
+| PATCH | `/conversations/{id}` | Atualiza status da conversa (`{ "status": "closed" }`) | JWT |
+| DELETE | `/conversations/{id}` | Exclui conversa | JWT |
+
+**Resposta enriquecida** (`_to_response` em `app/routers/conversation_router.py`):
+`id, company_id, customer_id, status, created_at, updated_at, customer`
+({id, name, phone}), `last_message`, `last_message_at`, `message_count`.
 
 ### Messages
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
-| GET | `/messages/conversation/{id}` | Lista mensagens | JWT |
+| GET | `/messages/conversation/{id}` | Lista mensagens de uma conversa | JWT |
 | POST | `/messages/` | Cria mensagem | JWT |
+| POST | `/messages/conversation/{id}/reply` | Resposta **manual** do atendente: envia pelo WhatsApp (Evolution) e registra como `sender_type="agent"` | JWT |
 | GET | `/messages/pending` | Busca mensagens aguardando | JWT |
 
 ### Webhook

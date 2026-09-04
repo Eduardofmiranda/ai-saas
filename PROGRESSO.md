@@ -205,8 +205,11 @@
       documentacao (implementado/parcial/planejado/desconhecido)
       -> `docs/20-estudo-painel-mercado.md`
 - [ ] Propor o redesenho do painel atual (hoje muito simples): navegacao, cards, layout
-- [ ] Implementar a estrutura/navegacao do novo painel
-- [ ] Implementar as telas/componentes priorizados pelo estudo
+- [x] Implementar a estrutura do inbox (pagina `/conversas`, rota `App.jsx`, item no Header):
+      backend `GET /conversations/` enriquecido + `POST /messages/conversation/{id}/reply`
+      (`sender_type="agent"`), frontend `Conversations.jsx` 3 paineis + polling.
+- [ ] Implementar as demais telas/componentes priorizados pelo estudo (historico de
+      execucoes por node, filtros+paginacao, KPIs com periodo/tendencia)
 
 ### 9.1 — Limitador de IA por empresa
 - [ ] Model/coluna JSON para limites por empresa
