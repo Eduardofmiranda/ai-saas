@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models.user import User
 from app.services import evolution, llm
-from app.services.config_service import get_config
+from app.services.config_service import resolve_ai_config
 from app.models.company_config import CompanyConfig
 from app.models.message import Message
 from app.config import get_secret
@@ -104,10 +104,11 @@ class NodeContext:
         system_prompt: str | None = None,
     ) -> str:
         """Chama o LLM usando a config da empresa (provedor/modelo/chave)."""
-        provider = self.config.ai_provider or get_secret("DEFAULT_AI_PROVIDER") or "groq"
-        model = self.config.ai_model or get_secret("DEFAULT_AI_MODEL")
-        api_key = decrypt_field(self.config.ai_api_key) or get_secret("DEFAULT_AI_API_KEY")
-        base_url = decrypt_field(self.config.ai_base_url) or get_secret("DEFAULT_AI_BASE_URL")
+        resolved_ai = resolve_ai_config(self.config)
+        provider = resolved_ai["provider"]
+        model = resolved_ai["model"]
+        api_key = resolved_ai["api_key"]
+        base_url = resolved_ai["base_url"]
         sys_prompt = system_prompt or self.config.system_prompt or "Voce e um assistente."
 
         if provider == "mock":

@@ -4,7 +4,7 @@
 
 | Variavel | Finalidade | Exemplo |
 |----------|-----------|---------|
-| `DATABASE_URL` | URL de conexao com o banco | Producao: `postgresql://postgres:senha@postgres:5432/ai_saas` (host `postgres` = servico do docker-compose). Dev local: `sqlite:///./aissaas.db` |
+| `DATABASE_URL` | URL de conexao com o banco | Producao: URL do **Supabase** (`...supabase.co:5432/postgres`). Dev local: `sqlite:///./aissaas.db`; o Postgres do Compose e apenas fallback |
 | `SECRET_KEY` | Chave secreta para JWT e derivacao de criptografia | `openssl rand -hex 32` |
 
 > **Importante:** `SECRET_KEY` e **obrigatoria** no startup. Sem ela, o servidor
@@ -66,6 +66,15 @@
 | `DEFAULT_AI_MODEL` | `qwen/qwen3.8-27b` | Modelo padrao (fallback global; a config da empresa em `company_configs.ai_model` **tem prioridade**) |
 | `DEFAULT_AI_API_KEY` | — | Chave de API do provedor padrao (Groq). **NAO reutilizar como Evolution API key** |
 | `DEFAULT_AI_BASE_URL` | — | URL base do provedor (auto-resolvido) |
+
+> `DEFAULT_AI_*` sao a configuracao inicial do projeto. Campos de IA vazios em
+> `company_configs` preservam esse fallback; valores nao vazios sao overrides
+> por empresa. A mesma resolucao e usada por conversa, nodes/workflows, RAG,
+> Knowledge e `POST /config/ai/test`. `GET /config/` mostra os valores efetivos
+> de provider/modelo em campos `resolved_ai_*`, sem revelar a chave.
+>
+> Para alterar um `.env` em producao, confirme a env do container real e
+> recrie `backend` e `celery-worker`; `docker compose restart` nao reaplica env.
 
 > **Modelos Groq descontinuados (2026-09-04):** `mixtral-8x7b-32768` nao existe mais.
 > Self-serve vigentes: `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `qwen/qwen3.6-27b`,

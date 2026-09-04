@@ -7,7 +7,7 @@ from app.models.message import Message
 from app.models.pending_flow import PendingFlow
 from app.models.workflow import Workflow
 from app.services import evolution, llm
-from app.services.config_service import get_or_create_config
+from app.services.config_service import get_or_create_config, resolve_ai_config
 from app.services.field_crypto import decrypt_field
 
 
@@ -79,10 +79,11 @@ async def handle_incoming_message(
     # 5) Resolve configuracao da empresa (IA + Evolution) com fallback global
     config = get_or_create_config(db, company_id)
 
-    ai_provider = config.ai_provider or get_secret("DEFAULT_AI_PROVIDER") or "groq"
-    ai_model = config.ai_model or get_secret("DEFAULT_AI_MODEL")
-    ai_api_key = decrypt_field(config.ai_api_key) or get_secret("DEFAULT_AI_API_KEY")
-    ai_base_url = decrypt_field(config.ai_base_url) or get_secret("DEFAULT_AI_BASE_URL")
+    resolved_ai = resolve_ai_config(config)
+    ai_provider = resolved_ai["provider"]
+    ai_model = resolved_ai["model"]
+    ai_api_key = resolved_ai["api_key"]
+    ai_base_url = resolved_ai["base_url"]
 
     evolution_base = decrypt_field(config.evolution_base_url) or get_secret("EVOLUTION_BASE_URL")
     evolution_key = decrypt_field(config.evolution_api_key) or get_secret("EVOLUTION_API_KEY")

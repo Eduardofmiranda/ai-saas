@@ -20,7 +20,7 @@ from app.services.vector_store import (
     search_similar,
     upsert_knowledge,
 )
-from app.config import get_secret
+from app.services.config_service import get_or_create_config, resolve_ai_config
 
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
@@ -94,13 +94,13 @@ async def create_knowledge(
     db.commit()
     db.refresh(item)
 
-    provider = get_secret("DEFAULT_AI_PROVIDER", "openai")
-    api_key = get_secret("DEFAULT_AI_API_KEY", "")
+    ai_config = resolve_ai_config(get_or_create_config(db, current_user.company_id))
     model = "text-embedding-3-small"
 
     chunks_saved = await upsert_knowledge(
         db, current_user.company_id, item.id, body.content,
-        provider=provider, api_key=api_key, embedding_model=model,
+        provider=ai_config["provider"], api_key=ai_config["api_key"],
+        embedding_model=model, base_url=ai_config["base_url"],
     )
 
     return KnowledgeResponse(
@@ -137,12 +137,12 @@ async def update_knowledge(
     db.commit()
 
     if body.content is not None:
-        provider = get_secret("DEFAULT_AI_PROVIDER", "openai")
-        api_key = get_secret("DEFAULT_AI_API_KEY", "")
+        ai_config = resolve_ai_config(get_or_create_config(db, current_user.company_id))
         model = "text-embedding-3-small"
         await upsert_knowledge(
             db, current_user.company_id, item.id, body.content,
-            provider=provider, api_key=api_key, embedding_model=model,
+            provider=ai_config["provider"], api_key=ai_config["api_key"],
+            embedding_model=model, base_url=ai_config["base_url"],
         )
 
     chunks = get_chunks_by_knowledge(db, item.id)
@@ -183,27 +183,13 @@ async def search_knowledge(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[SearchResult]:
-    from app.models.company_config import CompanyConfig
-
-    config = db.query(CompanyConfig).filter(
-        CompanyConfig.company_id == current_user.company_id
-    ).first()
-
-    provider = "openai"
-    api_key = ""
+    ai_config = resolve_ai_config(get_or_create_config(db, current_user.company_id))
     model = "text-embedding-3-small"
-
-    if config:
-        if config.ai_provider:
-            provider = config.ai_provider
-        if config.ai_api_key:
-            from app.services.field_crypto import decrypt_field
-            api_key = decrypt_field(config.ai_api_key)
 
     results = await search_similar(
         db, current_user.company_id, body.query,
-        provider=provider, api_key=api_key, embedding_model=model,
-        top_k=body.top_k,
+        provider=ai_config["provider"], api_key=ai_config["api_key"],
+        embedding_model=model, base_url=ai_config["base_url"], top_k=body.top_k,
     )
 
     return [SearchResult(**r) for r in results]

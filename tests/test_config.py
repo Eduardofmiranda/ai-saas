@@ -272,3 +272,48 @@ class TestAITestEndpoint:
             assert res.status_code == 200
             assert res.json()["ok"] is True
         assert seen["model"] == "mixtral-8x7b-32768"
+class TestAIConfigResolution:
+    def test_empty_company_fields_use_environment_defaults(self, config, monkeypatch):
+        from app.services.config_service import resolve_ai_config
+
+        values = {
+            "DEFAULT_AI_PROVIDER": "groq",
+            "DEFAULT_AI_MODEL": "env-model",
+            "DEFAULT_AI_API_KEY": "env-key",
+            "DEFAULT_AI_BASE_URL": "https://example.test/v1",
+        }
+        monkeypatch.setattr(
+            "app.services.config_service.get_secret",
+            lambda name: values.get(name, ""),
+        )
+
+        config.ai_provider = ""
+        config.ai_model = ""
+        config.ai_api_key = ""
+        config.ai_base_url = ""
+
+        assert resolve_ai_config(config) == {
+            "provider": "groq",
+            "model": "env-model",
+            "api_key": "env-key",
+            "base_url": "https://example.test/v1",
+        }
+
+    def test_company_values_override_environment_defaults(self, config, monkeypatch):
+        from app.services.config_service import resolve_ai_config
+
+        monkeypatch.setattr(
+            "app.services.config_service.get_secret",
+            lambda name: f"env-{name}",
+        )
+        config.ai_provider = "mock"
+        config.ai_model = "company-model"
+        config.ai_api_key = "company-key"
+        config.ai_base_url = "https://company.test/v1"
+
+        assert resolve_ai_config(config) == {
+            "provider": "mock",
+            "model": "company-model",
+            "api_key": "company-key",
+            "base_url": "https://company.test/v1",
+        }

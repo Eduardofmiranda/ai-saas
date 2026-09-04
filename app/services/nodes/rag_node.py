@@ -1,5 +1,6 @@
 from app.services.nodes.context import NodeContext, _get
 from app.services.llm import generate_reply
+from app.services.config_service import resolve_ai_config
 
 
 async def run_rag_node(ctx: NodeContext, node: dict) -> dict:
@@ -54,22 +55,9 @@ async def run_rag_node(ctx: NodeContext, node: dict) -> dict:
     # ---------------------------------------------------------
     # Configuração da IA
     # ---------------------------------------------------------
-    provider = (
-        ctx.config.ai_provider
-        if ctx.config
-        else "openai"
-    )
-
-    api_key = (
-        ctx.config.ai_api_key
-        if ctx.config
-        else ""
-    )
-
-    if api_key:
-        from app.services.field_crypto import decrypt_field
-
-        api_key = decrypt_field(api_key)
+    resolved_ai = resolve_ai_config(ctx.config)
+    provider = resolved_ai["provider"]
+    api_key = resolved_ai["api_key"]
 
     embedding_model = "text-embedding-3-small"
 
@@ -85,6 +73,7 @@ async def run_rag_node(ctx: NodeContext, node: dict) -> dict:
         provider=provider,
         api_key=api_key,
         embedding_model=embedding_model,
+        base_url=resolved_ai["base_url"],
         top_k=top_k,
     )
 
@@ -124,22 +113,10 @@ async def run_rag_node(ctx: NodeContext, node: dict) -> dict:
             )
         ),
         history=history,
-        provider=(
-            ctx.config.ai_provider
-            if ctx.config
-            else "mock"
-        ),
+        provider=provider,
         api_key=api_key,
-        model=(
-            ctx.config.ai_model
-            if ctx.config
-            else None
-        ),
-        base_url=(
-            ctx.config.ai_base_url
-            if ctx.config
-            else None
-        ),
+        model=resolved_ai["model"],
+        base_url=resolved_ai["base_url"],
     )
 
     # ---------------------------------------------------------

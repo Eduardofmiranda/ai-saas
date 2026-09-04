@@ -44,11 +44,7 @@ Resposta atual:
 
 ### Health Checks
 
-Nao implementados. Sugestao:
-```
-GET /health
-GET /health/db
-GET /health/redis
-GET /health/evolution
-GET /health/llm
-```
+**Parcial.** Existe apenas `GET /health`, que responde `{"status":"healthy"}`
+e confirma que o processo HTTP esta ativo. Os checks de banco, Redis,
+Evolution e LLM **nao estao implementados**; estes seriam endpoints distintos,
+nao devem ser presumidos como existentes.

@@ -1,6 +1,9 @@
 # 10 — API REST
 
-Base URL: `http://localhost:8000`
+Base URL direta do backend em desenvolvimento: `http://localhost:8000`.
+Em producao, o frontend usa o prefixo relativo `/api` e o nginx o remove antes
+de encaminhar ao backend; portanto uma chamada do navegador e `/api/config/`,
+enquanto a rota FastAPI continua `/config/`.
 
 ## Endpoints
 
@@ -15,12 +18,14 @@ Base URL: `http://localhost:8000`
 | POST | `/auth/forgot-password` | Envia link de reset por email (503 sem SMTP; 10/min) | Nao |
 | POST | `/auth/reset-password` | Redefine senha com token (uso unico) | Nao |
 
-### Company
+### Companies
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
-| GET | `/company/` | Busca empresa do usuario | JWT |
-| PATCH | `/company/` | Atualiza empresa | JWT |
+| POST | `/companies/` | Cria empresa | JWT |
+| GET | `/companies/` | Lista somente a empresa do usuario | JWT |
+| GET | `/companies/{id}` | Busca a propria empresa | JWT |
+| PATCH | `/companies/{id}` | Atualiza a propria empresa | JWT |
 
 ### Config (por empresa)
 
@@ -46,7 +51,7 @@ Base URL: `http://localhost:8000`
 |--------|-----|-----------|------|
 | GET | `/customers/` | Lista clientes da empresa | JWT |
 | GET | `/customers/{id}` | Busca cliente | JWT |
-| GET | `/customers/by-phone/{phone}` | Busca por telefone | JWT |
+
 
 ### Conversations
 
@@ -77,7 +82,9 @@ A atualizacao de status (`PATCH`) registra automaticamente um `ConversationTrans
 | GET | `/messages/conversation/{id}` | Lista mensagens de uma conversa | JWT |
 | POST | `/messages/` | Cria mensagem | JWT |
 | POST | `/messages/conversation/{id}/reply` | Resposta **manual** do atendente: envia pelo WhatsApp (Evolution) e registra como `sender_type="agent"` | JWT |
-| GET | `/messages/pending` | Busca mensagens aguardando | JWT |
+| GET | `/messages/{id}` | Busca mensagem | JWT |
+| PATCH | `/messages/{id}` | Atualiza conteudo | JWT |
+| DELETE | `/messages/{id}` | Exclui mensagem | JWT |
 
 ### Webhook
 
@@ -98,7 +105,7 @@ A atualizacao de status (`PATCH`) registra automaticamente um `ConversationTrans
 | GET | `/workflows/` | Lista workflows | JWT |
 | POST | `/workflows/` | Cria workflow | JWT |
 | GET | `/workflows/{id}` | Busca workflow | JWT |
-| PUT | `/workflows/{id}` | Atualiza workflow | JWT |
+| PATCH | `/workflows/{id}` | Atualiza workflow | JWT |
 | DELETE | `/workflows/{id}` | Deleta workflow | JWT |
 | GET | `/workflows/{id}/executions` | Lista execucoes | JWT |
 | GET | `/workflows/node-types` | Tipos de nodes disponiveis | JWT |
@@ -108,7 +115,8 @@ A atualizacao de status (`PATCH`) registra automaticamente um `ConversationTrans
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
-| GET | `/executions/{id}` | Busca execucao | JWT |
+> **Nao implementado:** nao existe router global `/executions/{id}`. As execucoes
+> confirmadas pelo codigo sao listadas por `GET /workflows/{id}/executions`.
 
 ### Knowledge
 

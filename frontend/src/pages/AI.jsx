@@ -63,6 +63,8 @@ export default function AI() {
   const [success, setSuccess] = useState("");
   const [testResult, setTestResult] = useState(null);
   const [testing, setTesting] = useState(false);
+  const [aiFieldsChanged, setAiFieldsChanged] = useState(false);
+  const [resetAiDefaults, setResetAiDefaults] = useState(false);
 
   const [form, setForm] = useState({
     ai_on: false,
@@ -75,17 +77,13 @@ export default function AI() {
     api
       .getConfig()
       .then((cfg) => {
-        const prov = cfg.ai_provider || "groq";
-        const available = MODELS[prov] || [];
-        // Se o modelo salvo nao existe mais (ex.: mixtral-8x7b-32768 descontinuado),
-        // cai para um modelo valido do provedor — sem reescrever nada no banco.
-        const effectiveModel =
-          available.includes(cfg.ai_model) ? cfg.ai_model : (available[0] || "");
+        // A API fornece os valores efetivos: empresa quando houver override,
+        // caso contrario os DEFAULT_AI_* do .env do backend.
         setConfig(cfg);
         setForm({
           ai_on: cfg.ai_on ?? false,
-          ai_provider: prov,
-          ai_model: cfg.ai_model || effectiveModel,
+          ai_provider: cfg.resolved_ai_provider || cfg.ai_provider || "groq",
+          ai_model: cfg.resolved_ai_model || cfg.ai_model || "",
           system_prompt: cfg.system_prompt || "",
         });
       })
@@ -94,7 +92,21 @@ export default function AI() {
   }, []);
 
   function set(field, value) {
+    if (field === "ai_provider" || field === "ai_model") {
+      setAiFieldsChanged(true);
+      setResetAiDefaults(false);
+    }
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function useEnvironmentDefaults() {
+    setAiFieldsChanged(false);
+    setResetAiDefaults(true);
+    setForm((f) => ({
+      ...f,
+      ai_provider: config?.resolved_ai_provider || f.ai_provider,
+      ai_model: config?.resolved_ai_model || f.ai_model,
+    }));
   }
 
   async function handleSave() {
@@ -102,8 +114,24 @@ export default function AI() {
     setError("");
     setSuccess("");
     try {
-      const updated = await api.updateConfig(form);
+      const payload = { ...form };
+      if (resetAiDefaults) {
+        payload.ai_provider = "";
+        payload.ai_model = "";
+      } else if (!aiFieldsChanged) {
+        // Salvar prompt/status nao deve transformar o default do .env em override.
+        delete payload.ai_provider;
+        delete payload.ai_model;
+      }
+      const updated = await api.updateConfig(payload);
       setConfig(updated);
+      setAiFieldsChanged(false);
+      setResetAiDefaults(false);
+      setForm((f) => ({
+        ...f,
+        ai_provider: updated.resolved_ai_provider || f.ai_provider,
+        ai_model: updated.resolved_ai_model || f.ai_model,
+      }));
       setSuccess("Configuração salva.");
       setTimeout(() => setSuccess(""), 3000);
     } catch (e) {
@@ -143,7 +171,7 @@ export default function AI() {
   }
 
   const provider = PROVIDERS.find((p) => p.value === form.ai_provider);
-  const models = MODELS[form.ai_provider] || [];
+  const models = [...new Set([form.ai_model, ...(MODELS[form.ai_provider] || [])].filter(Boolean))];
 
   return (
     <div className="layout">
@@ -215,6 +243,9 @@ export default function AI() {
           </div>
 
           <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
+            <button className="btn ghost" onClick={useEnvironmentDefaults}>
+              Usar padrões do .env
+            </button>
             <button className="btn ghost" onClick={handleTest} disabled={testing}>
               {testing ? "Testando..." : "Testar resposta da IA"}
             </button>

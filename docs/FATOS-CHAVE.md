@@ -72,7 +72,7 @@
 | `DATABASE_URL` | Supabase (pooler IPv4) |
 | `SECRET_KEY` | `openssl rand -hex 32` |
 | `SECRET_ENCRYPTION_KEY` | `openssl rand -hex 32` (distinto) |
-| `DEFAULT_AI_API_KEY` | chave da Groq |
+| `DEFAULT_AI_PROVIDER` / `DEFAULT_AI_MODEL` / `DEFAULT_AI_API_KEY` | configuracao inicial da IA; `company_configs` so sobrepoe quando os campos nao estao vazios |
 | `EVOLUTION_BASE_URL` | `http://evolution:8080` |
 | `EVOLUTION_API_KEY` | chave da **Evolution** (NAO a Groq) — **igual** a `EVOLUTION_AUTH_KEY` |
 | `EVOLUTION_AUTH_KEY` | mesma da Evolution (tambem usada p/ webhook HMAC) |

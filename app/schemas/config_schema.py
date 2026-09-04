@@ -35,3 +35,6 @@ class ConfigResponse(BaseModel):
     evolution_instance: str | None
     has_evolution_key: bool
     ai_on: bool
+    # Valores efetivos para a interface; a chave nunca e exposta.
+    resolved_ai_provider: str
+    resolved_ai_model: str

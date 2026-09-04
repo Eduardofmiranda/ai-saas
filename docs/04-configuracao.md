@@ -31,11 +31,22 @@ A configuracao de IA e WhatsApp e feita por empresa via API `PATCH /config/`:
 
 ## Configuracao da IA
 
-O sistema suporta multiplos provedores de IA. A configuracao segue a ordem:
+O sistema suporta multiplos provedores. A resolucao e unica para conversa,
+workflows/nodes, RAG, Knowledge e o teste de conectividade:
 
-1. Configuracao da empresa (company_configs)
-2. Variaveis de ambiente globais (DEFAULT_AI_*)
-3. Defaults do codigo
+1. Override nao vazio da empresa em `company_configs`
+2. Variaveis globais `DEFAULT_AI_*` do `.env` realmente carregado pelo backend
+3. Defaults seguros do adapter (provider, modelo e base URL quando nao houver env)
+
+Uma configuracao nova e criada com `ai_provider`, `ai_model`, `ai_api_key` e
+`ai_base_url` vazios. Isso e intencional: campos vazios usam o `.env` e nao
+criam um valor aleatorio no banco. A resposta de `GET /config/` conserva esses
+campos brutos e inclui `resolved_ai_provider`/`resolved_ai_model` apenas para a
+interface mostrar o valor efetivo, sem expor a chave.
+
+Na tela `/ai`, salvar prompt ou status nao persiste provider/modelo. Provider e
+modelo so viram override quando o operador os altera; **Usar padroes do .env**
+limpa os dois overrides ao salvar.
 
 ## Configuracao do WhatsApp
 

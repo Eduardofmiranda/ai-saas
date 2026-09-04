@@ -1,14 +1,15 @@
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
+from app.config import get_secret
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.config import get_secret
+
 from app.database.session import get_db
 from app.models.user import User
 from app.schemas.config_schema import ConfigResponse, ConfigUpdate
 from app.services import llm
-from app.services.config_service import get_or_create_config
+from app.services.config_service import get_or_create_config, resolve_ai_config
 from app.services.deps import get_current_user
 from app.services.field_crypto import decrypt_field, encrypt_field
 
@@ -22,6 +23,7 @@ _SENSITIVE_FIELDS = ("ai_api_key", "evolution_api_key")
 
 
 def _to_response(config) -> ConfigResponse:
+    resolved_ai = resolve_ai_config(config)
     return ConfigResponse(
         company_id=config.company_id,
         ai_provider=config.ai_provider,
@@ -32,6 +34,8 @@ def _to_response(config) -> ConfigResponse:
         evolution_instance=config.evolution_instance,
         has_evolution_key=bool(config.evolution_api_key),
         ai_on=config.ai_on,
+        resolved_ai_provider=resolved_ai["provider"],
+        resolved_ai_model=resolved_ai["model"],
     )
 
 
@@ -78,10 +82,11 @@ async def ai_test(
     """
     config = get_or_create_config(db, current_user.company_id)
 
-    provider = config.ai_provider or get_secret("DEFAULT_AI_PROVIDER") or "groq"
-    model = config.ai_model or get_secret("DEFAULT_AI_MODEL")
-    api_key = decrypt_field(config.ai_api_key) or get_secret("DEFAULT_AI_API_KEY")
-    base_url = decrypt_field(config.ai_base_url) or get_secret("DEFAULT_AI_BASE_URL")
+    resolved_ai = resolve_ai_config(config)
+    provider = resolved_ai["provider"]
+    model = resolved_ai["model"]
+    api_key = resolved_ai["api_key"]
+    base_url = resolved_ai["base_url"]
 
     resolved = llm._resolve(provider, model, api_key, base_url)
 
