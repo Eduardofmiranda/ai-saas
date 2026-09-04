@@ -63,6 +63,15 @@ Se divergir: iguale no `.env` (mantenha o `AUTH_KEY`, copie p/ `API_KEY`) e
 O `POST /config/whatsapp/setup` do backend ja envia `integration` automaticamente
 e provisiona a instancia por empresa (`inst-<company_id>`) — prefira o setup.
 
+### Erro ao desconectar: Evolution retornou HTTP 404
+
+**Erro:** `POST /config/whatsapp/disconnect` → `Evolution retornou HTTP 404`.
+
+**Causa (fato verificado, doc oficial):** logout na Evolution e
+`DELETE /instance/logout/{instance}` — o backend usava `POST`, rota que nao
+existe. Corrigido em `app/routers/config_router.py:whatsapp_disconnect`.
+404 com DELETE = instancia inexistente → tratado como ja desconectado (`ok`).
+
 ### Webhook da Evolution retorna 400 "webhook requires property enabled"
 
 **Solucao:** incluir `"enabled": true` dentro do objeto `webhook`.

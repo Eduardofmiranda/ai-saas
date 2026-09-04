@@ -244,16 +244,23 @@ def whatsapp_disconnect(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Desconecta o WhatsApp (Ex: botao 'Desconectar' na UI)."""
+    """Desconecta o WhatsApp (Ex: botao 'Desconectar' na UI).
+
+    A Evolution expoe o logout como DELETE /instance/logout/{instance}
+    (doc oficial; POST nessa rota retorna 404).
+    """
     config = get_or_create_config(db, current_user.company_id)
     base_url, api_key, instance = _evo_config(config)
     base, key, inst = _evolve_pair(base_url, api_key, instance)
 
     try:
-        resp = httpx.post(f"{base}/instance/logout/{inst}", headers={"apikey": key}, timeout=30)
+        resp = httpx.delete(f"{base}/instance/logout/{inst}", headers={"apikey": key}, timeout=30)
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"Sem conexao com a Evolution: {exc}")
 
+    if resp.status_code == 404:
+        # Instancia nao existe na Evolution: objetivo (desconectado) ja atingido.
+        return {"ok": True, "detail": "Instancia nao encontrada na Evolution (ja desconectada ou removida)."}
     if resp.status_code not in (200, 201, 204):
         raise HTTPException(status_code=resp.status_code, detail=f"Evolution retornou HTTP {resp.status_code}")
 
