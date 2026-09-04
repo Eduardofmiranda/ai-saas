@@ -1,7 +1,7 @@
 services:
-  # Banco de dados PostgreSQL local (usado para deploy simples na VPS).
-  # NOTA: para usar o Supabase em vez do local, descomente a URL do Supabase
-  # no .env e remova/desative este servico.
+  # Banco de dados PostgreSQL LOCAL (alternativa/fallback de deploy na VPS).
+  # NOTA: o banco de PRODUCAO e o Supabase (DATABASE_URL aponta para Supabase).
+  # Este servico e opcional/caso prefira Postgres local.
   postgres:
     image: postgres:16-alpine
     container_name: ai-saas-postgres

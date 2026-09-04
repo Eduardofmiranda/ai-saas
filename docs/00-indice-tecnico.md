@@ -1,5 +1,8 @@
 # 00 — Indice Tecnico
 
+> ⭐ **Comece por `docs/FATOS-CHAVE.md`** — fixa os fatos principais do projeto
+> (banco de producao = Supabase, usuario por cadastro, credenciais, etc.).
+
 ## Resumo do Projeto
 
 **Nome:** FlowAI (AI SaaS - Atendimento WhatsApp)
@@ -17,7 +20,7 @@
 | Backend | FastAPI (Python) | — |
 | Servidor | Uvicorn | — |
 | ORM | SQLAlchemy | — |
-| Banco de dados | PostgreSQL (producao) / SQLite (dev) | 16 |
+| Banco de dados | **Supabase** (PostgreSQL, producao) / SQLite (dev) | 16 |
 | Cache/Filas | Redis | 7 |
 | Workers | Celery | — |
 | Agendador Celery | RedBeat | — |

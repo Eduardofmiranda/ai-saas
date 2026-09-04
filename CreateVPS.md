@@ -188,8 +188,10 @@ docker compose ps
 | ai-saas-celery-worker | Up (healthcheck desabilitado) | — |
 | ai-saas-celery-beat | Up (healthcheck desabilitado) | — |
 
-> **Banco:** o deploy usa **Postgres local** (serviço `postgres`, volume
-> `postgres_data`). **NÃO usa Supabase** (ver `docs/06-banco-de-dados.md`).
+> **Banco (producao):** o deploy em producao usa o **Supabase** como banco
+> principal (`DATABASE_URL` aponta para a connection string do Supabase —
+> pooler IPv4 em VPS sem IPv6). O Postgres do docker-compose e alternativa.
+> Detalhes em `docs/06-banco-de-dados.md` e `docs/15-deploy.md`.
 
 > **As tabelas são criadas automaticamente no boot** (o backend roda
 > `Base.metadata.create_all` no startup via `lifespan` em `app/main.py`).

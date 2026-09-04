@@ -35,10 +35,11 @@
 | Celery worker/beat | Containers `ai-saas-celery-worker` / `ai-saas-celery-beat` |
 | Evolution API (WhatsApp) | Container `evolution` (porta 8080), compose separado |
 
-> **Banco de dados:** o deploy usa **Postgres local do Docker** (padrao atual).
-> O Supabase foi abandonado por causa do problema de IPv6 (a "direct connection"
-> do Supabase resolve so IPv6 e VPS sem rede IPv6 nao conecta). A evolucao
-> correta esta documentada em `docs/06-banco-de-dados.md`.
+> **Banco de dados (producao):** o deploy em producao usa o **Supabase** como
+> banco principal. A `DATABASE_URL` do `.env` deve apontar para a connection
+> string do **Supabase** (pooler IPv4 em VPS sem IPv6). O container `postgres`
+> do `docker-compose.yml` e uma alternativa/fallback local, **nao** o banco em
+> uso em producao. Detalhes em `docs/06-banco-de-dados.md` e `docs/15-deploy.md`.
 
 ---
 

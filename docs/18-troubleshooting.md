@@ -78,9 +78,10 @@ healthcheck proprio. Nao e erro.
 **Causa:** a direct connection do Supabase resolve so IPv6; VPS sem rota IPv6
 nao conecta.
 
-**Solucao (adotada):** usar **Postgres local** do docker (ver docs/06). Se
-voltasse a usar Supabase, usar o **pooler IPv4**
-(`…@aws-0-<regiao>.pooler.supabase.com:5432/postgres`).
+**Solucao (adotada):** producao **usa o Supabase via pooler IPv4**
+(`…@aws-0-<regiao>.pooler.supabase.com:5432/postgres`) para contornar a falta
+de rota IPv6 na VPS. O Postgres local do docker e apenas alternativa/fallback.
+(Producao = Supabase; ver docs/06.)
 
 ### "Nao conecta via IP" de fora
 

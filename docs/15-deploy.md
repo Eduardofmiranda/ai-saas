@@ -16,8 +16,10 @@ cp .env.production.example .env
 docker compose up -d --build
 ```
 
-> **Banco:** o deploy usa **Postgres local** (servico `postgres` do compose,
-> volume `postgres_data`). Nao usa Supabase (ver docs/06).
+> **Banco (producao):** o deploy de producao usa o **Supabase** como banco
+> principal. A `DATABASE_URL` do `.env` aponta para a connection string do
+> **Supabase** (pooler IPv4 em VPS sem IPv6). O servico `postgres` do compose
+> e alternativa/fallback local, nao o banco em uso. Ver `docs/06-banco-de-dados.md`.
 
 > **As tabelas sao criadas AUTOMATICAMENTE no boot** do backend (o `lifespan` em
 > `app/main.py` chama `Base.metadata.create_all`). Nao e preciso (nem recomendado)

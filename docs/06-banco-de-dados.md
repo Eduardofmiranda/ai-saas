@@ -2,8 +2,8 @@
 
 ## Tecnologia
 
-- **Producao**: PostgreSQL 16 (**local no Docker** — container `ai-saas-postgres`)
-- **Desenvolvimento**: SQLite (automatico quando `DATABASE_URL` nao configurado)
+- **Producao**: **Supabase** (PostgreSQL hospedado, connection string via `DATABASE_URL`)
+- **Desenvolvimento local**: SQLite (automatico quando `DATABASE_URL` aponta para `sqlite:///`)
 - **ORM**: SQLAlchemy
 - **Criacao do schema**: **SQLAlchemy `Base.metadata.create_all`** (mecanismo principal)
 
@@ -33,9 +33,23 @@
 > `create_all` e o caminho que de fato cria as tabelas. A mudanca para o boot
 > automatico (lifespan) elimina a necessidade do passo manual de `create_all`.
 >
-> **Supabase:** abandonado como banco principal devido ao problema de IPv6
-> (a direct connection resolve so IPv6 e VPS sem rede IPv6 nao conecta). O
-> deploy padrao usa **Postgres local**.
+> **Supabase (banco de producao):** o deploy em producao (VPS) usa o **Supabase**
+> como banco principal. A connection string do Supabase vai em `DATABASE_URL`:
+>
+> - **Pooler IPv4** (recomendado em VPS sem IPv6):
+>   `postgresql://postgres.<ref>:SENHA@aws-0-<regiao>.pooler.supabase.com:5432/postgres`
+> - **Direct**: `postgresql://postgres:<senha>@db.<ref>.supabase.co:5432/postgres`
+>
+> Para conectar com o pooler IPv4, defina a env var
+> `SUPABASE_DISABLE_IPV6=1` (ou use apenas a URL do pooler). Consulte
+> `docs/15-deploy.md` e `.env.production.example`.
+>
+> > **Nota historica:** em determinado momento o Supabase foi testado como banco
+> > e houve a consideracao de usar Postgres local do Docker por causa de IPv6 na
+> > direct connection. **Decisao final (fonte de verdade = producao real):**
+> > producao USA o **Supabase**. O Postgres local do Docker (`docker-compose`,
+> > servico `postgres`) e apenas uma alternativa/fallback, **nao** o banco em uso
+> > em producao.
 
 ## Tabelas
 

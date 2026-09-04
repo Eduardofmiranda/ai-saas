@@ -56,7 +56,7 @@
 ## FASE 4 — Deploy em Producao ✅ (concluido e validado)
 - [x] Dockerfile.backend / Dockerfile.frontend (multi-stage)
 - [x] docker-compose.yml (postgres, redis, backend, celery-worker, celery-beat, frontend)
-- [x] **Postgres local do Docker** como banco de producao (Supabase abandonado por IPv6)
+- [x] **Supabase** como banco de producao (`DATABASE_URL` = pooler IPv4 do Supabase). Postgres local do Docker = alternativa/fallback, nao o banco em uso.
 - [x] Evolution API em **compose separado** (`docker-compose.evolution.yml`), mesma rede do backend, porta 8080
 - [x] **create_all automatico no boot** (`lifespan` em `app/main.py`) — nao depende de Alembic/manual
 - [x] Celery + Redis para tarefas assincronas
