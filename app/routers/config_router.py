@@ -126,27 +126,21 @@ def whatsapp_status(
     if api_key and instance:
         try:
             from urllib.parse import urljoin
+            base = base_url.rstrip("/")
             resp = httpx.get(
-                urljoin(base_url.rstrip("/") + "/", f"instance/connectionState/{instance}"),
+                f"{base}/instance/fetchInstances",
                 headers={"apikey": api_key},
                 timeout=10,
             )
             if resp.status_code == 200:
-                data = resp.json()
-                state = data.get("state") or data.get("connectionStatus") or ("open" if data.get("instance") else "unknown")
-                detail = data.get("status", "")
-            elif resp.status_code == 400:
-                # Evolution retorna 400 quando a instancia existe mas esta desconectada
-                body = resp.text.lower()
-                if "not connected" in body or "not_found" in body:
-                    state = "close"
-                    detail = "Instancia desconectada na Evolution"
+                instances = resp.json() or []
+                found = next((i for i in instances if i.get("name") == instance), None)
+                if found:
+                    state = found.get("connectionStatus", "unknown")
+                    detail = found.get("disconnectionReasonCode", "")
                 else:
-                    state = "error"
-                    detail = resp.text[:200]
-            elif resp.status_code == 404:
-                state = "instance_not_found"
-                detail = "Instancia nao encontrada na Evolution"
+                    state = "instance_not_found"
+                    detail = "Instancia nao encontrada na Evolution"
             else:
                 state = "error"
                 detail = f"HTTP {resp.status_code}"
