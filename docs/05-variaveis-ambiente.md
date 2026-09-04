@@ -67,11 +67,11 @@
 | `DEFAULT_AI_API_KEY` | — | Chave de API do provedor padrao (Groq). **NAO reutilizar como Evolution API key** |
 | `DEFAULT_AI_BASE_URL` | — | URL base do provedor (auto-resolvido) |
 
-> `DEFAULT_AI_*` sao a configuracao inicial do projeto. Campos de IA vazios em
+> `DEFAULT_AI_*` sao a configuracao inicial do chat. Campos de IA vazios em
 > `company_configs` preservam esse fallback; valores nao vazios sao overrides
-> por empresa. A mesma resolucao e usada por conversa, nodes/workflows, RAG,
-> Knowledge e `POST /config/ai/test`. `GET /config/` mostra os valores efetivos
-> de provider/modelo em campos `resolved_ai_*`, sem revelar a chave.
+> por empresa. A mesma resolucao e usada por conversa, nodes/workflows e
+> `POST /config/ai/test`. `GET /config/` mostra os valores efetivos de
+> provider/modelo em campos `resolved_ai_*`, sem revelar a chave.
 >
 > Para alterar um `.env` em producao, confirme a env do container real e
 > recrie `backend` e `celery-worker`; `docker compose restart` nao reaplica env.
@@ -81,6 +81,26 @@
 > `qwen/qwen3.8-27b`. Se `company_configs.ai_model` ainda tiver um modelo antigo gravado,
 > somente o `DEFAULT_AI_MODEL` nao resolve — atualize o registro (ou salve na pagina `/ai`).
 
+## Embeddings / Knowledge
+
+Knowledge e RAG usam um endpoint `/embeddings`, separado do chat. Isso evita
+usar por engano um modelo/chave de conversa em um provedor que nao oferece
+embeddings.
+
+| Variavel | Default | Finalidade |
+|----------|---------|------------|
+| `DEFAULT_EMBEDDING_PROVIDER` | `openai` | Provedor de embeddings |
+| `DEFAULT_EMBEDDING_MODEL` | `text-embedding-3-small` | Modelo usado ao indexar e consultar Knowledge |
+| `DEFAULT_EMBEDDING_API_KEY` | — | Chave exclusiva de embeddings |
+| `DEFAULT_EMBEDDING_BASE_URL` | auto por provider | Base URL do endpoint `/embeddings` |
+| `DEFAULT_EMBEDDING_DIMENSIONS` | `1536` | Dimensao do modelo, usada pelo indice pgvector |
+| `ENABLE_PGVECTOR` | `false` | Habilita a migration pgvector no PostgreSQL/Supabase; manter `false` no SQLite local |
+
+> Em producao Supabase, use `ENABLE_PGVECTOR=true` e confirme que a extensao
+> `vector` pode ser criada. A migration preserva o JSON antigo, cria
+> `embedding_vector` e um indice HNSW parcial. Alterar o modelo/dimensao exige
+> reindexar a base de conhecimento, pois vetores de modelos diferentes nao sao
+> comparaveis.
 ## WhatsApp / Evolution API
 
 > A versao fixada da Evolution (`evoapicloud/evolution-api:v2.3.7`) usa a chave

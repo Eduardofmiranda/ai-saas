@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy.orm import Session
 
 from app.config import get_secret
@@ -9,6 +11,8 @@ from app.models.workflow import Workflow
 from app.services import evolution, llm
 from app.services.config_service import get_or_create_config, resolve_ai_config
 from app.services.field_crypto import decrypt_field
+
+logger = logging.getLogger(__name__)
 
 
 async def handle_incoming_message(
@@ -109,7 +113,12 @@ async def handle_incoming_message(
                 base_url=ai_base_url,
             )
         except llm.LLMError:
-            # IA indisponivel: nao quebra o fluxo, apenas registra
+            # IA indisponivel: nao quebra o fluxo. O diagnostico preserva
+            # apenas metadados operacionais, nunca prompt, chave ou resposta.
+            logger.warning(
+                "Resposta da IA indisponivel",
+                extra={"company_id": company_id, "provider": ai_provider, "model": ai_model},
+            )
             reply_text = None
 
     # 7) Envia resposta pelo WhatsApp e registra

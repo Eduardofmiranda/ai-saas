@@ -7,7 +7,21 @@ enquanto a rota FastAPI continua `/config/`.
 
 ## Endpoints
 
-### Autenticacao
+#### Health (operacional, sem JWT)
+
+| Metodo | URL | Descricao |
+|--------|-----|-----------|
+| GET | `/health` | Liveness do processo HTTP |
+| GET | `/health/db` | Readiness do banco configurado |
+| GET | `/health/redis` | Readiness do Redis |
+| GET | `/health/evolution` | Alcance/autenticacao da Evolution |
+| GET | `/health/llm` | Coerencia da configuracao global do LLM, sem chamar o modelo |
+
+Os checks de dependencia retornam `503` quando indisponiveis e nunca expõem
+segredos. Pelo nginx de producao, use o prefixo `/api`, por exemplo
+`/api/health/db`.
+
+## Autenticacao
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
@@ -22,7 +36,7 @@ enquanto a rota FastAPI continua `/config/`.
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
-| POST | `/companies/` | Cria empresa | JWT |
+| POST | `/companies/` | **Depreciado:** responde 409 para evitar empresa sem usuario; use `/auth/register` | JWT |
 | GET | `/companies/` | Lista somente a empresa do usuario | JWT |
 | GET | `/companies/{id}` | Busca a propria empresa | JWT |
 | PATCH | `/companies/{id}` | Atualiza a propria empresa | JWT |
@@ -128,6 +142,20 @@ A atualizacao de status (`PATCH`) registra automaticamente um `ConversationTrans
 | PATCH | `/knowledge/{id}` | Atualiza documento | JWT |
 | DELETE | `/knowledge/{id}` | Deleta documento e chunks | JWT |
 | POST | `/knowledge/search` | Busca semantica | JWT |
+
+### Health (operacional, sem JWT)
+
+| Metodo | URL | Descricao |
+|--------|-----|-----------|
+| GET | `/health` | Liveness do processo HTTP |
+| GET | `/health/db` | Readiness do banco configurado |
+| GET | `/health/redis` | Readiness do Redis |
+| GET | `/health/evolution` | Alcance/autenticacao da Evolution |
+| GET | `/health/llm` | Coerencia da configuracao global do LLM, sem chamar o modelo |
+
+Os checks de dependencia retornam `503` quando indisponiveis e nunca expõem
+segredos. Pelo nginx de producao, use o prefixo `/api`, por exemplo
+`/api/health/db`.
 
 ## Autenticacao
 

@@ -20,6 +20,9 @@ $env:EVOLUTION_BASE_URL = "http://localhost:8090"
 $env:EVOLUTION_API_KEY = "mock"
 $env:EVOLUTION_INSTANCE = "flowai"
 uvicorn app.main:app --reload --port 8000
+
+# Para validar tambem o caminho de producao pelo nginx, execute o script E2E
+# com E2E_BACKEND_URL=http://localhost/api depois de subir o frontend Docker.
 ```
 
 ### 2. Suba o mock em outro terminal
@@ -78,3 +81,16 @@ curl http://localhost:8090/sent_messages | python -m json.tool
 | `MOCK_BACKEND_URL` | `http://localhost:8000` | URL do backend para o webhook |
 
 Se rodar dentro do Docker, use `MOCK_BACKEND_URL=http://backend:8000`.
+
+## Validacao pelo nginx (`/api`)
+
+O script aceita `E2E_BACKEND_URL`. Quando o frontend nginx estiver publicado
+localmente, rode o mesmo fluxo atraves dele, garantindo a paridade com a VPS:
+
+```powershell
+$env:E2E_BACKEND_URL = "http://localhost/api"
+python e2e_mock_test.py
+```
+
+O mock continua encaminhando o webhook diretamente ao backend; apenas as
+chamadas do operador (registro, configuracao e workflow) passam pelo nginx.

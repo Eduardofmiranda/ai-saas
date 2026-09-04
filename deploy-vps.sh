@@ -92,11 +92,9 @@ log "Stack iniciada."
 # ---------------------------------------------------------------
 # 5. Migracoes
 # ---------------------------------------------------------------
-log "Rodando migracoes (alembic)..."
-docker compose exec -T backend alembic upgrade head || warn "Migracao falhou - rode manualmente: docker compose exec backend alembic upgrade head"
-
-# Se nao tiver alembic, garante as tabelas via create_all
-docker compose exec -T backend python -c "from app.database.database import Base, engine; import app.models; Base.metadata.create_all(bind=engine)" 2>/dev/null || true
+# O comando do backend executa `alembic upgrade head` antes do Uvicorn. Nao use
+# Base.metadata.create_all na VPS: a fonte de verdade do schema e o Alembic.
+log "Migracoes Alembic aplicadas pelo container backend no startup."
 
 # ---------------------------------------------------------------
 # 6. Verificacao

@@ -204,3 +204,16 @@ Todos os providers seguem a interface OpenAI (chat.completions).
 1. `config.ai_base_url` (configuracao da empresa)
 2. `DEFAULT_AI_BASE_URL` (variavel de ambiente)
 3. URL padrao por provider (auto-resolvido)
+
+## Embeddings e Knowledge
+
+**Implementado:** Knowledge e o node RAG usam uma configuracao independente da
+IA de chat: `DEFAULT_EMBEDDING_PROVIDER`, `DEFAULT_EMBEDDING_MODEL`,
+`DEFAULT_EMBEDDING_API_KEY` e `DEFAULT_EMBEDDING_BASE_URL`. O contrato esperado
+e OpenAI-compatível: `POST /embeddings`.
+
+Em producao Supabase, `ENABLE_PGVECTOR=true` aplica a migration que preserva o
+JSON legado e inclui a busca de similaridade no banco via pgvector. Em testes
+locais com SQLite, o fallback JSON calcula a similaridade no processo. Ao mudar
+o modelo/dimensao de embeddings, reindexe a Knowledge; vetores de modelos
+diferentes nao podem ser misturados.

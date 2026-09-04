@@ -1,12 +1,16 @@
 from contextlib import asynccontextmanager
+import logging
 
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 import app.models  # registra todos os models no Base.metadata
 from app.config import get_secret
 from app.database.database import Base, engine, SessionLocal
+from app.services import llm
 
 from app.routers.auth_router import router as auth_router
 from app.routers.company_router import router as company_router
@@ -22,11 +26,19 @@ from app.routers.template_router import router as template_router
 from app.routers.users_router import router as users_router
 
 
+logger = logging.getLogger("ai_saas")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Garante que todas as tabelas existam no boot.
-    # Evita depender de rodar `create_all` manualmente apos o deploy.
-    Base.metadata.create_all(bind=engine)
+    # Em producao o schema e controlado exclusivamente pelo Alembic. SQLite
+    # local continua pratico para desenvolvimento/testes sem setup adicional.
+    auto_create = get_secret("AUTO_CREATE_SCHEMA").lower() in {"1", "true", "yes"}
+    if engine.dialect.name == "sqlite" and get_secret("AUTO_CREATE_SCHEMA", "true").lower() not in {"0", "false", "no"}:
+        auto_create = True
+    if auto_create:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Schema criado/verificado automaticamente para ambiente local")
 
     # Seed de usuario de teste (apenas dev, controlado por SEED_DEFAULT_USER)
     db = SessionLocal()
@@ -90,6 +102,73 @@ def home():
     return {"status": "online"}
 
 
+def _health_payload(name: str, check) -> JSONResponse:
+    try:
+        detail = check()
+        return JSONResponse(status_code=200, content={"status": "healthy", "service": name, "detail": detail})
+    except Exception:
+        logger.warning("Health check indisponivel", extra={"service": name})
+        return JSONResponse(status_code=503, content={"status": "unhealthy", "service": name})
+
+
 @app.get("/health")
 def health():
+    """Liveness: confirma apenas que o processo HTTP esta em execucao."""
     return {"status": "healthy"}
+
+
+@app.get("/health/db")
+def health_database():
+    def check():
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return "connected"
+    return _health_payload("database", check)
+
+
+@app.get("/health/redis")
+def health_redis():
+    def check():
+        from redis import Redis
+
+        client = Redis.from_url(get_secret("REDIS_URL", "redis://localhost:6379/0"), socket_connect_timeout=2)
+        try:
+            return "pong" if client.ping() else "unavailable"
+        finally:
+            client.close()
+    return _health_payload("redis", check)
+
+
+@app.get("/health/evolution")
+def health_evolution():
+    def check():
+        base_url = get_secret("EVOLUTION_BASE_URL")
+        api_key = get_secret("EVOLUTION_API_KEY")
+        if not base_url or not api_key:
+            raise RuntimeError("Evolution nao configurada")
+        response = httpx.get(
+            f"{base_url.rstrip('/')}/instance/fetchInstances",
+            headers={"apikey": api_key},
+            timeout=5,
+        )
+        response.raise_for_status()
+        return "reachable"
+    return _health_payload("evolution", check)
+
+
+@app.get("/health/llm")
+def health_llm():
+    def check():
+        provider = get_secret("DEFAULT_AI_PROVIDER") or "groq"
+        resolved = llm._resolve(
+            provider,
+            get_secret("DEFAULT_AI_MODEL"),
+            get_secret("DEFAULT_AI_API_KEY"),
+            get_secret("DEFAULT_AI_BASE_URL"),
+        )
+        if not resolved["base_url"]:
+            raise RuntimeError("LLM sem URL")
+        if resolved["provider"] not in {"mock", "ollama"} and not resolved["api_key"]:
+            raise RuntimeError("LLM sem chave")
+        return {"provider": resolved["provider"], "model": resolved["model"], "configured": True}
+    return _health_payload("llm", check)

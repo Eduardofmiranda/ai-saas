@@ -31,6 +31,20 @@ def resolve_ai_config(config: CompanyConfig | None) -> dict[str, str]:
     }
 
 
+def resolve_embedding_config() -> dict[str, str]:
+    """Resolve embeddings independentemente do provedor de chat.
+
+    Modelos de conversa e modelos de embeddings possuem contratos diferentes.
+    Por isso a Knowledge nunca herda implicitamente uma chave/modelo de chat.
+    """
+    return {
+        "provider": get_secret("DEFAULT_EMBEDDING_PROVIDER") or "openai",
+        "model": get_secret("DEFAULT_EMBEDDING_MODEL") or "text-embedding-3-small",
+        "api_key": get_secret("DEFAULT_EMBEDDING_API_KEY"),
+        "base_url": get_secret("DEFAULT_EMBEDDING_BASE_URL"),
+    }
+
+
 def get_or_create_config(db: Session, company_id: int) -> CompanyConfig:
     """Retorna a configuracao da empresa, criando com defaults se nao existir."""
     config = (

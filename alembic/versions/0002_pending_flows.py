@@ -1,7 +1,7 @@
 """add pending_flows table
 
 Revision ID: 0002_pending_flows
-Revises: None
+Revises: 0001_initial_schema
 Create Date: 2026-08-28
 """
 from alembic import op
@@ -11,7 +11,7 @@ from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = "0002_pending_flows"
-down_revision = None
+down_revision = "0001_initial_schema"
 branch_labels = None
 depends_on = None
 

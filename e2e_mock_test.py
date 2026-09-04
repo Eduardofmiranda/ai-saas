@@ -23,6 +23,7 @@ Quando terminar: veja a lista de mensagens enviadas no mock em
 """
 from __future__ import annotations
 
+import os
 import time
 
 import httpx

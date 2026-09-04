@@ -1,6 +1,6 @@
 from app.services.nodes.context import NodeContext, _get
 from app.services.llm import generate_reply
-from app.services.config_service import resolve_ai_config
+from app.services.config_service import resolve_ai_config, resolve_embedding_config
 
 
 async def run_rag_node(ctx: NodeContext, node: dict) -> dict:
@@ -59,7 +59,7 @@ async def run_rag_node(ctx: NodeContext, node: dict) -> dict:
     provider = resolved_ai["provider"]
     api_key = resolved_ai["api_key"]
 
-    embedding_model = "text-embedding-3-small"
+    embedding_config = resolve_embedding_config()
 
     # ---------------------------------------------------------
     # Busca semântica na base de conhecimento
@@ -70,10 +70,10 @@ async def run_rag_node(ctx: NodeContext, node: dict) -> dict:
         ctx.db,
         ctx.company_id,
         query,
-        provider=provider,
-        api_key=api_key,
-        embedding_model=embedding_model,
-        base_url=resolved_ai["base_url"],
+        provider=embedding_config["provider"],
+        api_key=embedding_config["api_key"],
+        embedding_model=embedding_config["model"],
+        base_url=embedding_config["base_url"],
         top_k=top_k,
     )
 

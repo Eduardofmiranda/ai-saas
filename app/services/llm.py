@@ -104,9 +104,11 @@ async def generate_reply(
             resp.raise_for_status()
             data = resp.json()
     except httpx.HTTPStatusError as exc:
-        raise LLMError(f"Provedor de IA retornou erro {exc.response.status_code}: {exc.response.text}")
+        # A resposta externa pode conter dados enviados pelo cliente. Nunca a
+        # propague para logs, banco ou API.
+        raise LLMError(f"Provedor de IA retornou HTTP {exc.response.status_code}") from exc
     except httpx.HTTPError as exc:
-        raise LLMError(f"Erro ao chamar provedor de IA: {exc}")
+        raise LLMError("Falha de rede ao chamar o provedor de IA") from exc
 
     try:
         return data["choices"][0]["message"]["content"].strip()

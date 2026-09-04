@@ -38,7 +38,11 @@ class KnowledgeChunk(Base):
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     chunk_index = Column(Integer, default=0)
     content = Column(Text, nullable=False)
+    # JSON permanece como fallback para SQLite/local. Em producao, a migration
+    # 0006 tambem mantem a representacao pgvector em embedding_vector.
     embedding = Column(JSON, nullable=True)
+    embedding_model = Column(String, default="text-embedding-3-small")
+    embedding_dimensions = Column(Integer, default=0)
     tokens = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 

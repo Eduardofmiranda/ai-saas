@@ -31,8 +31,8 @@ A configuracao de IA e WhatsApp e feita por empresa via API `PATCH /config/`:
 
 ## Configuracao da IA
 
-O sistema suporta multiplos provedores. A resolucao e unica para conversa,
-workflows/nodes, RAG, Knowledge e o teste de conectividade:
+O sistema suporta multiplos provedores. A resolucao de **chat** e unica para
+conversa, workflows/nodes, RAG (resposta final) e o teste de conectividade:
 
 1. Override nao vazio da empresa em `company_configs`
 2. Variaveis globais `DEFAULT_AI_*` do `.env` realmente carregado pelo backend
@@ -48,6 +48,14 @@ Na tela `/ai`, salvar prompt ou status nao persiste provider/modelo. Provider e
 modelo so viram override quando o operador os altera; **Usar padroes do .env**
 limpa os dois overrides ao salvar.
 
+## Configuracao de Embeddings
+
+Knowledge e a busca semantica do RAG nao usam `DEFAULT_AI_*`: usam
+`DEFAULT_EMBEDDING_*`, pois o endpoint e `/embeddings` e pode requerer outro
+provedor, modelo e chave. Essa configuracao e global por ambiente nesta versao;
+nao existe override de embeddings por empresa. Em producao Supabase,
+`ENABLE_PGVECTOR=true` habilita a busca vetorial no banco. Trocar modelo ou
+dimensao requer reindexar os documentos existentes.
 ## Configuracao do WhatsApp
 
 A integracao com WhatsApp e feita via **Evolution API**. Configuracao:

@@ -1,111 +1,86 @@
-# 15 — Deploy
+# 15 — Deploy na VPS
 
-> **Status: validado em producao (03/09/2026).** O roteiro completo E2E esta em
-> `VPS-SETUP.md`. Aqui esta o resumo das decisoes reais.
+## Estado implementado
 
-## Opcoes
+A VPS executa Docker Compose. O banco principal da aplicacao e sempre o
+**Supabase**, referenciado por `DATABASE_URL`; o Postgres do Compose e apenas
+um fallback/local e tambem e usado pela Evolution como banco operacional.
 
-### Docker Compose (Producao)
+O `backend` executa `alembic upgrade head` antes do Uvicorn. `celery-worker` e
+`celery-beat` aguardam o backend saudavel, logo nao processam tarefas contra um
+schema antigo.
 
-```bash
-# 1. Configurar .env (use o template de producao)
-cp .env.production.example .env
-# Editar .env com valores de producao
+## Preparar a VPS
 
-# 2. Subir servicos (levanta postgres LOCAL + redis + backend + celery + frontend)
-docker compose up -d --build
-```
+1. Atualize o codigo no diretorio do projeto.
+2. Preserve o `.env` da VPS: ele e fora do Git e contem os segredos reais.
+3. Compare o `.env` com `.env.production.example`; para esta versao, preencha:
+   - `DEFAULT_EMBEDDING_PROVIDER`, `DEFAULT_EMBEDDING_MODEL`,
+     `DEFAULT_EMBEDDING_API_KEY`, `DEFAULT_EMBEDDING_BASE_URL`;
+   - `DEFAULT_EMBEDDING_DIMENSIONS=1536`;
+   - `ENABLE_PGVECTOR=true`, depois de confirmar que pgvector esta disponivel
+     no projeto Supabase.
+4. Nunca use `down -v`, `reset` ou exclusao de volumes durante uma atualizacao.
 
-> **Banco (producao):** o deploy de producao usa o **Supabase** como banco
-> principal. A `DATABASE_URL` do `.env` aponta para a connection string do
-> **Supabase** (pooler IPv4 em VPS sem IPv6). O servico `postgres` do compose
-> e alternativa/fallback local, nao o banco em uso. Ver `docs/06-banco-de-dados.md`.
-
-> **As tabelas sao criadas AUTOMATICAMENTE no boot** do backend (o `lifespan` em
-> `app/main.py` chama `Base.metadata.create_all`). Nao e preciso (nem recomendado)
-> rodar `create_all` manualmente apos subir. Nao usa Alembic para criar as tabelas
-> base (ver docs/06).
-
-**Servicos:**
-
-| Servico | Porta | Descricao |
-|---------|-------|-----------|
-| frontend | 80 | React (nginx) |
-| backend | 8000 | FastAPI (uvicorn) |
-| celery-worker | — | Worker Celery |
-| celery-beat | — | Agendador Celery |
-| postgres | 5432 (interna) | PostgreSQL LOCAL (volume `postgres_data`) |
-| redis | 6379 (interna) | Redis |
-
-> **Evolution API** (WhatsApp) roda em **compose separado**
-> (`docker-compose.evolution.yml`), porta **8080** — ver docs/12 e VPS-SETUP.md.
-
-### VPS (Script)
+## Implantar
 
 ```bash
-# 1. Copiar script para VPS
-scp deploy-vps.sh usuario@servidor:/opt/ai-saas/
+cd /opt/ai-saas
+git fetch origin
+git switch -C main origin/main
 
-# 2. Executar setup (primeira vez)
-ssh usuario@servidor
-chmod +x deploy-vps.sh
-./deploy-vps.sh setup
+# Recria processos que recebem env ou imagem nova.
+docker compose up -d --build --no-deps --force-recreate backend
+# Worker e beat passam a depender do backend migrado e saudavel.
+docker compose up -d --build --no-deps --force-recreate celery-worker celery-beat
+docker compose up -d --build --no-deps --force-recreate frontend
 
-# 3. Copiar codigo
-rsync -avz --exclude '.git' . usuario@servidor:/opt/ai-saas/
-
-# 4. Executar deploy
-./deploy-vps.sh deploy
+# Evolution permanece em compose separado.
+docker compose -f docker-compose.evolution.yml up -d
 ```
 
-**Script `deploy-vps.sh`:**
-- `setup`: Instala Docker, cria diretorios, gera SECRET_KEY + SECRET_ENCRYPTION_KEY
-- `deploy`: Copia codigo, roda migrations, reinicia containers
+`docker compose restart` sozinho **nao reaplica** variaveis do `.env` no
+backend/worker. Use `--force-recreate` quando houver mudanca de env.
 
-## Variaveis de Ambiente (Producao)
+## Validacao obrigatoria na VPS
 
-Obrigatórias:
-- `DATABASE_URL` (producao = **Supabase via pooler IPv4**: `postgresql://postgres.<ref>:SENHA@aws-0-<regiao>.pooler.supabase.com:5432/postgres`; o Postgres local e so fallback)
-- `POSTGRES_PASSWORD` (mesma senha do `DATABASE_URL`)
-- `SECRET_KEY`
-- `SECRET_ENCRYPTION_KEY` (distinto de `SECRET_KEY`)
-- `DEFAULT_AI_API_KEY` (Groq)
-- `EVOLUTION_AUTH_KEY` / `EVOLUTION_API_KEY` (chave da Evolution, NAO a Groq)
+```bash
+# Confirma banco real e revisao aplicada (sem expor a URL no log)
+docker compose exec backend python -c "from app.database.database import engine; from sqlalchemy import text; print(dict(engine.connect().execute(text('select current_database(), inet_server_addr()')).mappings().first()))"
+docker compose exec backend alembic current
 
-## Ports
+# Saude do processo e dependencias
+curl -fsS http://127.0.0.1:8000/health
+curl -fsS http://127.0.0.1:8000/health/db
+curl -fsS http://127.0.0.1:8000/health/redis
+curl -fsS http://127.0.0.1:8000/health/llm
+curl -fsS http://127.0.0.1:8000/health/evolution
+
+# Confirma que os containers receberam as configuracoes esperadas.
+docker compose exec backend printenv DEFAULT_EMBEDDING_MODEL
+docker compose exec backend printenv ENABLE_PGVECTOR
+```
+
+Para `ENABLE_PGVECTOR=true`, `alembic current` deve mostrar
+`0006_pgvector_knowledge`. Se a migration informar indisponibilidade da
+extensao, nao force o deploy: habilite `vector` no Supabase ou volte a
+`ENABLE_PGVECTOR=false` antes de recriar o backend.
+
+## Portas
 
 | Porta | Servico |
-|-------|---------|
-| 80 | Frontend (nginx) |
-| 8000 | Backend (FastAPI) |
-| 8080 | Evolution API (WhatsApp) — liberar no firewall |
-| 5432 | PostgreSQL (interna) |
-| 6379 | Redis (interna) |
+|---|---|
+| 80 | Frontend nginx; encaminha a API pelo prefixo `/api` |
+| 8000 | Backend FastAPI (uso interno/operacional) |
+| 8080 | Evolution API |
+| 5432 | Postgres local interno; **nao** e o banco principal de producao |
+| 6379 | Redis interno |
 
-## Firewall (VPS com painel, ex.: Hostinger)
+## Riscos conhecidos
 
-Liberar no firewall do provedor: **80, 8080, 22**. Sem a 8080, o QR da
-Evolution nao abre fora da VPS.
-
-## Webhook (WhatsApp)
-
-O backend recebe mensagens em **`POST /webhook/whatsapp/{company_id}`**
-(app/routers/webhook_router.py). Configure a Evolution com essa URL (usando o
-`company_id` real, ex. `1` para a primeira empresa). **NAO existe**
-`/webhook/evolution` no codigo.
-
-## Nginx (Frontend)
-
-```nginx
-location /api/ {
-    proxy_pass http://backend:8000;
-}
-
-location /webhook/ {
-    proxy_pass http://backend:8000;
-}
-```
-
-## SSL/TLS
-
-Nao implementado ainda. Recomendado: usar Cloudflare ou nginx com Let's Encrypt.
+- `DEFAULT_EMBEDDING_MODEL` alterado sem reindexar Knowledge torna os vetores
+  anteriores incompatíveis. Reindexe os documentos após trocar modelo/dimensao.
+- `SECRET_ENCRYPTION_KEY` nao pode mudar: ela protege as chaves gravadas no
+  banco.
+- A VPS nao e ambiente de teste: execute `pytest` e o E2E mock local antes da
+  implantacao.

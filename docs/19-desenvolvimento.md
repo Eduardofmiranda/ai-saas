@@ -87,18 +87,19 @@ docker compose exec backend bash
 
 ## Banco de Dados
 
-### Criacao das tabelas (automatica)
-As tabelas sao criadas **automaticamente no boot** do backend (`lifespan` em
-`app/main.py` chama `Base.metadata.create_all`). Nao e preciso rodar `create_all`
-manualmente. Para conferir as tabelas:
+### Migrations e schema
+
+Alembic e a fonte de verdade para alteracoes estruturais. Em SQLite local, o
+backend pode criar o schema inicial para facilitar testes, mas um banco local
+reutilizado deve receber migrations antes de subir:
 
 ```bash
+alembic upgrade head
 python -c "from app.database.database import engine; from sqlalchemy import inspect; print(inspect(engine).get_table_names())"
 ```
 
-> Este projeto **nao usa Alembic para o schema base** (ver docs/06). As migrations
-> em `alembic/versions/` sao adicionais/idempotentes (ex.: `knowledge`). O fluxo de
-> desenvolvimento NAO depende de `alembic upgrade head`.
+Na VPS/Supabase, somente o backend aplica `alembic upgrade head` no startup;
+nunca execute `Base.metadata.create_all` ou DDL manual contra producao.
 
 ## Arquivos Importantes
 

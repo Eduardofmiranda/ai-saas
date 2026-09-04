@@ -20,7 +20,8 @@ from app.services.vector_store import (
     search_similar,
     upsert_knowledge,
 )
-from app.services.config_service import get_or_create_config, resolve_ai_config
+from app.services.config_service import resolve_embedding_config
+from app.services.embedding import EmbeddingError
 
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
@@ -94,14 +95,18 @@ async def create_knowledge(
     db.commit()
     db.refresh(item)
 
-    ai_config = resolve_ai_config(get_or_create_config(db, current_user.company_id))
-    model = "text-embedding-3-small"
+    embedding_config = resolve_embedding_config()
 
-    chunks_saved = await upsert_knowledge(
-        db, current_user.company_id, item.id, body.content,
-        provider=ai_config["provider"], api_key=ai_config["api_key"],
-        embedding_model=model, base_url=ai_config["base_url"],
-    )
+    try:
+        chunks_saved = await upsert_knowledge(
+            db, current_user.company_id, item.id, body.content,
+            provider=embedding_config["provider"], api_key=embedding_config["api_key"],
+            embedding_model=embedding_config["model"], base_url=embedding_config["base_url"],
+        )
+    except EmbeddingError as exc:
+        db.delete(item)
+        db.commit()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     return KnowledgeResponse(
         id=item.id,
@@ -137,13 +142,15 @@ async def update_knowledge(
     db.commit()
 
     if body.content is not None:
-        ai_config = resolve_ai_config(get_or_create_config(db, current_user.company_id))
-        model = "text-embedding-3-small"
-        await upsert_knowledge(
-            db, current_user.company_id, item.id, body.content,
-            provider=ai_config["provider"], api_key=ai_config["api_key"],
-            embedding_model=model, base_url=ai_config["base_url"],
-        )
+        embedding_config = resolve_embedding_config()
+        try:
+            await upsert_knowledge(
+                db, current_user.company_id, item.id, body.content,
+                provider=embedding_config["provider"], api_key=embedding_config["api_key"],
+                embedding_model=embedding_config["model"], base_url=embedding_config["base_url"],
+            )
+        except EmbeddingError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     chunks = get_chunks_by_knowledge(db, item.id)
     return KnowledgeResponse(
@@ -183,13 +190,12 @@ async def search_knowledge(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[SearchResult]:
-    ai_config = resolve_ai_config(get_or_create_config(db, current_user.company_id))
-    model = "text-embedding-3-small"
+    embedding_config = resolve_embedding_config()
 
     results = await search_similar(
         db, current_user.company_id, body.query,
-        provider=ai_config["provider"], api_key=ai_config["api_key"],
-        embedding_model=model, base_url=ai_config["base_url"], top_k=body.top_k,
+        provider=embedding_config["provider"], api_key=embedding_config["api_key"],
+        embedding_model=embedding_config["model"], base_url=embedding_config["base_url"], top_k=body.top_k,
     )
 
     return [SearchResult(**r) for r in results]

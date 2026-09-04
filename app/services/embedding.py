@@ -6,6 +6,10 @@ CHUNK_SIZE = 500
 CHUNK_OVERLAP = 100
 
 
+class EmbeddingError(Exception):
+    """Falha segura ao gerar embeddings, sem expor resposta do provedor."""
+
+
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
     text = text.strip()
     if not text:
@@ -31,7 +35,7 @@ async def generate_embeddings(
     base_url: str = "",
 ) -> list[list[float]]:
     if not api_key:
-        raise ValueError("API key is required for embeddings")
+        raise EmbeddingError("Embeddings nao configurados: informe DEFAULT_EMBEDDING_API_KEY")
 
     if not base_url:
         base_url = _resolve_embedding_base_url(provider)
@@ -46,17 +50,23 @@ async def generate_embeddings(
         "input": texts,
     }
 
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(
-            f"{base_url}/embeddings",
-            headers=headers,
-            json=payload,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-
-    sorted_data = sorted(data["data"], key=lambda x: x["index"])
-    return [item["embedding"] for item in sorted_data]
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(
+                f"{base_url}/embeddings",
+                headers=headers,
+                json=payload,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        sorted_data = sorted(data["data"], key=lambda x: x["index"])
+        return [item["embedding"] for item in sorted_data]
+    except httpx.HTTPStatusError as exc:
+        raise EmbeddingError(
+            f"O provedor de embeddings retornou HTTP {exc.response.status_code}"
+        ) from exc
+    except (httpx.HTTPError, KeyError, TypeError, ValueError) as exc:
+        raise EmbeddingError("Falha ao gerar embeddings") from exc
 
 
 async def generate_single_embedding(

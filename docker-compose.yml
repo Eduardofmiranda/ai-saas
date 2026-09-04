@@ -48,9 +48,18 @@ services:
       DEFAULT_AI_PROVIDER: ${DEFAULT_AI_PROVIDER:-groq}
       DEFAULT_AI_MODEL: ${DEFAULT_AI_MODEL:-qwen/qwen3.8-27b}
       DEFAULT_AI_API_KEY: ${DEFAULT_AI_API_KEY:-}
+      DEFAULT_AI_BASE_URL: ${DEFAULT_AI_BASE_URL:-}
+      DEFAULT_EMBEDDING_PROVIDER: ${DEFAULT_EMBEDDING_PROVIDER:-openai}
+      DEFAULT_EMBEDDING_MODEL: ${DEFAULT_EMBEDDING_MODEL:-text-embedding-3-small}
+      DEFAULT_EMBEDDING_API_KEY: ${DEFAULT_EMBEDDING_API_KEY:-}
+      DEFAULT_EMBEDDING_BASE_URL: ${DEFAULT_EMBEDDING_BASE_URL:-}
+      DEFAULT_EMBEDDING_DIMENSIONS: ${DEFAULT_EMBEDDING_DIMENSIONS:-1536}
+      ENABLE_PGVECTOR: ${ENABLE_PGVECTOR:-false}
       EVOLUTION_BASE_URL: ${EVOLUTION_BASE_URL:-}
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
       EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
+    command: >
+      sh -c "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"
     depends_on:
       redis:
         condition: service_healthy
@@ -77,13 +86,20 @@ services:
       DEFAULT_AI_PROVIDER: ${DEFAULT_AI_PROVIDER:-groq}
       DEFAULT_AI_MODEL: ${DEFAULT_AI_MODEL:-qwen/qwen3.8-27b}
       DEFAULT_AI_API_KEY: ${DEFAULT_AI_API_KEY:-}
+      DEFAULT_AI_BASE_URL: ${DEFAULT_AI_BASE_URL:-}
+      DEFAULT_EMBEDDING_PROVIDER: ${DEFAULT_EMBEDDING_PROVIDER:-openai}
+      DEFAULT_EMBEDDING_MODEL: ${DEFAULT_EMBEDDING_MODEL:-text-embedding-3-small}
+      DEFAULT_EMBEDDING_API_KEY: ${DEFAULT_EMBEDDING_API_KEY:-}
+      DEFAULT_EMBEDDING_BASE_URL: ${DEFAULT_EMBEDDING_BASE_URL:-}
+      DEFAULT_EMBEDDING_DIMENSIONS: ${DEFAULT_EMBEDDING_DIMENSIONS:-1536}
+      ENABLE_PGVECTOR: ${ENABLE_PGVECTOR:-false}
       EVOLUTION_BASE_URL: ${EVOLUTION_BASE_URL:-}
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
       EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
     depends_on:
-      redis:
+      backend:
         condition: service_healthy
-      postgres:
+      redis:
         condition: service_healthy
     networks:
       - ai-saas-network
@@ -105,6 +121,8 @@ services:
       DATABASE_URL: ${DATABASE_URL:-}
       REDIS_URL: redis://redis:6379/0
     depends_on:
+      backend:
+        condition: service_healthy
       redis:
         condition: service_healthy
     networks:

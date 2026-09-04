@@ -29,9 +29,12 @@ pip install -r requirements.txt
 cp .env.example .env
 # Editar .env com suas configuracoes
 
-# 5. Iniciar o backend
-# (as tabelas sao criadas automaticamente no start pelo lifespan do main.py;
-#   sem DATABASE_URL usa SQLite local ./aissaas.db - ver docs/06)
+# 5. Aplicar migrations (necessario ao reutilizar um banco local existente)
+alembic upgrade head
+
+# 6. Iniciar o backend
+# SQLite local recebe o schema inicial automaticamente; migrations continuam
+# sendo a fonte de verdade para evolucoes estruturais.
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -58,8 +61,7 @@ cp .env.example .env
 # Editar .env com configuracoes de producao
 
 # 2. Subir todos os servicos
-# (as tabelas sao criadas automaticamente no boot do backend - nao precisa
-#   rodar create_all nem alembic; ver docs/06)
+# O backend executa `alembic upgrade head` antes de iniciar a API.
 docker compose up -d --build
 ```
 
@@ -84,8 +86,9 @@ docker compose logs -f backend
 # Entrar no container do backend
 docker compose exec backend bash
 
-# (tabelas sao criadas automaticamente no boot - nao ha migracao manual)
-# Ver tabelas criadas (confirmacao):
+# Ver a revisao de schema aplicada:
+docker compose exec backend alembic current
+# Ver tabelas (confirmacao):
 docker compose exec backend python -c "from app.database.database import engine; from sqlalchemy import inspect; print(inspect(engine).get_table_names())"
 
 # Rodar testes
