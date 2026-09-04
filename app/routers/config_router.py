@@ -133,8 +133,17 @@ def whatsapp_status(
             )
             if resp.status_code == 200:
                 data = resp.json()
-                state = data.get("state", "open" if data.get("instance") else "unknown")
+                state = data.get("state") or data.get("connectionStatus") or ("open" if data.get("instance") else "unknown")
                 detail = data.get("status", "")
+            elif resp.status_code == 400:
+                # Evolution retorna 400 quando a instancia existe mas esta desconectada
+                body = resp.text.lower()
+                if "not connected" in body or "not_found" in body:
+                    state = "close"
+                    detail = "Instancia desconectada na Evolution"
+                else:
+                    state = "error"
+                    detail = resp.text[:200]
             elif resp.status_code == 404:
                 state = "instance_not_found"
                 detail = "Instancia nao encontrada na Evolution"
@@ -259,8 +268,11 @@ def whatsapp_disconnect(
         raise HTTPException(status_code=502, detail=f"Sem conexao com a Evolution: {exc}")
 
     if resp.status_code == 404:
-        # Instancia nao existe na Evolution: objetivo (desconectado) ja atingido.
         return {"ok": True, "detail": "Instancia nao encontrada na Evolution (ja desconectada ou removida)."}
+    if resp.status_code == 400:
+        body = resp.text.lower()
+        if "not connected" in body or "not_found" in body:
+            return {"ok": True, "detail": "WhatsApp ja desconectado na Evolution."}
     if resp.status_code not in (200, 201, 204):
         raise HTTPException(status_code=resp.status_code, detail=f"Evolution retornou HTTP {resp.status_code}")
 
