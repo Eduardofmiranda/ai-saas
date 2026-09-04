@@ -141,7 +141,81 @@ Nunca apagar dados ou tabelas sem autorização explícita.
 
 ---
 
-# 7. Variáveis de ambiente
+# 7. BANCO DE PRODUÇÃO = SUPABASE (regra inegociável)
+
+## Fato arquitetural fixo
+
+- **Em produção (VPS), o banco de dados é o SUPABASE.**
+- Confirmação real (04/09/2026): `DATABASE_URL` deve apontar para o Supabase
+  (`...supabase.co:5432/postgres`), default **Supabase**, NÃO o Postgres local.
+- O **Postgres local do Docker** (serviço `postgres` do `docker-compose.yml`,
+  volume `postgres_data`) é apenas **alternativa/fallback**, NUNCA o banco em
+  uso em produção.
+- Nunca afirmar, documentar ou tratar produção como "Postgres local".
+
+## Paridade obrigatória entre `.env` e os containers em execução
+
+Este é o erro que causou confusão real (04/09/2026): o `.env` em disco apontava
+para o Supabase, MAS o container `backend` rodando usava `DATABASE_URL` antiga
+apontando para o Postgres local. NÃO pode mais acontecer.
+
+### Sempre que mexer em banco/deploy, verificar a paridade:
+
+```bash
+# 1. O que o .env em disco diz (FONTE FALSA de paridade)
+grep '^DATABASE_URL=' .env
+
+# 2. O que o container REALMENTE usa (FONTE DE VERDADE EM EXECUCAO)
+docker compose exec backend printenv DATABASE_URL
+docker compose exec backend python -c "from app.database.database import engine; from sqlalchemy import text; print(dict(engine.connect().execute(text('select current_database(), inet_server_addr()')).mappings().first()))"
+```
+
+- Se o `.env` apontar Supabase mas o container apontar `@postgres:5432`,
+  o container NÃO foi recriado. **`docker compose restart` NÃO reaplica o env.**
+- Para aplicar o `.env` recém-editado é OBRIGATÓRIO recriar o container:
+  ```bash
+  docker compose up -d --no-deps --force-recreate backend celery-worker
+  docker compose restart frontend
+  ```
+- Ao diagnosticar login/dados, **sempre** confirmar qual banco o container usa
+  (passo 2), nunca confiar apenas no `.env` em disco.
+
+### Usuário de produção (Supabase)
+
+- Em produção o usuário é criado por **cadastro** (`POST /auth/register`) ou
+  resetado via backend. `SEED_DEFAULT_USER` fica **desabilitado** em produção.
+- Para saber quem existe no banco (a partir do backend, que é a fonte de verdade):
+  ```bash
+  docker compose exec backend python -c "
+  from app.database.database import SessionLocal
+  from app.models.user import User
+  db = SessionLocal()
+  for u in db.query(User).all():
+      print(u.id, u.email, u.company_id)
+  "
+  ```
+- Não assumir email de usuário de produção com base em dev local
+  (dev = `teste@flowai.com` no SQLite; produção difere).
+
+## Pensar SEMPRE em produção (isolamento por ambiente)
+
+- Todo código/config/comando deve ser pensado em **como vai rodar em produção**
+  (VPS), não apenas no dev local do Windows.
+- Nunca deixar valores fixos de dev (ex.: `localhost:8000`, `127.0.0.1`,
+  `VITE_API_BASE` hardcoded) aplicáveis a produção por engano. Em produção o
+  frontend usa **caminho relativo** (mesma origem via nginx) — `VITE_API_BASE`
+  deve ficar vazio/ausente em produção.
+- Ao diagnosticar um erro, confirmar o **ambiente real**: qual URL/banco/token o
+  processo em execução usa (container, não `.env`), nunca supor que producao
+  se comporta como dev local.
+- Exemplo real (04/09/2026): erro "Not authenticated" na tela de Knowledge era
+  token antigo/inválido no navegador após troca de banco — não era bug do
+  backend nem de `localhost`. Testar a API via `curl` com token no terminal da
+  VPS para isolar frontend vs backend.
+
+---
+
+# 8. Variáveis de ambiente
 
 Nunca colocar secrets diretamente no código.
 
@@ -164,7 +238,7 @@ Novas variáveis de ambiente devem:
 
 ---
 
-# 8. Segurança
+# 9. Segurança
 
 Sempre considerar:
 
@@ -187,7 +261,7 @@ Nunca imprimir secrets nos logs.
 
 ---
 
-# 9. Workflows
+# 10. Workflows
 
 Um workflow deve ser tratado como uma estrutura composta por:
 
@@ -205,7 +279,7 @@ Antes de alterar o mecanismo de workflow, entender completamente o fluxo atual.
 
 ---
 
-# 10. Nodes
+# 11. Nodes
 
 Antes de criar um novo node:
 
@@ -222,7 +296,7 @@ Um node novo deve seguir o padrão existente do projeto.
 
 ---
 
-# 11. Redis e filas
+# 12. Redis e filas
 
 Antes de alterar filas ou workers:
 
@@ -240,7 +314,7 @@ Nunca criar uma segunda implementação de fila sem necessidade.
 
 ---
 
-# 12. APIs
+# 13. APIs
 
 Novos endpoints devem seguir o padrão existente.
 
@@ -257,7 +331,7 @@ Documentar:
 
 ---
 
-# 13. Testes
+# 14. Testes
 
 Depois de alterações relevantes:
 
@@ -271,7 +345,7 @@ Não considerar uma alteração concluída apenas porque o código parece corret
 
 ---
 
-# 14. Documentação
+# 15. Documentação
 
 A documentação está em:
 
@@ -296,7 +370,7 @@ Nunca documentar comportamento que não existe.
 
 ---
 
-# 15. Regra para documentação
+# 16. Regra para documentação
 
 Toda documentação deve distinguir claramente:
 
@@ -320,7 +394,7 @@ Nunca transformar "planejado" em "implementado".
 
 ---
 
-# 16. Mudanças arquiteturais
+# 17. Mudanças arquiteturais
 
 Para mudanças que afetem múltiplos componentes:
 
@@ -337,7 +411,7 @@ Utilizar o agente `architect` quando necessário.
 
 ---
 
-# 17. Revisão
+# 18. Revisão
 
 Antes de considerar uma tarefa concluída, verificar:
 
@@ -354,7 +428,7 @@ Utilizar o agente `reviewer` para revisões importantes.
 
 ---
 
-# 18. Princípio de mínimo impacto
+# 19. Princípio de mínimo impacto
 
 Sempre preferir:
 
@@ -369,7 +443,7 @@ Evitar:
 
 ---
 
-# 19. Comunicação
+# 20. Comunicação
 
 Ao finalizar uma tarefa, informar:
 
@@ -404,7 +478,7 @@ Toda nova integração deve possuir documentação.
 
 ---
 
-# 20. Regra final
+# 21. Regra final
 
 Quando não souber algo:
 

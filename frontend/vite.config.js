@@ -3,29 +3,29 @@ import { defineConfig } from 'vite'
 
 const BACKEND_TARGET = process.env.VITE_BACKEND_TARGET || 'http://localhost:8000'
 
-const backendPaths = [
-  '/auth', '/companies', '/customers', '/conversations', '/messages',
-  '/config', '/dashboard', '/webhook', '/workflows', '/knowledge',
-  '/templates', '/health',
-]
-
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: Object.fromEntries(
-      backendPaths.map((p) => [
-        p,
-        {
-          target: BACKEND_TARGET,
-          changeOrigin: true,
-          secure: false,
-          bypass(req) {
-            if (req.headers.accept && req.headers.accept.includes('text/html')) {
-              return req.url
-            }
-          },
-        },
-      ])
-    ),
+    proxy: {
+      // Em PRODUCAO o nginx trata /api/ (mesma origem). Em dev, o Vite
+      // reencaminha /api/* para o backend removendo o prefixo /api.
+      // (paridade com nginx.conf: location /api/ { proxy_pass http://backend:8000/; })
+      '/api': {
+        target: BACKEND_TARGET,
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/webhook': {
+        target: BACKEND_TARGET,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/health': {
+        target: BACKEND_TARGET,
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 })

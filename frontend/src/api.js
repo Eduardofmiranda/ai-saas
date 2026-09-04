@@ -1,7 +1,11 @@
 // API_BASE:
-// - Em producao (nginx) usamos caminho relativo (mesma origem) -> "".
-// - Em dev pode ser sobrescrito por VITE_API_BASE ou apontar para o backend.
-const API_BASE = import.meta.env.VITE_API_BASE || "";
+// - Em PRODUCAO (nginx) usamos o prefixo "/api": o nginx tem
+//   `location /api/ { proxy_pass http://backend:8000/; }` que descarta o
+//   "/api" e entrega ao backend. Isso SEPARA as chamadas de API das rotas do
+//   SPA (ex.: /knowledge, /workflows), evitando que navegacao do frontend caia
+//   no backend sem token (bug de "Not authenticated").
+// - Em dev pode ser sobrescrito por VITE_API_BASE (ver vite.config.js proxy).
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 let token = localStorage.getItem("token") || "";
 let onUnauthorized = null;

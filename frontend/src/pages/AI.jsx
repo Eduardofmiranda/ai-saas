@@ -113,10 +113,11 @@ export default function AI() {
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch("/config/whatsapp/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ base_url: "http://localhost:8000" }),
+      const config = await api.getConfig();
+      const res = await api.testWhatsApp({
+        base_url: config.evolution_base_url,
+        api_key: config.evolution_api_key,
+        instance: config.evolution_instance,
       });
       setTestResult({ ok: res.ok, detail: "Configuração da IA testada com sucesso." });
     } catch {
