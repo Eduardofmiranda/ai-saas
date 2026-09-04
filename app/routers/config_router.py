@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.config import get_secret
 from app.database.session import get_db
 from app.models.user import User
 from app.schemas.config_schema import ConfigResponse, ConfigUpdate
@@ -75,9 +76,28 @@ class WhatsAppTestRequest(BaseModel):
 
 
 def _evo_config(config) -> tuple[str | None, str | None, str | None]:
-    base_url = decrypt_field(config.evolution_base_url) or config.evolution_base_url
-    api_key = decrypt_field(config.evolution_api_key) or config.evolution_api_key
-    instance = config.evolution_instance
+    """Resolve a config da Evolution para a empresa, com fallback de infraestrutura.
+
+    A Evolution e um servico do proprio deploy (mesma VPS). Por isso, quando a
+    empresa ainda nao preencheu os campos em `company_configs`, caímos para os
+    valores de infraestrutura do ambiente (.env) — o usuario comum nao precisa
+    configurar URL/chave manualmente.
+
+    Multi-tenant: a INSTANCIA e sempre unica POR EMPRESA (`inst-<company_id>`),
+    pois cada empresa tem seu proprio numero de WhatsApp na Evolution. NUNCA
+    usar uma instancia global compartilhada.
+    """
+    base_url = (
+        decrypt_field(config.evolution_base_url)
+        or get_secret("EVOLUTION_BASE_URL")
+        or config.evolution_base_url
+    )
+    api_key = (
+        decrypt_field(config.evolution_api_key)
+        or get_secret("EVOLUTION_API_KEY")
+        or config.evolution_api_key
+    )
+    instance = config.evolution_instance or f"inst-{config.company_id}"
     return (base_url or None, api_key or None, instance or None)
 
 
@@ -257,6 +277,12 @@ def whatsapp_setup(
     config = get_or_create_config(db, current_user.company_id)
     base_url, api_key, instance = _evo_config(config)
     base, key, inst = _evolve_pair(base_url, api_key, instance)
+
+    # Garante que a instancia unica da empresa fique persistida no banco,
+    # para que o status refletir o nome real da instancia.
+    if not config.evolution_instance:
+        config.evolution_instance = inst
+        db.commit()
 
     # 1. Verificar se a instância já existe
     instance_exists = False
