@@ -98,7 +98,7 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     container_name: ai-saas-celery-beat
-    command: celery -A app.tasks.celery_app beat --loglevel=info --scheduler redbeat.RedBeatScheduler
+    command: celery -A app.tasks.celery_app beat --loglevel=info
     env_file:
       - .env
     environment:
