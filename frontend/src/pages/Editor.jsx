@@ -232,7 +232,8 @@ export default function Editor() {
     if (running) return;
     setRunning(true);
     setRunResult(null);
-    const saved = await save(false);
+    // Executar um teste nao pode desativar uma automacao ja ativa.
+    const saved = await save();
     if (!saved) { setRunning(false); return; }
     try {
       const payload = {

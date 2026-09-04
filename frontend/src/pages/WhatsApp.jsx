@@ -52,6 +52,10 @@ export default function WhatsApp() {
     setQrBase64(null);
     try {
       const res = await api.setupWhatsApp();
+      if (res.connected) {
+        await loadStatus();
+        return;
+      }
       setQrBase64(res.qr_base64);
     } catch (e) {
       setError(e.message || "Erro ao gerar QR Code");

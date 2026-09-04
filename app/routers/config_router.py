@@ -364,7 +364,7 @@ def whatsapp_setup(
                 for i in instances:
                     if i.get("name") == inst:
                         instance_exists = True
-                        instance_state = i.get("state", "unknown")
+                        instance_state = i.get("connectionStatus") or i.get("state", "unknown")
                         break
     except httpx.HTTPError:
         pass
@@ -393,6 +393,21 @@ def whatsapp_setup(
         except httpx.HTTPError as exc:
             raise HTTPException(status_code=502, detail=f"Sem conexao com a Evolution: {exc}")
 
+    # Tambem repara instancias existentes criadas antes do webhook automatico.
+    _configure_instance_webhook(
+        base=base,
+        api_key=key,
+        instance=inst,
+        company_id=current_user.company_id,
+    )
+
+    if instance_state == "open":
+        return {
+            "instance": inst,
+            "connected": True,
+            "webhook_configured": True,
+        }
+
     # 3. Gerar o QR Code
     try:
         resp = httpx.get(f"{base}/instance/connect/{inst}", headers={"apikey": key}, timeout=30)
@@ -414,3 +429,34 @@ def whatsapp_setup(
     if "," in qr:
         qr = qr.split(",", 1)[1]
     return {"qr_base64": qr, "instance": inst}
+
+def _configure_instance_webhook(*, base: str, api_key: str, instance: str, company_id: int) -> None:
+    """Registra o webhook autenticado da instancia na rede interna Docker."""
+    custom_headers: dict[str, str] = {}
+    webhook_auth_key = get_secret("EVOLUTION_AUTH_KEY")
+    if webhook_auth_key:
+        custom_headers["evolution-auth"] = webhook_auth_key
+
+    try:
+        response = httpx.post(
+            f"{base}/webhook/set/{instance}",
+            headers={"apikey": api_key, "Content-Type": "application/json"},
+            # A Evolution v2.3.x exige que a configuracao fique no objeto webhook.
+            json={
+                "webhook": {
+                    "enabled": True,
+                    "url": f"http://backend:8000/webhook/whatsapp/{company_id}",
+                    "headers": custom_headers,
+                    "events": ["MESSAGES_UPSERT"],
+                }
+            },
+            timeout=15,
+        )
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="Sem conexao ao configurar webhook da Evolution") from exc
+
+    if response.status_code not in (200, 201):
+        raise HTTPException(
+            status_code=502,
+            detail=f"Evolution recusou a configuracao do webhook (HTTP {response.status_code})",
+        )
