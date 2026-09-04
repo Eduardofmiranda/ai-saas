@@ -344,15 +344,15 @@ def whatsapp_setup(
         raise HTTPException(status_code=502, detail=f"Sem conexao com a Evolution: {exc}")
 
     if resp.status_code != 200:
-        raise HTTPException(status_code=resp.status_code, detail=f"Evolution retornou HTTP {resp.status_code}")
+        raise HTTPException(status_code=resp.status_code, detail=f"Evolution retornou HTTP {resp.status_code}: {resp.text[:300]}")
 
     data = resp.json()
-    qr = (data.get("qrcode") or {}).get("base64")
+    qr = (data.get("qrcode") or {}).get("base64") or (data.get("qrcode") or {}).get("baseCode")
     if not qr:
-        state = (data.get("instance") or {}).get("state")
-        detail = "QR indisponível"
+        state = (data.get("instance") or {}).get("state") or data.get("state", "")
+        detail = f"QR indisponivel (resp keys: {list(data.keys())})"
         if state == "open":
-            detail = "WhatsApp já conectado."
+            detail = "WhatsApp ja conectado."
         raise HTTPException(status_code=409, detail=detail)
 
     if "," in qr:
