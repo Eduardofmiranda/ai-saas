@@ -10,8 +10,6 @@ services:
       - SERVER_URL=http://2.25.122.157:8080
       - AUTHENTICATION_API_KEY=${EVOLUTION_AUTH_KEY}
       - DATABASE_ENABLED=false
-      - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/evolution
       - CACHE_REDIS_ENABLED=false
       - WEBHOOK_GLOBAL_ENABLED=false
       - LOG_LEVEL=WARN
