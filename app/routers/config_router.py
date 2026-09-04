@@ -124,51 +124,38 @@ def whatsapp_status(
             "detail": "Falta a API key e/ou o nome da instância na configuração",
         }
     if api_key and instance:
+        base = base_url.rstrip("/")
+        # 1) connectionState (tempo real)
+        cs_ok = False
         try:
-            base = base_url.rstrip("/")
-            # 1) connectionState: estado real em memoria (instantaneo)
-            resp = httpx.get(
-                f"{base}/instance/connectionState/{instance}",
-                headers={"apikey": api_key},
-                timeout=10,
-            )
+            resp = httpx.get(f"{base}/instance/connectionState/{instance}", headers={"apikey": api_key}, timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
-                state = data.get("state") or data.get("connectionStatus") or "unknown"
-                detail = data.get("status", "")
-            elif resp.status_code == 400:
-                body = resp.text.lower()
-                if "not connected" in body:
-                    state = "close"
-                    detail = "Instancia desconectada"
-                else:
-                    # fallback: busca no banco via fetchInstances
-                    raise httpx.HTTPError("fallback-fetch")
-            else:
-                raise httpx.HTTPError("fallback-fetch")
-        except httpx.HTTPError:
-            # 2) fallback: fetchInstances (estado do banco, pode estar stale)
+                inst_obj = data.get("instance") or {}
+                state = data.get("state") or inst_obj.get("state") or data.get("connectionStatus") or "unknown"
+                detail = f"cs:{str(data)[:200]}"
+                cs_ok = True
+            elif resp.status_code == 400 and "not connected" in resp.text.lower():
+                state = "close"
+                detail = "offline"
+                cs_ok = True
+        except Exception:
+            pass
+
+        # 2) fetchInstances (fallback / complemento)
+        if not cs_ok or state == "unknown":
             try:
-                resp2 = httpx.get(
-                    f"{base}/instance/fetchInstances",
-                    headers={"apikey": api_key},
-                    timeout=10,
-                )
+                resp2 = httpx.get(f"{base}/instance/fetchInstances", headers={"apikey": api_key}, timeout=10)
                 if resp2.status_code == 200:
                     instances = resp2.json() or []
                     found = next((i for i in instances if i.get("name") == instance), None)
                     if found:
-                        state = found.get("connectionStatus", "unknown")
-                        detail = f"banco (reason: {found.get('disconnectionReasonCode', '')})"
-                    else:
-                        state = "instance_not_found"
-                        detail = "Instancia nao encontrada na Evolution"
-                else:
-                    state = "error"
-                    detail = f"HTTP {resp2.status_code}"
-            except httpx.HTTPError as exc2:
-                state = "unreachable"
-                detail = str(exc2)
+                        db_state = found.get("connectionStatus", "unknown")
+                        if state == "unknown":
+                            state = db_state
+                        detail = f"cs:{detail} fi:{db_state}"
+            except Exception:
+                pass
 
     return {
         "configured": True,
