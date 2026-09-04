@@ -238,6 +238,7 @@ export default function Editor() {
       const payload = {
         message: { text: "Ola! Preciso de ajuda com os planos." },
         customer: "5511999999999",
+        phone: "5511999999999",
       };
       const ex = await api.runWorkflow(id, payload);
       setRunResult(ex);
