@@ -314,7 +314,82 @@ Nunca criar uma segunda implementação de fila sem necessidade.
 
 ---
 
-# 13. APIs
+# 13. Evolution API (WhatsApp)
+
+## Configuração padrão
+
+- **Compose:** `docker-compose.evolution.yml` (separado do `docker-compose.yml`)
+- **Imagem:** `evoapicloud/evolution-api:v2.3.7` (fixada; v2.4+ exige licença)
+- **Porta:** `8080` (exposta no host)
+- **Rede:** `ai-saas_ai-saas-network` (externa, compartilhada com backend)
+- **Volumes:** `evolution_instances` → `/evolution/instances`, `evolution_store` → `/evolution/store`
+- **Restart:** `unless-stopped`
+- **Banco operacional:** postgres local do compose (`postgres:5432/evolution`) — OBRIGATORIO (ver abaixo)
+- **Variáveis de ambiente do compose:**
+  - `EVOLUTION_AUTH_KEY` (do `.env`): chave de autenticação da API
+  - `EVOLUTION_DATABASE_ENABLED` (default `false`): uso do banco em runtime
+  - `EVOLUTION_DATABASE_PROVIDER` (default `postgresql`)
+  - `EVOLUTION_DATABASE_CONNECTION_URI` (default: postgres local; override p/ Supabase)
+
+## Banco operacional da Evolution (fato verificado 04/09/2026)
+
+O entrypoint oficial da imagem (`deploy_database.sh && npm run start:prod`)
+**exige** `DATABASE_PROVIDER` válido + banco **acessível** no startup e dá
+`exit 1` caso contrário — **mesmo com `DATABASE_ENABLED=false`**. Ou seja:
+
+- `DATABASE_ENABLED=false` desliga o uso do banco **em runtime** (dados ficam
+  nos volumes), mas a **migration do Prisma no startup continua obrigatória**.
+- **NUNCA remover** `DATABASE_PROVIDER`/`DATABASE_CONNECTION_URI` do compose:
+  sem provider → `Error: Database provider invalid` + `exit 1`; com URI
+  inacessível → `Migration failed` + `exit 1` (crash-loop, causa real da queda
+  do `/manager` em 04/09/2026).
+- O banco operacional padrão é o **postgres local** (`postgres:5432/evolution`,
+  mesma rede Docker). Isso é armazenamento **interno do serviço** (como o Redis
+  das filas) e **NÃO viola** a regra §7: o banco do **app** (`DATABASE_URL` →
+  users, companies, configs, conversations) continua sendo o **Supabase**.
+- **Paridade de senha:** a URI usa `${POSTGRES_PASSWORD}`; se o postgres local
+  for recriado com outra senha, o hash diverge e a Evolution cai com `P1000
+  Authentication failed` (mesmo com `psql` local passando — validar sempre via
+  rede, ex.: `psycopg2` a partir do backend). Correção: `ALTER USER postgres
+  WITH PASSWORD '<POSTGRES_PASSWORD do .env>';` + `--force-recreate`.
+
+## Migrar a Evolution para Supabase (futuro/escala)
+
+1. Criar banco `evolution` separado no Supabase (requer plano Pro).
+2. No `.env`: `EVOLUTION_DATABASE_CONNECTION_URI=postgresql://<user>:<pass>@aws-0-us-west-2.pooler.supabase.com:5432/evolution`
+3. `docker compose -f docker-compose.evolution.yml up -d --force-recreate evolution`
+4. Sem mudar `.env`, o default continua sendo o postgres local (zero fricção).
+
+## Variáveis de ambiente necessárias (no `.env`)
+
+```
+EVOLUTION_AUTH_KEY=<chave-unica>    # API key da Evolution (mesma do AUTHENTICATION_API_KEY)
+EVOLUTION_API_KEY=<mesma-chave>     # Usada pelo backend para autenticar chamadas
+EVOLUTION_BASE_URL=http://evolution:8080  # URL interna do Docker
+```
+
+**Regra:** `EVOLUTION_AUTH_KEY` e `EVOLUTION_API_KEY` devem ter o **mesmo valor**.
+
+## Paridade obrigatória (Evolution)
+
+- `docker-compose.evolution.yml` NÃO usa `env_file: .env`
+- As variáveis são definidas explicitamente no compose
+- `docker compose restart` NÃO reaplica env — usar `--force-recreate`
+- Para verificar a env real do container:
+  ```bash
+  docker inspect evolution --format '{{json .Config.Env}}' | python3 -m json.tool
+  ```
+
+## Instância por empresa (multi-tenant)
+
+- Cada empresa tem instância única: `inst-<company_id>`
+- Nome da instância persistido em `company_configs.evolution_instance`
+- Webhook: `POST /webhook/whatsapp/{company_id}` (isolado por empresa)
+- Nunca usar instância global compartilhada entre empresas
+
+---
+
+# 14. APIs
 
 Novos endpoints devem seguir o padrão existente.
 
@@ -331,7 +406,7 @@ Documentar:
 
 ---
 
-# 14. Testes
+# 15. Testes
 
 Depois de alterações relevantes:
 
@@ -345,7 +420,7 @@ Não considerar uma alteração concluída apenas porque o código parece corret
 
 ---
 
-# 15. Documentação
+# 16. Documentação
 
 A documentação está em:
 
@@ -370,7 +445,7 @@ Nunca documentar comportamento que não existe.
 
 ---
 
-# 16. Regra para documentação
+# 17. Regra para documentação
 
 Toda documentação deve distinguir claramente:
 
@@ -394,7 +469,7 @@ Nunca transformar "planejado" em "implementado".
 
 ---
 
-# 17. Mudanças arquiteturais
+# 18. Mudanças arquiteturais
 
 Para mudanças que afetem múltiplos componentes:
 
@@ -411,7 +486,7 @@ Utilizar o agente `architect` quando necessário.
 
 ---
 
-# 18. Revisão
+# 19. Revisão
 
 Antes de considerar uma tarefa concluída, verificar:
 
@@ -428,7 +503,7 @@ Utilizar o agente `reviewer` para revisões importantes.
 
 ---
 
-# 19. Princípio de mínimo impacto
+# 20. Princípio de mínimo impacto
 
 Sempre preferir:
 
@@ -443,7 +518,7 @@ Evitar:
 
 ---
 
-# 20. Padrão de desenvolvimento do frontend (API separada das rotas do SPA)
+# 21. Padrão de desenvolvimento do frontend (API separada das rotas do SPA)
 
 ## Contexto (lição real, 04/09/2026)
 
@@ -482,7 +557,7 @@ token → 401.
 
 ---
 
-# 21. Comunicação
+# 22. Comunicação
 
 Ao finalizar uma tarefa, informar:
 
@@ -517,7 +592,7 @@ Toda nova integração deve possuir documentação.
 
 ---
 
-# 22. Regra final
+# 23. Regra final
 
 Quando não souber algo:
 

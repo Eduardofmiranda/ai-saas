@@ -9,7 +9,15 @@ services:
     environment:
       - SERVER_URL=http://2.25.122.157:8080
       - AUTHENTICATION_API_KEY=${EVOLUTION_AUTH_KEY}
-      - DATABASE_ENABLED=false
+      # Banco OPERACIONAL da Evolution (OBRIGATORIO no startup: o entrypoint
+      # oficial roda deploy_database.sh, que exige DATABASE_PROVIDER valido +
+      # banco acessivel e da exit 1 caso contrario — mesmo com
+      # DATABASE_ENABLED=false. NUNCA remover estas duas variaveis.
+      # Padrao: postgres local do compose (mesma rede). Para usar Supabase:
+      #   EVOLUTION_DATABASE_CONNECTION_URI=postgresql://<user>:<pass>@<pooler>:5432/evolution
+      - DATABASE_ENABLED=${EVOLUTION_DATABASE_ENABLED:-false}
+      - DATABASE_PROVIDER=${EVOLUTION_DATABASE_PROVIDER:-postgresql}
+      - DATABASE_CONNECTION_URI=${EVOLUTION_DATABASE_CONNECTION_URI:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/evolution}
       - CACHE_REDIS_ENABLED=false
       - WEBHOOK_GLOBAL_ENABLED=false
       - LOG_LEVEL=WARN
