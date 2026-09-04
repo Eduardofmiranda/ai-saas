@@ -27,6 +27,8 @@ export default function WhatsApp() {
       const st = await api.getWhatsAppStatus();
       setStatus(st);
       setError("");
+      // Se conectou, limpa o QR para a UI trocar para tela de conectado
+      if (st?.state === "open") setQrBase64(null);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -35,6 +37,14 @@ export default function WhatsApp() {
   }
 
   useEffect(() => { loadStatus(); }, []);
+
+  // Poll: 3s quando QR visivel (escaneando), 10s caso contrario
+  useEffect(() => {
+    if (loading) return;
+    const ms = qrBase64 ? 3000 : 10000;
+    const id = setInterval(loadStatus, ms);
+    return () => clearInterval(id);
+  }, [loading, qrBase64]);
 
   async function handleSetup() {
     setConnecting(true);
