@@ -5,6 +5,7 @@ import {
   Background,
   Controls,
   MiniMap,
+  Panel,
   addEdge,
   useNodesState,
   useEdgesState,
@@ -26,12 +27,51 @@ const ICONS = {
   core: "◆",
 };
 
+const NODE_COLORS = {
+  trigger: "#22c55e",
+  ai: "#a78bfa",
+  logic: "#f59e0b",
+  data: "#94a3b8",
+  integration: "#22d3ee",
+  whatsapp: "#22c55e",
+  core: "#6ea8ff",
+};
+
+const NODE_GUIDANCE = {
+  trigger_message: "Use como primeiro node do fluxo. A mensagem e o telefone do cliente ficam disponiveis no contexto, por exemplo em {{ data.message.text }} e {{ data.customer }}.",
+  trigger_webhook: "Use apenas em fluxos disparados por webhook configurado. Ele inicia o processamento com os dados recebidos na requisicao.",
+  schedule: "Defina a expressao Cron que representa o horario desejado. Confirme que o disparador de agendamento esteja configurado antes de ativar o fluxo.",
+  ai: "A resposta gerada fica em {{ data.ai_reply }}. Conecte este node a Enviar WhatsApp e use essa variavel no campo Texto para responder ao cliente.",
+  ai_rag: "Busca conteudo na Base de Conhecimento antes de gerar a resposta. A resposta fica em {{ data.ai_reply }} e as fontes usadas ficam no contexto da execucao.",
+  whatsapp_send: "Informe o telefone no formato internacional, sem simbolos. Para responder ao remetente use {{ data.customer }}; para enviar a resposta da IA use {{ data.ai_reply }} no campo Texto.",
+  condition: "Conecte a saida Sim ao caminho que deve rodar quando a regra for verdadeira e a saida Nao ao caminho alternativo.",
+  wait_until_message: "Pausa o fluxo e o retoma na proxima mensagem do mesmo cliente. Conecte-o ao node que deve processar essa nova mensagem.",
+  transfer_to_agent: "Entrega a conversa para atendimento humano. A conversa passa para o estado aguardando agente quando houver uma conversa valida no contexto.",
+  http: "Use somente URLs confiaveis. A resposta fica disponivel como {{ data.http_body }} e o codigo HTTP como {{ data.http_status }}.",
+  set: "Cria ou atualiza um valor no contexto do fluxo. Depois use {{ data.nome_da_variavel }} nos proximos nodes.",
+  code: "Executa Python limitado com acesso a data. Guarde o resultado na variavel informada para usa-lo nos proximos nodes.",
+  delay: "Aguarda pelo numero de segundos informado antes de continuar. Evite tempos longos em fluxos que precisam responder rapidamente.",
+  log: "Registra uma mensagem no log da execucao para facilitar diagnosticos. Nao inclua senhas, tokens ou dados sensiveis.",
+  execute_workflow: "Executa outro workflow da mesma empresa. Use-o para reaproveitar uma automacao que ja foi testada.",
+};
+
+function nodeData(spec, data = {}) {
+  return {
+    ...data,
+    label: spec?.label || data.label || "Node",
+    category: spec?.category || data.category || "data",
+    description: spec?.description || data.description || "",
+  };
+}
+
 function NodeShell({ data, selected }) {
   const cat = data.category || "data";
   return (
     <div className={`rf-node cat-${cat} ${selected ? "selected" : ""}`}>
       <Handle type="target" position={Position.Top} />
       <div className="rf-node-title"><span className="rf-icon">{ICONS[cat] || "•"}</span>{data.label}</div>
+      {data.description && <p className="rf-node-description">{data.description}</p>}
+      <div className="rf-node-ports"><span>entrada</span><span>saida</span></div>
       <Handle type="source" position={Position.Bottom} id="out" />
     </div>
   );
@@ -42,6 +82,7 @@ function ConditionNode({ data, selected }) {
     <div className={`rf-node cat-logic condition ${selected ? "selected" : ""}`}>
       <Handle type="target" position={Position.Top} />
       <div className="rf-node-title"><span className="rf-icon">➜</span>{data.label}</div>
+      {data.description && <p className="rf-node-description">{data.description}</p>}
       <div className="condition-handles">
         <Handle type="source" position={Position.Bottom} id="true" style={{ left: "30%", background: "#16a34a" }} />
         <Handle type="source" position={Position.Bottom} id="false" style={{ left: "70%", background: "#dc2626" }} />
@@ -55,6 +96,8 @@ function TriggerNode({ data, selected }) {
   return (
     <div className={`rf-node cat-trigger trigger ${selected ? "selected" : ""}`}>
       <div className="rf-node-title"><span className="rf-icon">▶</span>{data.label}</div>
+      {data.description && <p className="rf-node-description">{data.description}</p>}
+      <div className="rf-node-ports trigger-port"><span>inicio do fluxo</span><span>saida</span></div>
       <Handle type="source" position={Position.Bottom} id="out" />
     </div>
   );
@@ -86,6 +129,7 @@ const nodeTypes = {
   filter: NodeShell,
   log: NodeShell,
   execute_workflow: NodeShell,
+  transfer_to_agent: NodeShell,
   wait_until_message: NodeShell,
   sticky_note: StickyNote,
 };
@@ -104,6 +148,7 @@ export default function Editor() {
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [reactFlowInstance, setReactFlowInstance] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,7 +172,7 @@ export default function Editor() {
             : {
               ...n,
               position: Array.isArray(n.position) ? { x: n.position[0], y: n.position[1] } : n.position,
-              data: { ...n.data, label: byType.get(n.type)?.label || n.type },
+              data: nodeData(byType.get(n.type), n.data),
             }
         ));
         setEdges((w.data?.edges || []).map((e) => ({
@@ -159,7 +204,7 @@ export default function Editor() {
   };
 
   function buildNodeData(spec) {
-    const data = { label: spec.label, category: spec.category };
+    const data = nodeData(spec);
     for (const f of spec.fields || []) {
       data[f.key] = f.default ?? "";
     }
@@ -331,7 +376,9 @@ export default function Editor() {
             if (!raw) return;
             const spec = JSON.parse(raw);
             const rect = e.currentTarget.getBoundingClientRect();
-            const position = { x: e.clientX - rect.left - 60, y: e.clientY - rect.top - 20 };
+            const position = reactFlowInstance
+              ? reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY })
+              : { x: e.clientX - rect.left - 60, y: e.clientY - rect.top - 20 };
             const nodeId = `${spec.type}_${Date.now()}`;
             setNodes((ns) => [...ns, {
               id: nodeId,
@@ -350,11 +397,33 @@ export default function Editor() {
             onNodeClick={onNodeClick}
             onPaneClick={() => setSelectedNode(null)}
             nodeTypes={nodeTypes}
+            onInit={setReactFlowInstance}
             fitView
+            fitViewOptions={{ padding: 0.2 }}
           >
             <Background />
-            <Controls />
-            <MiniMap />
+            <Controls position="bottom-left" showInteractive={false} />
+            <MiniMap
+              position="bottom-right"
+              pannable
+              zoomable
+              nodeColor={(node) => NODE_COLORS[node.data?.category] || NODE_COLORS.data}
+              nodeStrokeColor="#0f1115"
+              nodeBorderRadius={4}
+              bgColor="#171a21"
+              maskColor="rgba(10, 12, 16, 0.72)"
+              ariaLabel="Mapa de navegacao do fluxo"
+            />
+            <Panel position="top-right" className="canvas-tools">
+              <button
+                className="canvas-fit-button"
+                type="button"
+                onClick={() => reactFlowInstance?.fitView({ padding: 0.2, duration: 250 })}
+                title="Centralizar todos os nodes"
+              >
+                Centralizar fluxo
+              </button>
+            </Panel>
           </ReactFlow>
         </div>
 
@@ -370,6 +439,13 @@ export default function Editor() {
                 <h4>{selectedNode.type === "sticky_note" ? "Nota" : selectedNode.data.label}</h4>
                 <button className="btn ghost small danger" onClick={deleteSelectedNode}>Excluir</button>
               </div>
+              {selectedNode.spec && (
+                <div className="node-explainer">
+                  <strong>Como funciona</strong>
+                  <p>{selectedNode.spec.description}</p>
+                  {NODE_GUIDANCE[selectedNode.type] && <p className="node-tip">{NODE_GUIDANCE[selectedNode.type]}</p>}
+                </div>
+              )}
               {fields.length === 0 ? (
                 <p>Este node nao possui propriedades.</p>
               ) : (
@@ -400,12 +476,15 @@ export default function Editor() {
                         {(f.options || []).map((o) => <option key={o} value={o}>{o}</option>)}
                       </select>
                     ) : (
-                      <input
-                        value={selectedNode.data?.[f.key] ?? ""}
-                        onChange={(e) => updateSelectedConfig(f.key, e.target.value)}
-                        placeholder={f.placeholder || ""}
-                        type={f.type === "number" ? "number" : "text"}
-                      />
+                      <>
+                        <input
+                          value={selectedNode.data?.[f.key] ?? ""}
+                          onChange={(e) => updateSelectedConfig(f.key, e.target.value)}
+                          placeholder={f.placeholder || ""}
+                          type={f.type === "number" ? "number" : "text"}
+                        />
+                        {f.help && <small className="field-help">{f.help}</small>}
+                      </>
                     )}
                   </label>
                 ))

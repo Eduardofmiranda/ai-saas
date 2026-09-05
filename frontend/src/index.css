@@ -133,6 +133,9 @@ body {
 }
 .rf-node.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79,124,255,.25); }
 .rf-node-title { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.rf-node-description { margin: 7px 0 0; color: var(--muted); font-size: 11px; line-height: 1.35; }
+.rf-node-ports { display: flex; justify-content: space-between; margin-top: 10px; color: #667085; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; }
+.trigger-port { padding: 0 8px; }
 .rf-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 22px; height: 22px; border-radius: 6px; background: rgba(255,255,255,.06);
@@ -153,6 +156,45 @@ body {
 .tag.red { background: rgba(239,68,68,.15); color: var(--red); }
 
 .trigger { border-radius: 50px; text-align: center; }
+.trigger .rf-node-description { max-width: 190px; margin-left: auto; margin-right: auto; }
+
+/* Navegacao do canvas: o MiniMap precisa permanecer legivel no tema escuro. */
+.react-flow__minimap {
+  background: #171a21 !important;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .28);
+}
+.react-flow__minimap-node { stroke-width: 2; }
+.react-flow__controls {
+  overflow: hidden;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .24);
+}
+.react-flow__controls-button {
+  background: var(--panel) !important;
+  border-bottom-color: var(--border) !important;
+  color: var(--text) !important;
+}
+.react-flow__controls-button:hover { background: var(--panel2) !important; }
+.react-flow__controls-button svg { fill: currentColor; }
+.canvas-tools { margin: 12px; }
+.canvas-fit-button {
+  padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--panel); color: var(--text); cursor: pointer; font: inherit; font-size: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .2);
+}
+.canvas-fit-button:hover { border-color: var(--accent); background: var(--panel2); }
+
+.node-explainer {
+  margin: 0 0 14px; padding: 10px; background: rgba(79, 124, 255, .08);
+  border: 1px solid rgba(79, 124, 255, .26); border-radius: 8px; font-size: 12px;
+}
+.node-explainer strong { color: var(--accent2); }
+.node-explainer p { margin: 5px 0 0; color: #c6d0e0; line-height: 1.45; }
+.node-explainer .node-tip { color: var(--muted); }
 
 /* ---------- Editor melhorias ---------- */
 .ed-name {

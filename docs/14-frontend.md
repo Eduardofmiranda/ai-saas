@@ -36,8 +36,12 @@
 ### `/editor/:id`
 - Editor visual de workflows
 - Paleta de nodes (arrastar para o canvas)
-- Canvas com nodes e edges
-- Inspector (editar node selecionado)
+- Canvas com nodes e edges; a posicao de um node arrastado respeita o zoom e o deslocamento atuais do canvas.
+- Minimap escuro no canto inferior direito: pode ser arrastado para navegar e receber zoom por scroll.
+- Controles de zoom no canto inferior esquerdo e botao **Centralizar fluxo** para reenquadrar todos os nodes.
+- Os cards dos nodes mostram sua descricao e suas portas visuais; triggers indicam inicio/saida e condicoes indicam os caminhos Sim/Nao.
+- Inspector (editar node selecionado), com descricao e orientacao de uso para os principais nodes.
+- O node `transfer_to_agent` e representado visualmente no editor, como os demais tipos retornados pela API.
 - Salvar / Rodar / Logs
 
 ### `/whatsapp`
