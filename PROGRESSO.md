@@ -210,6 +210,9 @@
       (`sender_type="agent"`), frontend `Conversations.jsx` 3 paineis + polling.
 - [ ] Implementar as demais telas/componentes priorizados pelo estudo (historico de
       execucoes por node, filtros+paginacao, KPIs com periodo/tendencia)
+- [ ] PRIORIDADE - Verificar questão da configuração da IA, foi verificado que suas ultima atualização gerou
+      problemas na configuração, colocando as configurações da ia aleatoria, sem puxar a configuração 
+      inicial padrão do projeto que era puxar a configuração da mesma via .env. 
 
 ### 9.1 — Limitador de IA por empresa
 - [ ] Model/coluna JSON para limites por empresa
@@ -345,3 +348,43 @@
 8. **pgvector ausente** — busca vetorial em memoria (O(N))
 9. **Sem WebSocket** — sem atualizacao em tempo real
 10. **Sem canais extras** — so WhatsApp disponivel
+---
+
+## Revisao de prioridade — 04/09/2026
+
+### Fatos corrigidos
+
+- [x] Producao do aplicativo usa Supabase; Postgres do Docker nao e o banco principal de producao.
+- [x] Handoff humano esta implementado (Fase 8.3); a lista de gaps acima e historica e deve ser lida com esta correcao.
+- [x] Configuracao padrao da IA foi revisada: defaults DEFAULT_AI_* do ambiente sao usados quando nao ha override valido da empresa.
+- [x] Webhook Evolution por empresa e fluxo de mensagem unico foram corrigidos e validados no atendimento real.
+
+### Proximo marco recomendado: Estabilizacao operacional
+
+- [ ] Criar smoke test automatizado: webhook autenticado -> workflow ativo -> execucao -> envio Evolution simulado.
+- [ ] Criar checklist de deploy verificavel na VPS: ambiente real do container, Supabase, Redis, Evolution e health checks.
+- [ ] Consolidar politica de schema: migrations Alembic obrigatorias para alteracoes estruturais; create_all apenas para bootstrap compativel.
+- [ ] Adicionar logs estruturados e alertas para falhas de webhook, IA e worker.
+
+### Depois da estabilizacao
+
+- [ ] Paginacao e filtros nas listas de conversas, mensagens, clientes, knowledge, workflows e execucoes.
+- [ ] Guardrails de IA por empresa: timeout, retry, limite de uso/custo e fallback para humano.
+- [ ] Upload de arquivos no Knowledge Base (PDF, DOCX, TXT/CSV/Markdown) com limites e processamento assincrono.
+- [ ] Padrao de atendimento de IA por empresa: definir tom, escopo, apresentacao inicial e regras de encerramento, sem respostas genericas repetidas a cada mensagem.
+- [ ] Contexto conversacional: reconhecer conversas pessoais ou fora do escopo comercial, responder uma unica vez de forma breve e oferecer handoff/encerramento em vez de insistir na mesma mensagem.
+- [ ] Fluxo de identificacao de lead: solicitar o primeiro nome no momento adequado, confirmar a informacao e armazenar em `Customer.name` sem sobrescrever um nome ja confirmado.
+- [ ] Qualificacao de lead: registrar origem (WhatsApp/workflow), interesse, etapa, tags, ultimo contato e responsavel; encaminhar para humano quando houver intencao comercial ou pedido explicito.
+- [ ] Privacidade no lead capture: informar a finalidade quando aplicavel, coletar somente os dados necessarios e permitir correcao/remocao conforme a politica da empresa.
+- [ ] Template testavel "Recepcao e captura de lead": saudacao unica -> entender necessidade -> solicitar nome -> qualificar interesse -> responder ou transferir para humano.
+- [ ] Horario de atendimento por empresa.
+- [ ] Midia WhatsApp.
+
+> Decisao: nao ampliar dashboard nem redesenhar o frontend antes de concluir o marco de estabilizacao e definir os dados e metricas que ele deve exibir.
+### Revisao do editor React Flow e templates
+
+- [ ] Verificar a configuracao completa do React Flow: drag and drop, conexoes, handles, selecao, exclusao, autosave, viewport/minimap e responsividade.
+- [ ] Validar o grafo antes de ativar: trigger compativel, nodes orfaos, conexoes invalidas, ciclos e node final sem acao.
+- [ ] Revisar os fluxos pre-configurados: cada template deve abrir sem erro, possuir descricao, dados iniciais validos e teste simulavel.
+- [ ] Melhorar o fluxo de uso dos templates: preview, campos obrigatorios destacados e duplicacao segura antes de ativar.
+- [ ] Criar testes de contrato para templates e para salvar/carregar grafos do editor.
