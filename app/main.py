@@ -29,14 +29,25 @@ from app.routers.users_router import router as users_router
 logger = logging.getLogger("ai_saas")
 
 
+def _should_auto_create_schema(dialect_name: str, requested: bool) -> bool:
+    "create_all e permitido somente no bootstrap SQLite local."
+    return dialect_name == "sqlite" and requested
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Em producao o schema e controlado exclusivamente pelo Alembic. SQLite
     # local continua pratico para desenvolvimento/testes sem setup adicional.
-    auto_create = get_secret("AUTO_CREATE_SCHEMA").lower() in {"1", "true", "yes"}
-    if engine.dialect.name == "sqlite" and get_secret("AUTO_CREATE_SCHEMA", "true").lower() not in {"0", "false", "no"}:
-        auto_create = True
-    if auto_create:
+    requested_auto_create = get_secret(
+        "AUTO_CREATE_SCHEMA",
+        "true" if engine.dialect.name == "sqlite" else "false",
+    ).lower() in {"1", "true", "yes"}
+    if requested_auto_create and engine.dialect.name != "sqlite":
+        logger.warning(
+            "AUTO_CREATE_SCHEMA ignorado para %s; use migrations Alembic.",
+            engine.dialect.name,
+        )
+    if _should_auto_create_schema(engine.dialect.name, requested_auto_create):
         Base.metadata.create_all(bind=engine)
         logger.info("Schema criado/verificado automaticamente para ambiente local")
 

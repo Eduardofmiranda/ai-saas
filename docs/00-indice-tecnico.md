@@ -5,6 +5,8 @@
 >
 > 📊 **Estudo de UX:** `docs/20-estudo-painel-mercado.md` — analise de plataformas
 > de referencia e proposta de redesenho do painel (Fase 9.0).
+>
+> 🛠️ **Operacao:** docs/21-checklist-deploy-vps.md — verificacao segura apos deploy na VPS.
 
 ## Resumo do Projeto
 
