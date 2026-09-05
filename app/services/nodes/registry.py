@@ -304,7 +304,11 @@ async def _run_execute_workflow(ctx, node):
     from app.models.workflow import Workflow
     from app.services.workflow_engine import execute_workflow
 
-    wf = ctx.db.query(Workflow).filter(Workflow.id == workflow_id).first()
+    wf = (
+        ctx.db.query(Workflow)
+        .filter(Workflow.id == workflow_id, Workflow.company_id == ctx.company_id)
+        .first()
+    )
     if not wf:
         raise NodeError(f"Workflow {workflow_id} nao encontrado", node.get("id", ""))
 
@@ -316,10 +320,15 @@ async def _run_execute_workflow(ctx, node):
         "parent_context": {k: v for k, v in ctx.data.items() if not k.startswith("_")},
     }
 
-    result = await execute_workflow(
-        ctx.db, workflow_id, ctx.company_id, payload,
+    execution = await execute_workflow(
+        ctx.db, workflow=wf, payload=payload, config=ctx.config,
     )
 
+    result = {
+        "status": execution.status,
+        "execution_id": execution.id,
+        "outputs": execution.node_results or {},
+    }
     if isinstance(result, dict):
         for key, value in result.items():
             ctx.data[f"sub_{key}"] = value
@@ -540,15 +549,35 @@ def get_node_type(node_type: str) -> dict | None:
 
 def list_node_types() -> list[dict]:
     """Retorna os tipos de no (metadata) para o editor montar a paleta."""
+    partial_types = {"trigger_webhook", "schedule", "loop", "aggregate", "filter", "code", "http"}
+    required_fields = {
+        "ai": {"prompt"}, "ai_rag": {"prompt"}, "set": {"variable"},
+        "code": {"code"}, "condition": {"value", "operator"}, "http": {"url"},
+        "whatsapp_send": {"phone", "text"}, "log": {"message"},
+        "execute_workflow": {"workflow_id"}, "schedule": {"cron"},
+    }
     out = []
     for nt in NODE_TYPES.values():
+        node_type = nt["type"]
+        output_handles = ["out", "error"]
+        if node_type.startswith("trigger_") or node_type == "schedule":
+            output_handles = ["out"]
+        elif node_type == "condition":
+            output_handles = ["true", "false", "error"]
         out.append(
             {
-                "type": nt["type"],
+                "type": node_type,
                 "label": nt["label"],
                 "category": nt["category"],
                 "description": nt["description"],
-                "fields": nt["fields"],
+                "status": "partial" if node_type in partial_types else "implemented",
+                "editor_available": node_type not in partial_types,
+                "input_handles": [] if node_type.startswith("trigger_") or node_type == "schedule" else ["in"],
+                "output_handles": output_handles,
+                "fields": [
+                    {**field, "required": field["key"] in required_fields.get(node_type, set())}
+                    for field in nt["fields"]
+                ],
             }
         )
     return out

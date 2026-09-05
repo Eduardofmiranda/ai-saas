@@ -61,6 +61,7 @@ function nodeData(spec, data = {}) {
     label: spec?.label || data.label || "Node",
     category: spec?.category || data.category || "data",
     description: spec?.description || data.description || "",
+    status: spec?.status || data.status || "implemented",
   };
 }
 
@@ -71,6 +72,7 @@ function NodeShell({ data, selected }) {
       <Handle type="target" position={Position.Top} />
       <div className="rf-node-title"><span className="rf-icon">{ICONS[cat] || "•"}</span>{data.label}</div>
       {data.description && <p className="rf-node-description">{data.description}</p>}
+      {data.status === "partial" && <span className="rf-node-status">em revisao</span>}
       <div className="rf-node-ports"><span>entrada</span><span>saida</span></div>
       <Handle type="source" position={Position.Bottom} id="out" />
     </div>
@@ -212,6 +214,7 @@ export default function Editor() {
   }
 
   function addNode(spec) {
+    if (spec.editor_available === false) return;
     const nodeId = `${spec.type}_${Date.now()}`;
     const newNode = {
       id: nodeId,
@@ -353,13 +356,19 @@ export default function Editor() {
           />
           <div className="palette-list">
             {filteredNodes.map((nt) => (
-              <div key={nt.type} className="palette-item" draggable
-                   onDragStart={(e) => e.dataTransfer.setData("application/flow-node", JSON.stringify(nt))}
+              <div key={nt.type} className={`palette-item ${nt.editor_available === false ? "unavailable" : ""}`}
+                   draggable={nt.editor_available !== false}
+                   title={nt.editor_available === false ? "Node em revisao: nao pode ser usado em novos fluxos." : nt.description}
+                   onDragStart={(e) => {
+                     if (nt.editor_available === false) { e.preventDefault(); return; }
+                     e.dataTransfer.setData("application/flow-node", JSON.stringify(nt));
+                   }}
                    onClick={() => addNode(nt)}>
                 <span className="rf-icon">{ICONS[nt.category] || "•"}</span>
                 <div>
                   <strong>{nt.label}</strong>
                   <p>{nt.description}</p>
+                  {nt.editor_available === false && <small>Em revisao</small>}
                 </div>
               </div>
             ))}

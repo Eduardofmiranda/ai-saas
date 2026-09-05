@@ -325,7 +325,11 @@ async def _run_graph(
             current = nxt
             continue
 
-        outgoing = build_outgoing_edges(edges, current["id"])
+        # A edge de erro so deve ser seguida se o node falhar com
+        # on_error=fallback_edge. Em um caminho de sucesso ela nao e uma
+        # ramificacao comum do workflow.
+        outgoing = [edge for edge in build_outgoing_edges(edges, current["id"])
+                    if (edge.get("sourceHandle") or "") != "error"]
         if not outgoing:
             return
 
