@@ -118,13 +118,25 @@ export default function Editor() {
       .then(({ types, w }) => {
         if (cancelled) return;
         const byType = new Map(types.map((t) => [t.type, t]));
+        const rawNodes = w.data?.nodes || [];
+        const nodeTypeById = new Map(rawNodes.map((n) => [n.id, n.type]));
         setWf(w);
-        setNodes((w.data?.nodes || []).map((n) =>
+        setNodes(rawNodes.map((n) =>
           n.type === "sticky_note"
-            ? n
-            : { ...n, data: { ...n.data, label: byType.get(n.type)?.label || n.type } }
+            ? { ...n, position: Array.isArray(n.position) ? { x: n.position[0], y: n.position[1] } : n.position }
+            : {
+              ...n,
+              position: Array.isArray(n.position) ? { x: n.position[0], y: n.position[1] } : n.position,
+              data: { ...n.data, label: byType.get(n.type)?.label || n.type },
+            }
         ));
-        setEdges((w.data?.edges || []).map((e) => ({ ...e, markerEnd: { type: MarkerType.ArrowClosed } })));
+        setEdges((w.data?.edges || []).map((e) => ({
+          ...e,
+          sourceHandle: e.sourceHandle === "success" && nodeTypeById.get(e.source) !== "condition"
+            ? "out"
+            : e.sourceHandle,
+          markerEnd: { type: MarkerType.ArrowClosed },
+        })));
       })
       .catch((e) => { if (!cancelled) alert("Erro ao carregar fluxo: " + e.message); });
     return () => { cancelled = true; };

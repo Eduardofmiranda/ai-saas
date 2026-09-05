@@ -5,7 +5,7 @@ from app.database.session import get_db
 from app.models.user import User
 from app.schemas.workflow_schema import WorkflowCreate
 from app.services.deps import get_current_user
-from app.services.templates import get_template, get_templates
+from app.services.templates import get_template, get_templates, prepare_template_data, template_trigger_type
 
 router = APIRouter(prefix="/templates", tags=["templates"])
 
@@ -39,8 +39,8 @@ def use_template(
         company_id=current_user.company_id,
         name=template["name"],
         description=template["description"],
-        data=template["data"],
-        trigger_type="message",
+        data=prepare_template_data(template["data"]),
+        trigger_type=template_trigger_type(template),
         active=False,
     )
     db.add(workflow)

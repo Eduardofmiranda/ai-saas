@@ -1,4 +1,5 @@
 """Templates prontos de workflows para novos usuarios."""
+from copy import deepcopy
 
 TEMPLATES = [
     {
@@ -134,6 +135,7 @@ TEMPLATES = [
                     "type": "whatsapp_send",
                     "data": {
                         "label": "Enviar Pergunta",
+                        "phone": "{{ data.phone }}",
                         "text": "{{ data.ai_reply }}",
                     },
                     "position": [1000, 300],
@@ -269,6 +271,36 @@ TEMPLATES = [
 ]
 
 
+def prepare_template_data(data: dict) -> dict:
+    """Converte o grafo legado para o contrato atual do React Flow."""
+    graph = deepcopy(data)
+    node_types = {}
+    for node in graph.get("nodes", []):
+        node_types[node.get("id")] = node.get("type")
+        position = node.get("position")
+        if isinstance(position, list) and len(position) >= 2:
+            node["position"] = {"x": position[0], "y": position[1]}
+
+    for edge in graph.get("edges", []):
+        if (
+            edge.get("sourceHandle") == "success"
+            and node_types.get(edge.get("source")) != "condition"
+        ):
+            edge["sourceHandle"] = "out"
+    return graph
+
+
+def template_trigger_type(template: dict) -> str:
+    """Deriva o tipo de disparo do node de entrada do template."""
+    for node in template.get("data", {}).get("nodes", []):
+        node_type = node.get("type")
+        if node_type == "trigger_webhook":
+            return "webhook"
+        if node_type == "schedule":
+            return "cron"
+    return "message"
+
+
 def get_templates() -> list[dict]:
     return [
         {
@@ -276,6 +308,7 @@ def get_templates() -> list[dict]:
             "name": t["name"],
             "description": t["description"],
             "category": t["category"],
+            "trigger_type": template_trigger_type(t),
         }
         for t in TEMPLATES
     ]
