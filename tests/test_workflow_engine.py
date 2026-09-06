@@ -8,7 +8,12 @@ from app.models.workflow import Workflow
 from fastapi import HTTPException
 from app.routers.workflow_router import update_workflow
 from app.schemas.workflow_schema import WorkflowUpdate
+from app.schemas.execution_schema import TestRunRequest as WorkflowTestRunRequest
 
+
+
+def test_workflow_test_request_is_safe_by_default():
+    assert WorkflowTestRunRequest(payload={}).dry_run is True
 
 class TestWorkflowEngine:
     @pytest.mark.asyncio
@@ -168,6 +173,68 @@ class TestWorkflowEngine:
         assert execution.status == "success"
         assert "apos delay" in execution.node_results.get("ai_reply", "")
 
+
+    @pytest.mark.asyncio
+    async def test_dry_run_simulates_whatsapp_without_external_send(self, db_session, config, mock_payload, monkeypatch):
+        from app.services import evolution
+
+        wf = Workflow(
+            company_id=config.company_id,
+            name="Safe editor test",
+            trigger_type="message",
+            data={
+                "nodes": [
+                    {"id": "trigger", "type": "trigger_message", "data": {}},
+                    {"id": "ai", "type": "ai", "data": {"prompt": "Responda {{ data.message.text }}", "history": "off"}},
+                    {"id": "send", "type": "whatsapp_send", "data": {"phone": "{{ data.phone }}", "text": "{{ data.ai_reply }}"}},
+                ],
+                "edges": [
+                    {"source": "trigger", "target": "ai"},
+                    {"source": "ai", "target": "send"},
+                ],
+            },
+        )
+        db_session.add(wf)
+        db_session.commit()
+
+        async def fail_if_called(**kwargs):
+            raise AssertionError("Evolution nao deve ser chamada no modo de teste")
+
+        monkeypatch.setattr(evolution, "send_text", fail_if_called)
+        execution = await execute_workflow(
+            db_session, workflow=wf, payload=mock_payload, config=config, dry_run=True,
+        )
+
+        assert execution.status == "success"
+        assert execution.context["dry_run"] is True
+        assert execution.node_results["sent"] is False
+        assert execution.node_results["simulated"] is True
+        assert any("simulado" in line.lower() for line in execution.context["logs"])
+
+    @pytest.mark.asyncio
+    async def test_dry_run_does_not_persist_waiting_flow(self, db_session, config, mock_payload):
+        wf = Workflow(
+            company_id=config.company_id,
+            name="Safe wait test",
+            trigger_type="message",
+            data={
+                "nodes": [
+                    {"id": "trigger", "type": "trigger_message", "data": {}},
+                    {"id": "wait", "type": "wait_until_message", "data": {}},
+                ],
+                "edges": [{"source": "trigger", "target": "wait"}],
+            },
+        )
+        db_session.add(wf)
+        db_session.commit()
+
+        execution = await execute_workflow(
+            db_session, workflow=wf, payload=mock_payload, config=config, dry_run=True,
+        )
+
+        assert execution.status == "success"
+        assert execution.node_results["simulated"] is True
+        assert db_session.query(PendingFlow).filter(PendingFlow.phone == "5511999999999").first() is None
 def test_activating_message_workflow_deactivates_other_message_workflows(db_session, company):
     user = User(
         company_id=company.id,

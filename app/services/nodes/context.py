@@ -42,6 +42,7 @@ class NodeContext:
         workflow_id: int,
         data: dict,
         config: CompanyConfig,
+        dry_run: bool = False,
     ):
         self.db = db
         self.company_id = company_id
@@ -49,6 +50,7 @@ class NodeContext:
         self.workflow_id = workflow_id
         # dados mutaveis compartilhados entre os nos
         self.data = data
+        self.dry_run = dry_run
         self.config = config
         # log da execucao
         self.logs: list[str] = []
@@ -90,6 +92,9 @@ class NodeContext:
 
     async def save_bot_message(self, content: str) -> None:
         """Persiste a resposta do bot na conversa atual (se houver uma aberta)."""
+        if self.dry_run:
+            self.log("Teste: resposta da IA nao foi salva na conversa.")
+            return
         conv_id = self.data.get("conversation_id") or (self.data.get("conversation") or {}).get("id")
         if not conv_id:
             return
@@ -124,7 +129,10 @@ class NodeContext:
         )
 
     async def send_whatsapp(self, phone: str, text: str) -> dict:
-        """Envia mensagem WhatsApp via Evolution API."""
+        """Envia mensagem WhatsApp via Evolution API, salvo em modo de teste."""
+        if self.dry_run:
+            self.log(f"Teste: envio de WhatsApp para {phone} foi simulado.")
+            return {"sent": False, "simulated": True, "reason": "dry_run"}
         base = decrypt_field(self.config.evolution_base_url) or get_secret("EVOLUTION_BASE_URL")
         key = decrypt_field(self.config.evolution_api_key) or get_secret("EVOLUTION_API_KEY")
         instance = (

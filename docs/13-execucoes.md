@@ -69,17 +69,20 @@ Quando um workflow pausa (wait_until_message):
    - Se sim: `resume_workflow()` retoma de onde parou
    - Se nao: inicia novo workflow
 
-## Execucao Assincrona
+## Execucao de teste via API
 
-Para workflows de longa duracao:
-
-```python
-# Via API
+```json
 POST /workflows/{id}/run
 {
-  "phone": "+5511999999999",
-  "message": "texto da mensagem"
+  "payload": {
+    "message": { "text": "texto da mensagem" },
+    "phone": "5511999999999"
+  },
+  "dry_run": true
 }
 ```
 
-O sistema tenta executar diretamente; se nao conseguir, agenda via Celery.
+O endpoint executa o teste de forma sincrona e retorna a execucao. `dry_run`
+é `true` por padrao: a IA e executada, mas WhatsApp, espera e handoff sao
+simulados para nao causar efeitos externos ou criar pendencias. O webhook de
+mensagens recebidas usa a execucao normal, fora desse modo de teste.

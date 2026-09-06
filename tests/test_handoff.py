@@ -35,6 +35,30 @@ class TestTransferNode:
         assert transfer.action == "transfer_requested"
 
     @pytest.mark.asyncio
+    async def test_dry_run_transfer_does_not_change_conversation(self, db_session, company, config, conversation):
+        from app.services.nodes.context import NodeContext
+        from app.services.nodes import registry
+
+        ctx = NodeContext(
+            db=db_session,
+            company_id=company.id,
+            execution_id=1,
+            workflow_id=1,
+            data={"conversation_id": conversation.id},
+            config=config,
+            dry_run=True,
+        )
+
+        result = await registry.run_node(
+            ctx, {"id": "n1", "type": "transfer_to_agent", "data": {}}
+        )
+
+        db_session.refresh(conversation)
+        assert conversation.status == "open"
+        assert result["outputs"]["simulated"] is True
+        assert result["outputs"]["transferred"] is False
+        assert db_session.query(ConversationTransfer).count() == 0
+    @pytest.mark.asyncio
     async def test_transfer_to_agent_keeps_status_and_logs_when_already_pending(
         self, db_session, company, config, conversation,
     ):

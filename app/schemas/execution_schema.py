@@ -9,6 +9,9 @@ class TestRunRequest(BaseModel):
     payload: dict[str, Any] = {}
     # se true, executa de forma síncrona e retorna o resultado (para testes no editor)
     await_result: bool = True
+    # Testes do editor nunca enviam mensagens ou persistem espera/handoff sem
+    # uma opt-in explicita do chamador.
+    dry_run: bool = True
 
 
 class ExecutionResponse(BaseModel):

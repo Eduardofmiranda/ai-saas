@@ -120,9 +120,32 @@ body {
 .palette-item p { margin: 2px 0 0; font-size: 11px; color: var(--muted); }
 
 .canvas { flex: 1; background: #0a0c10; position: relative; }
+.workflow-guidance {
+  width: min(330px, calc(100vw - 560px)); padding: 12px;
+  display: grid; gap: 7px; background: #282116; border: 1px solid #8d6a25;
+  border-radius: 9px; color: #f8df9a; box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+}
+.workflow-guidance strong { font-size: 13px; }
+.workflow-guidance span { color: #dfca8c; font-size: 12px; line-height: 1.4; }
+.workflow-guidance .btn { width: fit-content; }
+.workflow-assistant { max-height: min(520px, calc(100vh - 180px)); overflow: auto; }
+.workflow-guidance-section, .activation-checklist { display: grid; gap: 7px; }
+.workflow-guidance-section + .activation-checklist { border-top: 1px solid rgba(248, 223, 154, .25); margin-top: 10px; padding-top: 10px; }
+.activation-checklist ul { display: grid; gap: 7px; margin: 1px 0 0; padding: 0; list-style: none; }
+.activation-checklist li { display: flex; gap: 7px; align-items: flex-start; font-size: 12px; }
+.activation-checklist li b { width: 16px; text-align: center; flex: 0 0 16px; }
+.activation-checklist li span { display: grid; gap: 2px; }
+.activation-checklist li span strong { color: inherit; }
+.integration-check-note { color: #dfca8c; font-size: 11px; line-height: 1.35; }
+.integration-checks { border-top: 1px solid rgba(248, 223, 154, .25); padding-top: 8px; }
+.check-ready { color: #86efac; }
+.check-warning { color: #fcd34d; }
+.check-not_applicable { color: #a8b0bf; }
+.canvas-fit-button.has-warnings { border-color: #8d6a25; color: #f8df9a; }
 
 .empty-panel p { color: var(--muted); }
 .run-result { margin-top: 16px; }
+.test-run-note { margin: 8px 0; color: #93c5fd; font-size: 12px; line-height: 1.4; }
 .run-result pre {
   background: var(--panel2); padding: 10px; border-radius: 8px;
   font-size: 11px; max-height: 300px; overflow: auto; color: #c6d0e0;

@@ -82,7 +82,7 @@ WhatsApp → Evolution webhook → POST /webhook/whatsapp/{company_id}
 | GET | /workflows/node-types | Lista os tipos de nó disponíveis (paleta do editor) |
 | GET/POST | /workflows/ | Lista / cria fluxos |
 | GET/PATCH/DELETE | /workflows/{id} | Lê / edita / exclui fluxo |
-| POST | /workflows/{id}/run | Executa o fluxo com payload de teste (retorna a execução) |
+| POST | /workflows/{id}/run | Executa teste seguro por padrão (retorna a execução) |
 | GET | /workflows/{id}/executions | Histórico de execuções |
 
 ## Motor de workflows (editor visual)

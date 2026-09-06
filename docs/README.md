@@ -28,6 +28,7 @@ Plataforma de automacao de processos baseada em workflows, inspirada no n8n, foc
 | [17-monitoramento.md](17-monitoramento.md) | Monitoramento |
 | [18-troubleshooting.md](18-troubleshooting.md) | Troubleshooting |
 | [19-desenvolvimento.md](19-desenvolvimento.md) | Guia de desenvolvimento |
+| [22-catalogo-nodes-roadmap.md](22-catalogo-nodes-roadmap.md) | Catálogo planejado de nodes e conectores |
 
 ## Guias de deploy (raiz do projeto)
 

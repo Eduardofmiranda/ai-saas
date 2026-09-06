@@ -182,9 +182,11 @@ async def _run_whatsapp_send(ctx, node):
     phone = _eval_expression(cfg.get("phone", ""), ctx.data)
     text = _eval_expression(cfg.get("text", ""), ctx.data)
     result = await ctx.send_whatsapp(phone, text)
-    ctx.log(f"WhatsApp para {phone}: {text[:60]}... (sent={result['sent']})")
+    if result.get("simulated"):
+        ctx.log(f"Teste: WhatsApp para {phone} seria enviado com: {text[:60]}...")
+    else:
+        ctx.log(f"WhatsApp para {phone}: {text[:60]}... (sent={result['sent']})")
     return {"outputs": result}
-
 
 async def _run_filter(ctx, node):
     cfg = node.get("data", {})
@@ -321,7 +323,7 @@ async def _run_execute_workflow(ctx, node):
     }
 
     execution = await execute_workflow(
-        ctx.db, workflow=wf, payload=payload, config=ctx.config,
+        ctx.db, workflow=wf, payload=payload, config=ctx.config, dry_run=ctx.dry_run,
     )
 
     result = {
@@ -352,6 +354,12 @@ async def _run_transfer_to_agent(ctx, node):
         except (TypeError, ValueError):
             conv_id = None
 
+    if ctx.dry_run:
+        ctx.log("Teste: transferencia para humano foi simulada; nenhuma conversa foi alterada.")
+        return {
+            "outputs": {"transferred": False, "conversation_id": conv_id or "", "simulated": True},
+            "stop": True,
+        }
     transferred = False
     if not conv_id:
         ctx.log("nenhuma conversation_id no contexto para transferir")
@@ -407,9 +415,11 @@ async def _run_trigger_webhook(ctx, node):
 
 async def _run_wait_until_message(ctx, node):
     """Pausa o fluxo ate que o cliente envie a proxima mensagem."""
+    if ctx.dry_run:
+        ctx.log("Teste: o fluxo aguardaria a proxima mensagem; nenhuma pendencia foi criada.")
+        return {"outputs": {"waiting": False, "simulated": True}, "stop": True}
     ctx.log("Aguardando proxima mensagem do cliente...")
     return {"outputs": {"waiting": True}, "wait_for_message": True}
-
 
 def _make_node(label, category, description, fields, run, extra_fields=None):
     all_fields = [
@@ -536,8 +546,11 @@ NODE_TYPES: dict[str, dict] = {
         "type": "whatsapp_send",
         **_make_node("Enviar WhatsApp", "whatsapp", "Envia uma mensagem de texto pelo WhatsApp.", [], _run_whatsapp_send,
             [{"key": "phone", "label": "Telefone", "type": "text",
-              "placeholder": "{{ data.customer }}"},
-             {"key": "text", "label": "Texto", "type": "textarea"}]),
+              "placeholder": "{{ data.phone }}",
+              "default": "{{ data.phone }}"},
+             {"key": "text", "label": "Texto", "type": "textarea",
+              "placeholder": "{{ data.ai_reply }}",
+              "default": "{{ data.ai_reply }}"}]),
     },
     "filter": {
         "type": "filter",

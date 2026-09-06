@@ -126,7 +126,24 @@ A atualizacao de status (`PATCH`) registra automaticamente um `ConversationTrans
 | DELETE | `/workflows/{id}` | Deleta workflow | JWT |
 | GET | `/workflows/{id}/executions` | Lista execucoes | JWT |
 | GET | `/workflows/node-types` | Tipos de nodes disponiveis | JWT |
-| POST | `/workflows/{id}/run` | Executa workflow | JWT |
+| POST | `/workflows/{id}/run` | Executa teste de workflow (seguro por padrao) | JWT |
+
+#### Teste de workflow
+
+```json
+{
+  "payload": {
+    "message": { "text": "Ola! Preciso de ajuda com os planos." },
+    "customer": "5511999999999",
+    "phone": "5511999999999"
+  },
+  "dry_run": true
+}
+```
+
+`dry_run` é `true` por padrao. Nesse modo, o motor gera a resposta, mas simula
+WhatsApp, espera e handoff. Enviar `dry_run: false` e uma opt-in explicita para
+clientes autenticados e permite os efeitos normais do workflow.
 
 ### Executions
 

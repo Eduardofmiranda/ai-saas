@@ -7,6 +7,7 @@
 > de referencia e proposta de redesenho do painel (Fase 9.0).
 >
 > 🛠️ **Operacao:** docs/21-checklist-deploy-vps.md — verificacao segura apos deploy na VPS.
+> 🔌 **Roadmap de nodes:** `docs/22-catalogo-nodes-roadmap.md` — catálogo planejado, prioridades e critérios de segurança.
 
 ## Resumo do Projeto
 

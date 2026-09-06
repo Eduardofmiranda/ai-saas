@@ -110,3 +110,10 @@ def test_ai_nodes_expose_prompt_defaults():
 
     assert "{{ data.message.text }}" in ai_prompt["default"]
     assert rag_prompt["default"] == "{{ data.message.text }}"
+
+def test_whatsapp_node_exposes_reply_defaults():
+    types = {item["type"]: item for item in list_node_types()}
+    fields = {field["key"]: field for field in types["whatsapp_send"]["fields"]}
+
+    assert fields["phone"]["default"] == "{{ data.phone }}"
+    assert fields["text"]["default"] == "{{ data.ai_reply }}"

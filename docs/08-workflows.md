@@ -95,6 +95,25 @@ O editor consulta o contrato de nodes do backend e desenha as portas declaradas 
 navegador entradas em triggers, auto-conexoes, duplicidades e ciclos, mostrando o
 motivo no canvas. Essa verificacao melhora a edicao, mas o backend continua sendo a
 autoridade: salvar, ativar e executar validam novamente o grafo e podem retornar 422.
+Em fluxos de mensagem, o editor tambem orienta quando uma resposta de `ai` ou
+`ai_rag` nao alcanca um node **Enviar WhatsApp**. O botao de orientacao adiciona
+o node e a conexao com valores iniciais `{{ data.phone }}` e
+`{{ data.ai_reply }}`. A alteracao fica apenas no canvas ate o usuario salvar;
+nenhuma mensagem e enviada pelo assistente do editor.
+O botao **Checklist** tambem confirma, localmente, o trigger de mensagem, os
+prompts de IA/RAG, a entrega pelo caminho de sucesso e os campos de cada envio.
+Por uma acao explicita do usuario, **Verificar IA e WhatsApp** chama
+`POST /config/ai/test` e `GET /config/whatsapp` para mostrar a conectividade
+real no proprio editor. O teste de IA chama o provedor e pode consumir cota; a
+consulta do WhatsApp nao envia mensagem e nao altera a instancia.
+
+### Teste seguro no editor
+
+O botao **Rodar teste** chama o endpoint de teste com `dry_run=true` por padrao.
+Ele ainda gera a resposta da IA e registra uma execucao auditavel, mas simula
+**Enviar WhatsApp**, **Aguardar mensagem** e **Transferir para humano**. Portanto,
+o teste nao envia mensagem, nao cria pendencia e nao altera uma conversa. A entrada
+real pelo webhook continua executando normalmente, fora desse modo de teste.
 
 ## Ativacao de fluxos por mensagem
 

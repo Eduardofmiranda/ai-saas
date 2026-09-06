@@ -167,13 +167,13 @@ async def run_workflow(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Executa o workflow com um payload de teste e retorna o resultado."""
+    """Executa teste em modo seguro por padrao e retorna o resultado."""
     wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
     from app.services.config_service import get_or_create_config
     config = get_or_create_config(db, current_user.company_id)
 
     try:
-        execution = await execute_workflow(db, workflow=wf, payload=body.payload, config=config)
+        execution = await execute_workflow(db, workflow=wf, payload=body.payload, config=config, dry_run=body.dry_run)
     except WorkflowEngineError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

@@ -78,7 +78,10 @@
 - **Icone:** MessageCircle (verde escuro)
 - **Entrada:** Qualquer
 - **Saida:** `success`, `error`
-- **Dados:** `data.value` (texto da mensagem)
+- **Dados:** `data.phone` (destinatario) e `data.text` (texto da mensagem)
+- **Padrao no editor:** novos nodes usam `{{ data.phone }}` como destinatario e
+  `{{ data.ai_reply }}` como texto, adequados para responder a mensagem que
+  disparou o workflow. Os dois valores continuam editaveis.
 - **Requer:** Configuracao Evolution API
 
 ### filter

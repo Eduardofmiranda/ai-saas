@@ -71,8 +71,8 @@ export const api = {
   updateWorkflow: (id, body) => request("PATCH", `/workflows/${id}`, body),
   deleteWorkflow: (id) => request("DELETE", `/workflows/${id}`),
   getNodeTypes: () => request("GET", "/workflows/node-types"),
-  runWorkflow: (id, payload) =>
-    request("POST", `/workflows/${id}/run`, { payload, await_result: true }),
+  runWorkflow: (id, payload, dryRun = true) =>
+    request("POST", `/workflows/${id}/run`, { payload, await_result: true, dry_run: dryRun }),
   getExecutions: (id) => request("GET", `/workflows/${id}/executions`),
   getConfig: () => request("GET", "/config/"),
   updateConfig: (body) => request("PATCH", "/config/", body),

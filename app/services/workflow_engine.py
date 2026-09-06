@@ -77,6 +77,7 @@ async def execute_workflow(
     payload: dict,
     config: CompanyConfig,
     resume_from: str | None = None,
+    dry_run: bool = False,
 ) -> Execution:
     """Executa o workflow e retorna a Execution registrada.
 
@@ -103,7 +104,7 @@ async def execute_workflow(
         workflow_id=workflow.id,
         company_id=workflow.company_id,
         status="running",
-        context={"trigger": payload},
+        context={"trigger": payload, "dry_run": dry_run},
         node_results={},
         started_at=_utcnow(),
     )
@@ -118,6 +119,7 @@ async def execute_workflow(
         workflow_id=workflow.id,
         data={"message": payload.get("message", {}), "customer": payload.get("customer"), **payload},
         config=config,
+        dry_run=dry_run,
     )
 
     node_map = {n.get("id"): n for n in nodes}
@@ -148,7 +150,7 @@ async def execute_workflow(
         ctx.log(f"ERRO: {exc}")
 
     execution.node_results = ctx.data
-    execution.context = {"trigger": payload, "logs": ctx.logs}
+    execution.context = {"trigger": payload, "logs": ctx.logs, "dry_run": dry_run}
     db.commit()
     db.refresh(execution)
     return execution

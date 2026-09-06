@@ -16,7 +16,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { api } from "../api";
 import Header from "../components/Header";
-import { connectionIssue, nodeData, suggestedPrompt } from "../workflowGraph";
+import { activationChecklist, connectionIssue, integrationChecklist, nodeData, suggestedPrompt, workflowGuidance } from "../workflowGraph";
 
 const ICONS = {
   trigger: "▶",
@@ -150,6 +150,9 @@ export default function Editor() {
   const [searchTerm, setSearchTerm] = useState("");
   const [editorError, setEditorError] = useState("");
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  const [showActivationChecklist, setShowActivationChecklist] = useState(false);
+  const [integrationChecks, setIntegrationChecks] = useState(null);
+  const [checkingIntegrations, setCheckingIntegrations] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -242,6 +245,35 @@ export default function Editor() {
     setNodes((ns) => [...ns, newNode]);
   }
 
+  function addSuggestedWhatsAppResponse() {
+    if (!responseGuidance) return;
+    const spec = nodeTypesList.find((nodeType) => nodeType.type === "whatsapp_send");
+    const sourceNode = nodes.find((node) => node.id === responseGuidance.sourceNodeId);
+    if (!spec || !sourceNode) {
+      setEditorError("Nao foi possivel preparar o envio de resposta. Atualize a pagina e tente novamente.");
+      return;
+    }
+
+    const nodeId = `whatsapp_send_${Date.now()}`;
+    const newNode = {
+      id: nodeId,
+      type: "whatsapp_send",
+      position: { x: sourceNode.position.x + 270, y: sourceNode.position.y },
+      data: buildNodeData(spec),
+    };
+    const newEdge = {
+      id: `${sourceNode.id}-${nodeId}`,
+      source: sourceNode.id,
+      sourceHandle: "out",
+      target: nodeId,
+      targetHandle: "in",
+      markerEnd: { type: MarkerType.ArrowClosed },
+    };
+    setNodes((currentNodes) => [...currentNodes, newNode]);
+    setEdges((currentEdges) => [...currentEdges, newEdge]);
+    setSelectedNode({ ...newNode, spec });
+    setEditorError("");
+  }
   function updateSelectedConfig(key, value) {
     if (!selectedNode) return;
     const updated = {
@@ -299,7 +331,7 @@ export default function Editor() {
     if (running) return;
     setRunning(true);
     setRunResult(null);
-    // Executar um teste nao pode desativar uma automacao ja ativa.
+    // O teste salva o canvas, mas simula envios, espera e handoff.
     const saved = await save();
     if (!saved) { setRunning(false); return; }
     try {
@@ -308,7 +340,7 @@ export default function Editor() {
         customer: "5511999999999",
         phone: "5511999999999",
       };
-      const ex = await api.runWorkflow(id, payload);
+      const ex = await api.runWorkflow(id, payload, true);
       setRunResult(ex);
     } catch (e) {
       alert("Erro ao executar: " + e.message);
@@ -317,7 +349,33 @@ export default function Editor() {
     }
   }
 
+  async function checkIntegrations() {
+    if (checkingIntegrations) return;
+    setCheckingIntegrations(true);
+    const unavailable = (error, fallback) => ({
+      ok: false,
+      state: "unavailable",
+      detail: error?.message || fallback,
+    });
+    try {
+      const [aiResult, whatsappResult] = await Promise.all([
+        api.testAI().catch((error) => unavailable(error, "Nao foi possivel testar a configuracao da IA.")),
+        api.getWhatsAppStatus().catch((error) => unavailable(error, "Nao foi possivel consultar o WhatsApp.")),
+      ]);
+      setIntegrationChecks(integrationChecklist(aiResult, whatsappResult));
+    } finally {
+      setCheckingIntegrations(false);
+    }
+  }
+
   const fields = selectedNode?.spec?.fields || [];
+  const responseGuidance = wf?.trigger_type === "message"
+    ? workflowGuidance(nodes, edges)
+    : null;
+  const activationChecks = wf?.trigger_type === "message"
+    ? activationChecklist(nodes, edges)
+    : [];
+  const activationWarnings = activationChecks.filter((item) => item.state === "warning").length;
 
   const filteredNodes = nodeTypesList.filter((nt) =>
     !searchTerm || nt.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -343,7 +401,7 @@ export default function Editor() {
             {wf?.active ? "Desativar" : "Ativar"}
           </button>
           <button className="btn secondary" onClick={() => run()} disabled={saving || running}>
-            {running ? "Rodando..." : "Rodar"}
+            {running ? "Testando..." : "Rodar teste"}
           </button>
           <button className="btn primary" onClick={() => save()} disabled={saving || running}>
             {saving ? "Salvando..." : "Salvar"}
@@ -436,7 +494,63 @@ export default function Editor() {
                 <button type="button" onClick={() => setEditorError("")} aria-label="Fechar aviso">×</button>
               </Panel>
             )}
+            {(responseGuidance || showActivationChecklist) && (
+              <Panel position="top-left" className="workflow-guidance workflow-assistant" role="status">
+                {responseGuidance && (
+                  <div className="workflow-guidance-section">
+                    <strong>Resposta ainda nao e enviada</strong>
+                    <span>{responseGuidance.message}</span>
+                    <button type="button" className="btn secondary small" onClick={addSuggestedWhatsAppResponse}>
+                      Adicionar envio de resposta
+                    </button>
+                  </div>
+                )}
+                {showActivationChecklist && (
+                  <div className="activation-checklist">
+                    <strong>Checklist de ativacao</strong>
+                    <span>Confere a estrutura do canvas e permite testar, sob demanda, a conexao com IA e WhatsApp.</span>
+                    <ul>
+                      {activationChecks.map((item) => (
+                        <li key={item.id} className={`check-${item.state}`}>
+                          <b>{item.state === "ready" ? "✓" : item.state === "warning" ? "!" : "—"}</b>
+                          <span><strong>{item.label}</strong>{item.detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      type="button"
+                      className="btn secondary small"
+                      onClick={checkIntegrations}
+                      disabled={checkingIntegrations}
+                    >
+                      {checkingIntegrations ? "Verificando conexoes..." : "Verificar IA e WhatsApp"}
+                    </button>
+                    <small className="integration-check-note">A IA recebe um PONG de teste; o WhatsApp nao recebe mensagem.</small>
+                    {integrationChecks && (
+                      <ul className="integration-checks">
+                        {integrationChecks.map((item) => (
+                          <li key={item.id} className={`check-${item.state}`}>
+                            <b>{item.state === "ready" ? "✓" : "!"}</b>
+                            <span><strong>{item.label}</strong>{item.detail}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </Panel>
+            )}
             <Panel position="top-right" className="canvas-tools">
+              {wf?.trigger_type === "message" && (
+                <button
+                  className={`canvas-fit-button ${activationWarnings ? "has-warnings" : ""}`}
+                  type="button"
+                  onClick={() => setShowActivationChecklist((visible) => !visible)}
+                  title="Conferir a estrutura antes de ativar"
+                >
+                  {showActivationChecklist ? "Fechar checklist" : activationWarnings ? `Checklist (${activationWarnings})` : "Checklist pronto"}
+                </button>
+              )}
               <button
                 className="canvas-fit-button"
                 type="button"
@@ -528,7 +642,10 @@ export default function Editor() {
 
           {runResult && (
             <div className="run-result">
-              <h4>Resultado da execucao</h4>
+              <h4>{runResult.context?.dry_run ? "Resultado do teste" : "Resultado da execucao"}</h4>
+              {runResult.context?.dry_run && (
+                <p className="test-run-note">Teste seguro: nenhum WhatsApp foi enviado, nenhuma espera ou transferencia foi persistida.</p>
+              )}
               <div className={`badge ${runResult.status === "success" ? "on" : "off"}`}>
                 Status: {runResult.status}
               </div>
