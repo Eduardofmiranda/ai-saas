@@ -4,6 +4,18 @@ const PROMPT_SUGGESTIONS = Object.freeze({
   ai_rag: "{{ data.message.text }}",
 });
 
+const TRIGGER_NODE_FOR_TYPE = Object.freeze({
+  message: "trigger_message",
+  webhook: "trigger_webhook",
+  cron: "schedule",
+});
+
+const TRIGGER_LABELS = Object.freeze({
+  trigger_message: "mensagem",
+  trigger_webhook: "webhook",
+  schedule: "agendamento",
+});
+
 export function suggestedPrompt(nodeType) {
   return PROMPT_SUGGESTIONS[nodeType] || "";
 }
@@ -62,11 +74,13 @@ export function workflowGuidance(nodes, edges) {
  * externa e exibida separadamente apos uma acao explicita no editor, usando os
  * endpoints autenticados do backend.
  */
-export function activationChecklist(nodes, edges) {
+export function activationChecklist(nodes, edges, triggerType = "message") {
   const outgoing = outgoingEdges(edges);
   const responseNodes = nodes.filter((node) => ["ai", "ai_rag"].includes(node.type));
   const sendNodes = nodes.filter((node) => node.type === "whatsapp_send");
-  const messageTriggers = nodes.filter((node) => node.type === "trigger_message");
+  const triggerNodes = nodes.filter((node) => Object.values(TRIGGER_NODE_FOR_TYPE).includes(node.type));
+  const expectedTrigger = TRIGGER_NODE_FOR_TYPE[triggerType];
+  const hasExpectedTrigger = triggerNodes.length === 1 && (!expectedTrigger || triggerNodes[0].type === expectedTrigger);
   const missingPrompts = responseNodes.filter((node) => !String(node.data?.prompt || "").trim());
   const missingDelivery = responseNodes.filter(
     (node) => !reachesNodeType(node, "whatsapp_send", nodes, outgoing, true),
@@ -77,12 +91,14 @@ export function activationChecklist(nodes, edges) {
 
   return [
     {
-      id: "message-trigger",
-      label: "Gatilho de mensagem",
-      detail: messageTriggers.length === 1
-        ? "Um gatilho de mensagem foi encontrado."
-        : "Este fluxo precisa de exatamente um gatilho de mensagem.",
-      state: messageTriggers.length === 1 ? "ready" : "warning",
+      id: "workflow-trigger",
+      label: "Gatilho do fluxo",
+      detail: triggerNodes.length !== 1
+        ? "Este fluxo precisa de exatamente um node de trigger."
+        : hasExpectedTrigger
+          ? `Gatilho de ${TRIGGER_LABELS[triggerNodes[0].type]} compativel com este fluxo.`
+          : `Este fluxo e do tipo ${triggerType}, mas usa gatilho de ${TRIGGER_LABELS[triggerNodes[0].type]}.`,
+      state: hasExpectedTrigger ? "ready" : "warning",
     },
     {
       id: "ai-prompt",

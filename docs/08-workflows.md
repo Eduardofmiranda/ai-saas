@@ -100,8 +100,9 @@ Em fluxos de mensagem, o editor tambem orienta quando uma resposta de `ai` ou
 o node e a conexao com valores iniciais `{{ data.phone }}` e
 `{{ data.ai_reply }}`. A alteracao fica apenas no canvas ate o usuario salvar;
 nenhuma mensagem e enviada pelo assistente do editor.
-O botao **Checklist** tambem confirma, localmente, o trigger de mensagem, os
-prompts de IA/RAG, a entrega pelo caminho de sucesso e os campos de cada envio.
+O botao **Checklist** esta disponivel para todos os tipos de workflow. Ele
+confirma, localmente, o trigger compativel com o tipo do fluxo, os prompts de
+IA/RAG, a entrega pelo caminho de sucesso e os campos de cada envio.
 Por uma acao explicita do usuario, **Verificar IA e WhatsApp** chama
 `POST /config/ai/test` e `GET /config/whatsapp` para mostrar a conectividade
 real no proprio editor. O teste de IA chama o provedor e pode consumir cota; a

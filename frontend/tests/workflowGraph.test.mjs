@@ -43,7 +43,7 @@ test("nao orienta quando o envio de WhatsApp e alcancavel", () => {
 });
 test("checklist separa pendencias do canvas de verificacoes externas", () => {
   const incomplete = activationChecklist([trigger, ai], [{ source: "trigger", target: "ai" }]);
-  assert.equal(incomplete.find((item) => item.id === "message-trigger")?.state, "ready");
+  assert.equal(incomplete.find((item) => item.id === "workflow-trigger")?.state, "ready");
   assert.equal(incomplete.find((item) => item.id === "response-delivery")?.state, "warning");
   assert.equal(incomplete.find((item) => item.id === "whatsapp-fields")?.state, "not_applicable");
 
@@ -60,6 +60,15 @@ test("checklist separa pendencias do canvas de verificacoes externas", () => {
     [{ source: "trigger", target: "ai" }, { source: "ai", target: "send", sourceHandle: "out" }],
   );
   assert.equal(complete.every((item) => item.state !== "warning"), true);
+});
+
+test("confere o trigger conforme o tipo do workflow", () => {
+  const webhookTrigger = { id: "webhook", type: "trigger_webhook", data: nodeData({ input_handles: [], output_handles: ["out"] }) };
+  const webhookCheck = activationChecklist([webhookTrigger], [], "webhook");
+  assert.equal(webhookCheck.find((item) => item.id === "workflow-trigger")?.state, "ready");
+
+  const mismatch = activationChecklist([trigger], [], "webhook");
+  assert.equal(mismatch.find((item) => item.id === "workflow-trigger")?.state, "warning");
 });
 
 test("mostra o resultado real das conexoes sem confundir com o canvas", () => {

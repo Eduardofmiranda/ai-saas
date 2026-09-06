@@ -372,9 +372,7 @@ export default function Editor() {
   const responseGuidance = wf?.trigger_type === "message"
     ? workflowGuidance(nodes, edges)
     : null;
-  const activationChecks = wf?.trigger_type === "message"
-    ? activationChecklist(nodes, edges)
-    : [];
+  const activationChecks = activationChecklist(nodes, edges, wf?.trigger_type);
   const activationWarnings = activationChecks.filter((item) => item.state === "warning").length;
 
   const filteredNodes = nodeTypesList.filter((nt) =>
@@ -541,16 +539,14 @@ export default function Editor() {
               </Panel>
             )}
             <Panel position="top-right" className="canvas-tools">
-              {wf?.trigger_type === "message" && (
-                <button
-                  className={`canvas-fit-button ${activationWarnings ? "has-warnings" : ""}`}
-                  type="button"
-                  onClick={() => setShowActivationChecklist((visible) => !visible)}
-                  title="Conferir a estrutura antes de ativar"
-                >
-                  {showActivationChecklist ? "Fechar checklist" : activationWarnings ? `Checklist (${activationWarnings})` : "Checklist pronto"}
-                </button>
-              )}
+              <button
+                className={`canvas-fit-button ${activationWarnings ? "has-warnings" : ""}`}
+                type="button"
+                onClick={() => setShowActivationChecklist((visible) => !visible)}
+                title="Conferir a estrutura antes de ativar"
+              >
+                {showActivationChecklist ? "Fechar checklist" : activationWarnings ? `Checklist (${activationWarnings})` : "Checklist pronto"}
+              </button>
               <button
                 className="canvas-fit-button"
                 type="button"
