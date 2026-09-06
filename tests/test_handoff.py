@@ -26,6 +26,7 @@ class TestTransferNode:
         db_session.refresh(conversation)
         assert conversation.status == "pending_agent"
         assert result["outputs"]["transferred"] is True
+        assert result["stop"] is True
 
         transfer = db_session.query(ConversationTransfer).one()
         assert transfer.conversation_id == conversation.id
@@ -57,6 +58,7 @@ class TestTransferNode:
         )
 
         assert result["outputs"]["transferred"] is True
+        assert result["stop"] is True
         assert db_session.query(ConversationTransfer).count() == 0
 
     @pytest.mark.asyncio
@@ -98,6 +100,20 @@ class TestReusePendingConversation:
         db_session.add(conv)
         db_session.commit()
 
+        from app.models.execution import Execution
+        from app.models.workflow import Workflow
+
+        db_session.add(
+            Workflow(
+                company_id=company.id,
+                name="Fluxo que nao deve executar durante handoff",
+                active=True,
+                trigger_type="message",
+                data={"nodes": [{"id": "trigger", "type": "trigger_message", "data": {}}], "edges": []},
+            )
+        )
+        db_session.commit()
+
         result = await handle_incoming_workflow(
             db_session,
             company_id=company.id,
@@ -106,9 +122,10 @@ class TestReusePendingConversation:
             wa_message_id="wamid_reuse",
         )
 
-        assert result["status"] == "no_workflow"
+        assert result["status"] == "pending_agent"
         assert result["conversation_id"] == conv.id
         assert db_session.query(Conversation).count() == 1
+        assert db_session.query(Execution).count() == 0
         db_session.refresh(conv)
         assert conv.status == "pending_agent"
 

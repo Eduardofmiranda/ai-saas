@@ -383,7 +383,11 @@ async def _run_transfer_to_agent(ctx, node):
                 ctx.log(f"conversa {conv.id} ja estava em pending_agent")
             transferred = True
 
-    return {"outputs": {"transferred": transferred, "conversation_id": conv_id or ""}}
+    return {
+        "outputs": {"transferred": transferred, "conversation_id": conv_id or ""},
+        # Uma transferencia bem-sucedida encerra a automacao desta mensagem.
+        "stop": transferred,
+    }
 
 
 # ---------------------------------------------------------------

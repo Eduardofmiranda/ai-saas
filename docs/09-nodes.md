@@ -15,7 +15,7 @@
 | Filtro | `filter` | Filtra dados do contexto |
 | Log | `log` | Registra mensagem nos logs |
 | Aguardar mensagem | `wait_until_message` | Pausa ate proxima mensagem do cliente |
-| Transferir para humano | `transfer_to_agent` | Marca conversa como pendente de atendimento humano (handoff) |
+| Transferir para humano | `transfer_to_agent` | Marca conversa como pendente de atendimento humano (handoff) e encerra a automacao da mensagem atual |
 | IA RAG | `ai_rag` | Busca na base de conhecimento e responde com IA |
 | Codigo | `code` | **Indisponivel por seguranca**; sera reintroduzido apenas com sandbox real |
 | Loop | `loop` | Itera sobre uma lista |
@@ -103,7 +103,7 @@
 - **Categoria:** whatsapp
 - **Entrada:** Qualquer
 - **Saida:** `transferred` (bool), `conversation_id`
-- **Comportamento:** Seta `Conversation.status` para `pending_agent` e registra um `ConversationTransfer` (action=`transfer_requested`, actor_type=`workflow`). Se a conversa ja esta `pending_agent`, apenas registra log e retorna `transferred=true` sem regravar.
+- **Comportamento:** Seta `Conversation.status` para `pending_agent`, registra um `ConversationTransfer` (action=`transfer_requested`, actor_type=`workflow`) e encerra a automacao da mensagem atual. Enquanto estiver pendente, novas mensagens sao gravadas para o atendente, mas a IA nao responde nem retoma flows pausados. Se a conversa ja esta `pending_agent`, apenas registra log e retorna `transferred=true` sem regravar.
 
 ### ai_rag
 - **Icone:** Brain (lilas)

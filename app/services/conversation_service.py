@@ -81,6 +81,16 @@ async def handle_incoming_message(
     db.commit()
 
     # 5) Resolve configuracao da empresa (IA + Evolution) com fallback global
+    # O handoff pertence ao atendente humano: persiste a mensagem, cancela
+    # qualquer espera automatica e nao gera nem retoma respostas da IA.
+    if conversation.status == "pending_agent":
+        db.query(PendingFlow).filter(
+            PendingFlow.company_id == company_id,
+            PendingFlow.phone == phone,
+        ).delete(synchronize_session=False)
+        db.commit()
+        return {"status": "pending_agent", "conversation_id": conversation.id}
+
     config = get_or_create_config(db, company_id)
 
     resolved_ai = resolve_ai_config(config)
@@ -208,6 +218,16 @@ async def handle_incoming_workflow(
         Message(conversation_id=conversation.id, sender_type="customer", content=text, wa_message_id=wa_message_id)
     )
     db.commit()
+
+    # O handoff pertence ao atendente humano: persiste a mensagem, cancela
+    # qualquer espera automatica e nao gera nem retoma respostas da IA.
+    if conversation.status == "pending_agent":
+        db.query(PendingFlow).filter(
+            PendingFlow.company_id == company_id,
+            PendingFlow.phone == phone,
+        ).delete(synchronize_session=False)
+        db.commit()
+        return {"status": "pending_agent", "conversation_id": conversation.id}
 
     config = get_or_create_config(db, company_id)
 
