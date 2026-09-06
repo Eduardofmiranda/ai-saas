@@ -23,6 +23,18 @@ test("mantem os handles vindos do contrato do backend", () => {
   assert.deepEqual(data.input_handles, ["in"]);
   assert.deepEqual(data.output_handles, ["true", "false", "error"]);
 });
+
+test("restaura os defaults de WhatsApp para campos vazios de fluxos legados", () => {
+  const data = nodeData({
+    type: "whatsapp_send",
+    fields: [
+      { key: "phone", default: "{{ data.phone }}" },
+      { key: "text", default: "{{ data.ai_reply }}" },
+    ],
+  }, { phone: "", text: "" });
+  assert.equal(data.phone, "{{ data.phone }}");
+  assert.equal(data.text, "{{ data.ai_reply }}");
+});
 test("oferece prompts seguros para IA e RAG", () => {
   assert.match(suggestedPrompt("ai"), /data\.message\.text/);
   assert.equal(suggestedPrompt("ai_rag"), "{{ data.message.text }}");

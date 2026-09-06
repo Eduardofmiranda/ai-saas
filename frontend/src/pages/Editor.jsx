@@ -591,7 +591,10 @@ export default function Editor() {
                 <p>Este node nao possui propriedades.</p>
               ) : (
                 fields.map((f) => (
-                  <label key={f.key} className="field">
+                  <label
+                    key={f.key}
+                    className={`field ${selectedNode.type === "whatsapp_send" && ["phone", "text"].includes(f.key) ? "whatsapp-send-field" : ""}`}
+                  >
                     <span>
                       {f.label}
                       {f.required && <small className="field-required">Obrigatorio</small>}
@@ -637,6 +640,15 @@ export default function Editor() {
                         onClick={() => updateSelectedConfig("phone", "{{ data.phone }}")}
                       >
                         Responder ao remetente automaticamente
+                      </button>
+                    )}
+                    {selectedNode.type === "whatsapp_send" && f.key === "text" && selectedNode.data?.text !== "{{ data.ai_reply }}" && (
+                      <button
+                        className="btn ghost small field-suggestion"
+                        type="button"
+                        onClick={() => updateSelectedConfig("text", "{{ data.ai_reply }}")}
+                      >
+                        Usar resposta da IA
                       </button>
                     )}
                     {f.key === "prompt" && !String(selectedNode.data?.prompt || "").trim() && suggestedPrompt(selectedNode.type) && (

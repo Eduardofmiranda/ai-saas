@@ -554,9 +554,10 @@ NODE_TYPES: dict[str, dict] = {
               "placeholder": "{{ data.phone }}",
               "default": "{{ data.phone }}",
               "help": "Padrao: {{ data.phone }} responde automaticamente a quem enviar mensagem. Para outro destinatario, substitua por um numero internacional, por exemplo 5511999999999."},
-             {"key": "text", "label": "Texto", "type": "textarea",
+             {"key": "text", "label": "Texto da mensagem", "type": "textarea",
               "placeholder": "{{ data.ai_reply }}",
-              "default": "{{ data.ai_reply }}"}]),
+              "default": "{{ data.ai_reply }}",
+              "help": "Padrao: {{ data.ai_reply }} envia a resposta da IA. Sem IA, substitua por uma mensagem fixa, por exemplo: Ola! Recebi sua mensagem. Como posso ajudar?"}]),
     },
     "filter": {
         "type": "filter",

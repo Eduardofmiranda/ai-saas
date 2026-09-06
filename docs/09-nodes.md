@@ -85,7 +85,9 @@
   estiver vazio (inclusive em fluxos legados), o motor responde ao remetente.
   O editor exibe um icone de informacao e a acao **Responder ao remetente
   automaticamente** para restaurar esse padrao. Para envio proativo, substitua
-  a variavel por um numero internacional, por exemplo `5511999999999`.
+  a variavel por um numero internacional, por exemplo `5511999999999`. O campo
+  **Texto da mensagem** usa `{{ data.ai_reply }}` por padrao; sem node de IA,
+  ele pode ser trocado por uma mensagem fixa de exemplo exibida na ajuda do campo.
 - **Requer:** Configuracao Evolution API
 
 ### filter

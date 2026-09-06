@@ -118,3 +118,4 @@ def test_whatsapp_node_exposes_reply_defaults():
     assert fields["phone"]["default"] == "{{ data.phone }}"
     assert "5511999999999" in fields["phone"]["help"]
     assert fields["text"]["default"] == "{{ data.ai_reply }}"
+    assert "Ola! Recebi sua mensagem." in fields["text"]["help"]

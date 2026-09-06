@@ -44,14 +44,16 @@ body {
 .tab.active { background: var(--panel2); color: var(--text); border-color: var(--accent); }
 
 .field { display: block; margin-bottom: 12px; }
-.field span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 13px; }
+.field > span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 13px; }
+.whatsapp-send-field { padding: 11px; background: linear-gradient(135deg, rgba(34, 197, 94, .09), rgba(34, 211, 238, .04)); border: 1px solid rgba(34, 197, 94, .28); border-radius: 10px; }
+.whatsapp-send-field > span { color: #bbf7d0; }
 .field input, .field textarea, .field select {
   width: 100%; padding: 9px 10px; background: var(--panel2);
   border: 1px solid var(--border); border-radius: 8px; color: var(--text);
 }
 .field textarea { min-height: 70px; resize: vertical; font-family: inherit; }
-.field-help { display: flex; align-items: flex-start; gap: 6px; margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.4; }
-.field-help-icon { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; flex: 0 0 15px; border: 1px solid var(--muted); border-radius: 50%; font-size: 10px; font-weight: 700; line-height: 1; }
+.field-help { display: flex; align-items: flex-start; gap: 7px; margin-top: 7px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.field-help-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex: 0 0 16px; color: #bbf7d0; border: 1px solid rgba(134, 239, 172, .75); border-radius: 50%; font-size: 10px; font-weight: 700; line-height: 1; }
 .field-required { display: inline; margin-left: 6px; color: #fca5a5; font-size: 10px; text-transform: uppercase; }
 .field-suggestion { display: block; margin-top: 7px; width: fit-content; }
 .toggle { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
