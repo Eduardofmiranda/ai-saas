@@ -99,7 +99,11 @@ Quando invalido, a ativacao retorna **422** com os ajustes necessarios. Isso nao
 altera o rascunho salvo e impede execucao de grafos legados inseguros.
 ### Editor React Flow
 
-O editor consulta o contrato de nodes do backend e desenha as portas declaradas em
+O editor consulta o contrato de nodes do backend, preenche defaults seguros para
+campos vazios de workflows legados e mostra a ajuda de cada campo configuravel. A
+escolha de um sub-workflow continua explicita, pois nao existe um ID padrao seguro.
+
+O editor desenha as portas declaradas em
 `input_handles` e `output_handles`. Antes de criar uma conexao, ele bloqueia no
 navegador entradas em triggers, auto-conexoes, duplicidades e ciclos, mostrando o
 motivo no canvas. Essa verificacao melhora a edicao, mas o backend continua sendo a

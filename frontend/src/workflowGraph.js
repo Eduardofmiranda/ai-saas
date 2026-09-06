@@ -164,17 +164,15 @@ export function integrationChecklist(aiResult, whatsappResult) {
 }
 
 export function nodeData(spec, data = {}) {
-  const whatsappDefaults = spec?.type === "whatsapp_send"
-    ? Object.fromEntries(
-      (spec.fields || [])
-        .filter((field) => ["phone", "text"].includes(field.key) && field.default !== undefined)
-        .filter((field) => !String(data[field.key] ?? "").trim())
-        .map((field) => [field.key, field.default]),
-    )
-    : {};
+  const fieldDefaults = Object.fromEntries(
+    (spec?.fields || [])
+      .filter((field) => field.default !== undefined)
+      .filter((field) => !String(data[field.key] ?? "").trim())
+      .map((field) => [field.key, field.default]),
+  );
   return {
     ...data,
-    ...whatsappDefaults,
+    ...fieldDefaults,
     label: spec?.label || data.label || "Node",
     category: spec?.category || data.category || "data",
     description: spec?.description || data.description || "",

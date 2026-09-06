@@ -111,6 +111,15 @@ def test_ai_nodes_expose_prompt_defaults():
     assert "{{ data.message.text }}" in ai_prompt["default"]
     assert rag_prompt["default"] == "{{ data.message.text }}"
 
+def test_available_nodes_expose_defaults_and_explanations():
+    for node in list_node_types():
+        if not node["editor_available"]:
+            continue
+        for field in node["fields"]:
+            assert field.get("default") is not None or field.get("requires_explicit_value") is True
+            assert field.get("help")
+
+
 def test_whatsapp_node_exposes_reply_defaults():
     types = {item["type"]: item for item in list_node_types()}
     fields = {field["key"]: field for field in types["whatsapp_send"]["fields"]}

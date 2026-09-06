@@ -23,6 +23,16 @@
 | Schedule | `schedule` | Trigger por cron |
 | Executar Workflow | `execute_workflow` | Chama sub-workflow |
 
+## Configuracao padrao no editor
+
+Todo node disponivel para novos workflows recebe defaults seguros e uma explicacao
+visivel no painel de configuracao. Ao abrir um workflow legado, o editor tambem
+restaura defaults para campos vazios; basta salvar para persistir a correcao.
+
+A excecao e **Executar Workflow**: ele precisa apontar para um workflow real da
+mesma empresa e, portanto, exige escolha explicita de ID. O editor explica isso
+no proprio campo, sem inventar um destino.
+
 ## Detalhes por Node
 
 ### trigger_message
