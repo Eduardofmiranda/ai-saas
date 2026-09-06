@@ -181,6 +181,14 @@ body {
 .react-flow__controls-button:hover { background: var(--panel2) !important; }
 .react-flow__controls-button svg { fill: currentColor; }
 .canvas-tools { margin: 12px; }
+.editor-validation {
+  display: flex; align-items: center; gap: 10px; max-width: 440px; padding: 9px 12px;
+  border: 1px solid rgba(239,68,68,.55); border-radius: 8px; background: #30151a; color: #fecaca;
+  box-shadow: 0 8px 20px rgba(0,0,0,.28); font-size: 12px;
+}
+.editor-validation button {
+  border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 18px; line-height: 1;
+}
 .canvas-fit-button {
   padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
   background: var(--panel); color: var(--text); cursor: pointer; font: inherit; font-size: 12px;

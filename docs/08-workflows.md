@@ -49,9 +49,9 @@ O motor le campos de `node.data.key` (formato achatado):
 | `data.system_prompt` | Override do system prompt (ai) |
 | `data.url` | Reservado para HTTP; node indisponivel por seguranca |
 | `data.method` | Reservado para HTTP; node indisponivel por seguranca |
-| `data.body` | Corpo da requisicao (http) |
-| `data.code` | Codigo Python para execucao (code) |
-| `data.max_iterations` | Limite de iteracoes (loop) |
+| `data.body` | Reservado para HTTP; node indisponivel por seguranca |
+| `data.code` | Reservado para Code; node indisponivel por seguranca |
+| `data.max_iterations` | Reservado para Loop; node ainda parcial |
 
 ## Status de Execucao
 
@@ -88,6 +88,14 @@ ativar um workflow ou executa-lo pela API/webhook. A validacao exige:
 
 Quando invalido, a ativacao retorna **422** com os ajustes necessarios. Isso nao
 altera o rascunho salvo e impede execucao de grafos legados inseguros.
+### Editor React Flow
+
+O editor consulta o contrato de nodes do backend e desenha as portas declaradas em
+`input_handles` e `output_handles`. Antes de criar uma conexao, ele bloqueia no
+navegador entradas em triggers, auto-conexoes, duplicidades e ciclos, mostrando o
+motivo no canvas. Essa verificacao melhora a edicao, mas o backend continua sendo a
+autoridade: salvar, ativar e executar validam novamente o grafo e podem retornar 422.
+
 ## Ativacao de fluxos por mensagem
 
 ### Implementado

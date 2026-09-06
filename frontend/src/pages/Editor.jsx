@@ -16,6 +16,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { api } from "../api";
 import Header from "../components/Header";
+import { connectionIssue, nodeData } from "../workflowGraph";
 
 const ICONS = {
   trigger: "▶",
@@ -47,47 +48,43 @@ const NODE_GUIDANCE = {
   condition: "Conecte a saida Sim ao caminho que deve rodar quando a regra for verdadeira e a saida Nao ao caminho alternativo.",
   wait_until_message: "Pausa o fluxo e o retoma na proxima mensagem do mesmo cliente. Conecte-o ao node que deve processar essa nova mensagem.",
   transfer_to_agent: "Entrega a conversa para atendimento humano. A conversa passa para o estado aguardando agente quando houver uma conversa valida no contexto.",
-  http: "Use somente URLs confiaveis. A resposta fica disponivel como {{ data.http_body }} e o codigo HTTP como {{ data.http_status }}.",
+  http: "Este node esta em revisao e nao pode ser adicionado ou executado em novos fluxos por enquanto.",
   set: "Cria ou atualiza um valor no contexto do fluxo. Depois use {{ data.nome_da_variavel }} nos proximos nodes.",
-  code: "Executa Python limitado com acesso a data. Guarde o resultado na variavel informada para usa-lo nos proximos nodes.",
+  code: "Este node esta em revisao e nao pode ser adicionado ou executado em novos fluxos por enquanto.",
   delay: "Aguarda pelo numero de segundos informado antes de continuar. Evite tempos longos em fluxos que precisam responder rapidamente.",
   log: "Registra uma mensagem no log da execucao para facilitar diagnosticos. Nao inclua senhas, tokens ou dados sensiveis.",
   execute_workflow: "Executa outro workflow da mesma empresa. Use-o para reaproveitar uma automacao que ja foi testada.",
 };
 
-function nodeData(spec, data = {}) {
-  return {
-    ...data,
-    label: spec?.label || data.label || "Node",
-    category: spec?.category || data.category || "data",
-    description: spec?.description || data.description || "",
-    status: spec?.status || data.status || "implemented",
-  };
-}
-
 function NodeShell({ data, selected }) {
   const cat = data.category || "data";
+  const inputHandles = data.input_handles || ["in"];
+  const outputHandles = data.output_handles || ["out", "error"];
   return (
     <div className={`rf-node cat-${cat} ${selected ? "selected" : ""}`}>
-      <Handle type="target" position={Position.Top} />
+      {inputHandles.map((handle) => <Handle key={handle} type="target" position={Position.Top} id={handle} />)}
       <div className="rf-node-title"><span className="rf-icon">{ICONS[cat] || "•"}</span>{data.label}</div>
       {data.description && <p className="rf-node-description">{data.description}</p>}
       {data.status === "partial" && <span className="rf-node-status">em revisao</span>}
       <div className="rf-node-ports"><span>entrada</span><span>saida</span></div>
-      <Handle type="source" position={Position.Bottom} id="out" />
+      {outputHandles.includes("out") && <Handle type="source" position={Position.Bottom} id="out" />}
+      {outputHandles.includes("error") && <Handle type="source" position={Position.Right} id="error" style={{ background: "#dc2626" }} />}
     </div>
   );
 }
 
 function ConditionNode({ data, selected }) {
+  const inputHandles = data.input_handles || ["in"];
+  const outputHandles = data.output_handles || ["true", "false", "error"];
   return (
     <div className={`rf-node cat-logic condition ${selected ? "selected" : ""}`}>
-      <Handle type="target" position={Position.Top} />
+      {inputHandles.map((handle) => <Handle key={handle} type="target" position={Position.Top} id={handle} />)}
       <div className="rf-node-title"><span className="rf-icon">➜</span>{data.label}</div>
       {data.description && <p className="rf-node-description">{data.description}</p>}
       <div className="condition-handles">
-        <Handle type="source" position={Position.Bottom} id="true" style={{ left: "30%", background: "#16a34a" }} />
-        <Handle type="source" position={Position.Bottom} id="false" style={{ left: "70%", background: "#dc2626" }} />
+        {outputHandles.includes("true") && <Handle type="source" position={Position.Bottom} id="true" style={{ left: "30%", background: "#16a34a" }} />}
+        {outputHandles.includes("false") && <Handle type="source" position={Position.Bottom} id="false" style={{ left: "70%", background: "#dc2626" }} />}
+        {outputHandles.includes("error") && <Handle type="source" position={Position.Right} id="error" style={{ background: "#dc2626" }} />}
       </div>
       <div className="rf-node-tags"><span className="tag green">sim</span><span className="tag red">nao</span></div>
     </div>
@@ -95,12 +92,13 @@ function ConditionNode({ data, selected }) {
 }
 
 function TriggerNode({ data, selected }) {
+  const outputHandles = data.output_handles || ["out"];
   return (
     <div className={`rf-node cat-trigger trigger ${selected ? "selected" : ""}`}>
       <div className="rf-node-title"><span className="rf-icon">▶</span>{data.label}</div>
       {data.description && <p className="rf-node-description">{data.description}</p>}
       <div className="rf-node-ports trigger-port"><span>inicio do fluxo</span><span>saida</span></div>
-      <Handle type="source" position={Position.Bottom} id="out" />
+      {outputHandles.includes("out") && <Handle type="source" position={Position.Bottom} id="out" />}
     </div>
   );
 }
@@ -150,6 +148,7 @@ export default function Editor() {
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [editorError, setEditorError] = useState("");
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
 
   useEffect(() => {
@@ -190,8 +189,14 @@ export default function Editor() {
   }, [id]);
 
   const onConnect = useCallback((params) => {
+    const issue = connectionIssue(params, nodes, edges);
+    if (issue) {
+      setEditorError(issue);
+      return;
+    }
+    setEditorError("");
     setEdges((eds) => addEdge({ ...params, markerEnd: { type: MarkerType.ArrowClosed } }, eds));
-  }, [setEdges]);
+  }, [nodes, edges, setEdges]);
 
   const onNodeClick = (_, node) => {
     if (node.type === "sticky_note") {
@@ -274,17 +279,19 @@ export default function Editor() {
 
   async function save(activate) {
     setSaving(true);
+    setEditorError("");
     try {
       const body = { data: { nodes, edges } };
+      if (wf?.name) body.name = wf.name;
       if (activate !== undefined) body.active = activate;
       const saved = await api.updateWorkflow(id, body);
       setWf(saved);
-      setSaving(false);
       return true;
     } catch (e) {
-      setSaving(false);
-      alert("Erro ao salvar: " + e.message);
+      setEditorError(e.message || "Nao foi possivel salvar este fluxo.");
       return false;
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -423,6 +430,12 @@ export default function Editor() {
               maskColor="rgba(10, 12, 16, 0.72)"
               ariaLabel="Mapa de navegacao do fluxo"
             />
+            {editorError && (
+              <Panel position="top-center" className="editor-validation" role="alert">
+                <span>{editorError}</span>
+                <button type="button" onClick={() => setEditorError("")} aria-label="Fechar aviso">×</button>
+              </Panel>
+            )}
             <Panel position="top-right" className="canvas-tools">
               <button
                 className="canvas-fit-button"
