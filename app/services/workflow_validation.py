@@ -69,6 +69,10 @@ def validate_workflow_graph(graph: dict | None, *, trigger_type: str) -> list[st
             errors.append(f"Configuracao do node '{node_id}' deve ser um objeto.")
             continue
         for field in _REQUIRED_FIELDS.get(node_type, ()):
+            # No fluxo disparado por mensagem, telefone vazio significa responder
+            # ao remetente. Nos demais tipos, o destinatario precisa ser explicito.
+            if node_type == "whatsapp_send" and field == "phone" and trigger_type == "message":
+                continue
             value = data.get(field)
             if value is None or (isinstance(value, str) and not value.strip()):
                 errors.append(f"Node '{node_id}' exige o campo '{field}'.")

@@ -44,7 +44,7 @@ const NODE_GUIDANCE = {
   schedule: "Defina a expressao Cron que representa o horario desejado. Confirme que o disparador de agendamento esteja configurado antes de ativar o fluxo.",
   ai: "A resposta gerada fica em {{ data.ai_reply }}. Conecte este node a Enviar WhatsApp e use essa variavel no campo Texto para responder ao cliente.",
   ai_rag: "Busca conteudo na Base de Conhecimento antes de gerar a resposta. A resposta fica em {{ data.ai_reply }} e as fontes usadas ficam no contexto da execucao.",
-  whatsapp_send: "Informe o telefone no formato internacional, sem simbolos. Para responder ao remetente use {{ data.customer }}; para enviar a resposta da IA use {{ data.ai_reply }} no campo Texto.",
+  whatsapp_send: "Em fluxos de mensagem, mantenha {{ data.phone }} para responder automaticamente a qualquer remetente. Use um numero fixo somente em envio proativo; para a resposta da IA use {{ data.ai_reply }} no campo Texto.",
   condition: "Conecte a saida Sim ao caminho que deve rodar quando a regra for verdadeira e a saida Nao ao caminho alternativo.",
   wait_until_message: "Pausa o fluxo e o retoma na proxima mensagem do mesmo cliente. Conecte-o ao node que deve processar essa nova mensagem.",
   transfer_to_agent: "Entrega a conversa para atendimento humano. A conversa passa para o estado aguardando agente quando houver uma conversa valida no contexto.",
@@ -100,6 +100,15 @@ function TriggerNode({ data, selected }) {
       <div className="rf-node-ports trigger-port"><span>inicio do fluxo</span><span>saida</span></div>
       {outputHandles.includes("out") && <Handle type="source" position={Position.Bottom} id="out" />}
     </div>
+  );
+}
+
+function FieldHelp({ children }) {
+  return (
+    <small className="field-help">
+      <span className="field-help-icon" aria-hidden="true">i</span>
+      {children}
+    </small>
   );
 }
 
@@ -601,7 +610,7 @@ export default function Editor() {
                           onChange={(e) => updateSelectedConfig(f.key, e.target.checked ? "on" : "off")}
                         />
                         <span>Ligado</span>
-                        {f.help && <small className="field-help">{f.help}</small>}
+                        {f.help && <FieldHelp>{f.help}</FieldHelp>}
                       </label>
                     ) : f.type === "select" ? (
                       <select
@@ -618,8 +627,17 @@ export default function Editor() {
                           placeholder={f.placeholder || ""}
                           type={f.type === "number" ? "number" : "text"}
                         />
-                        {f.help && <small className="field-help">{f.help}</small>}
+                        {f.help && <FieldHelp>{f.help}</FieldHelp>}
                       </>
+                    )}
+                    {selectedNode.type === "whatsapp_send" && f.key === "phone" && selectedNode.data?.phone !== "{{ data.phone }}" && (
+                      <button
+                        className="btn ghost small field-suggestion"
+                        type="button"
+                        onClick={() => updateSelectedConfig("phone", "{{ data.phone }}")}
+                      >
+                        Responder ao remetente automaticamente
+                      </button>
                     )}
                     {f.key === "prompt" && !String(selectedNode.data?.prompt || "").trim() && suggestedPrompt(selectedNode.type) && (
                       <button

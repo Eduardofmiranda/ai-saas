@@ -186,7 +186,7 @@ class TestWorkflowEngine:
                 "nodes": [
                     {"id": "trigger", "type": "trigger_message", "data": {}},
                     {"id": "ai", "type": "ai", "data": {"prompt": "Responda {{ data.message.text }}", "history": "off"}},
-                    {"id": "send", "type": "whatsapp_send", "data": {"phone": "{{ data.phone }}", "text": "{{ data.ai_reply }}"}},
+                    {"id": "send", "type": "whatsapp_send", "data": {"phone": "", "text": "{{ data.ai_reply }}"}},
                 ],
                 "edges": [
                     {"source": "trigger", "target": "ai"},
@@ -210,6 +210,7 @@ class TestWorkflowEngine:
         assert execution.node_results["sent"] is False
         assert execution.node_results["simulated"] is True
         assert any("simulado" in line.lower() for line in execution.context["logs"])
+        assert any("5511999999999" in line for line in execution.context["logs"])
 
     @pytest.mark.asyncio
     async def test_dry_run_does_not_persist_waiting_flow(self, db_session, config, mock_payload):

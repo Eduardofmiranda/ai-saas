@@ -73,6 +73,15 @@ Templates suportam interpolecao com `{{ }}`:
 "Telefone: {{ data.customer.phone }}"
 ```
 
+### Destinatario padrao em fluxos de mensagem
+
+Todo workflow com `trigger_type = message` recebe o telefone do remetente em
+`{{ data.phone }}`. Os templates e novos nodes **Enviar WhatsApp** usam essa
+variavel por padrao, portanto respondem a qualquer numero que envie mensagem.
+Se um node legado estiver com o campo Telefone vazio, o motor tambem usa o
+remetente como destino. Um telefone preenchido e respeitado, permitindo envios
+proativos quando isso for intencional.
+
 ## Validacao antes de ativar ou executar
 
 ### Implementado

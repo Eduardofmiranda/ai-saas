@@ -15,6 +15,19 @@ def test_valid_message_workflow_has_no_validation_errors():
     assert validate_workflow_graph(_valid_graph(), trigger_type="message") == []
 
 
+def test_message_workflow_without_phone_replies_to_the_sender():
+    graph = {
+        "nodes": [
+            {"id": "trigger", "type": "trigger_message", "data": {}},
+            {"id": "send", "type": "whatsapp_send", "data": {"phone": "", "text": "Ola"}},
+        ],
+        "edges": [{"id": "trigger-send", "source": "trigger", "target": "send", "sourceHandle": "out"}],
+    }
+
+    assert validate_workflow_graph(graph, trigger_type="message") == []
+    assert any("phone" in error for error in validate_workflow_graph(graph, trigger_type="manual"))
+
+
 def test_validation_rejects_cycle_and_dangling_edge():
     graph = _valid_graph()
     graph["edges"].extend(

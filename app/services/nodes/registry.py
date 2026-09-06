@@ -180,6 +180,11 @@ async def _run_http(ctx, node):
 async def _run_whatsapp_send(ctx, node):
     cfg = node.get("data", {})
     phone = _eval_expression(cfg.get("phone", ""), ctx.data)
+    # Fluxos de mensagem respondem, por padrao, ao numero que os disparou.
+    # Um telefone preenchido continua tendo prioridade para envios proativos.
+    if not str(phone or "").strip() and ctx.data.get("phone"):
+        phone = str(ctx.data["phone"])
+        ctx.log("Destino nao informado; respondendo ao remetente da mensagem.")
     text = _eval_expression(cfg.get("text", ""), ctx.data)
     result = await ctx.send_whatsapp(phone, text)
     if result.get("simulated"):
@@ -545,9 +550,10 @@ NODE_TYPES: dict[str, dict] = {
     "whatsapp_send": {
         "type": "whatsapp_send",
         **_make_node("Enviar WhatsApp", "whatsapp", "Envia uma mensagem de texto pelo WhatsApp.", [], _run_whatsapp_send,
-            [{"key": "phone", "label": "Telefone", "type": "text",
+            [{"key": "phone", "label": "Telefone do destinatario", "type": "text",
               "placeholder": "{{ data.phone }}",
-              "default": "{{ data.phone }}"},
+              "default": "{{ data.phone }}",
+              "help": "Padrao: {{ data.phone }} responde automaticamente a quem enviar mensagem. Para outro destinatario, substitua por um numero internacional, por exemplo 5511999999999."},
              {"key": "text", "label": "Texto", "type": "textarea",
               "placeholder": "{{ data.ai_reply }}",
               "default": "{{ data.ai_reply }}"}]),

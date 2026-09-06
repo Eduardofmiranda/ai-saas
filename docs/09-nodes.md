@@ -81,7 +81,11 @@
 - **Dados:** `data.phone` (destinatario) e `data.text` (texto da mensagem)
 - **Padrao no editor:** novos nodes usam `{{ data.phone }}` como destinatario e
   `{{ data.ai_reply }}` como texto, adequados para responder a mensagem que
-  disparou o workflow. Os dois valores continuam editaveis.
+  disparou o workflow. Em workflows do tipo `message`, se o campo de telefone
+  estiver vazio (inclusive em fluxos legados), o motor responde ao remetente.
+  O editor exibe um icone de informacao e a acao **Responder ao remetente
+  automaticamente** para restaurar esse padrao. Para envio proativo, substitua
+  a variavel por um numero internacional, por exemplo `5511999999999`.
 - **Requer:** Configuracao Evolution API
 
 ### filter
