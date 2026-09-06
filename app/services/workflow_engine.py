@@ -15,6 +15,7 @@ from app.models.pending_flow import PendingFlow
 from app.models.workflow import Workflow
 from app.services.nodes.context import NodeContext, NodeError
 from app.services.nodes import registry
+from app.services.workflow_validation import WorkflowValidationError, ensure_valid_workflow_graph
 from datetime import datetime, timezone
 
 
@@ -83,6 +84,10 @@ async def execute_workflow(
     e retorna a Execution com status "waiting" (nao finaliza).
     """
     graph = workflow.data or {}
+    try:
+        ensure_valid_workflow_graph(graph, trigger_type=workflow.trigger_type)
+    except WorkflowValidationError as exc:
+        raise WorkflowEngineError(str(exc))
     nodes: list[dict] = graph.get("nodes", [])
     edges: list[dict] = graph.get("edges", [])
 
@@ -194,6 +199,10 @@ async def resume_workflow(db: Session, *, pending: PendingFlow, payload: dict, c
     merged.update(payload)
 
     graph = workflow.data or {}
+    try:
+        ensure_valid_workflow_graph(graph, trigger_type=workflow.trigger_type)
+    except WorkflowValidationError as exc:
+        raise WorkflowEngineError(str(exc))
     nodes: list[dict] = graph.get("nodes", [])
     edges: list[dict] = graph.get("edges", [])
     node_map = {n.get("id"): n for n in nodes}

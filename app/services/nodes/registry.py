@@ -429,6 +429,13 @@ def _make_node(label, category, description, fields, run, extra_fields=None):
     }
 
 
+# Nodes existentes, mas incompletos ou inseguros, nao podem ser adicionados no
+# editor nem ativados no servidor ate que seu contrato de execucao esteja pronto.
+PARTIAL_NODE_TYPES = frozenset({
+    "trigger_webhook", "schedule", "loop", "aggregate", "filter", "code", "http",
+})
+
+
 NODE_TYPES: dict[str, dict] = {
     "trigger_message": {
         "type": "trigger_message",
@@ -553,7 +560,7 @@ def get_node_type(node_type: str) -> dict | None:
 
 def list_node_types() -> list[dict]:
     """Retorna os tipos de no (metadata) para o editor montar a paleta."""
-    partial_types = {"trigger_webhook", "schedule", "loop", "aggregate", "filter", "code", "http"}
+    partial_types = PARTIAL_NODE_TYPES
     required_fields = {
         "ai": {"prompt"}, "ai_rag": {"prompt"}, "set": {"variable"},
         "code": {"code"}, "condition": {"value", "operator"}, "http": {"url"},

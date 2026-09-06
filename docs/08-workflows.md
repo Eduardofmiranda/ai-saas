@@ -13,7 +13,7 @@ Um **workflow** e uma composicao de **nodes** conectados por **edges** (arestas)
       "id": "trigger-1",
       "type": "trigger_message",
       "data": { "label": "WhatsApp", "text": "nova_mensagem" },
-      "position": [250, 300]
+      "position": { "x": 250, "y": 300 }
     },
     {
       "id": "ai-1",
@@ -24,11 +24,11 @@ Um **workflow** e uma composicao de **nodes** conectados por **edges** (arestas)
         "history": "on",
         "system_prompt": "Atendente virtual"
       },
-      "position": [500, 300]
+      "position": { "x": 500, "y": 300 }
     }
   ],
   "edges": [
-    { "source": "trigger-1", "target": "ai-1", "sourceHandle": "success" }
+    { "source": "trigger-1", "target": "ai-1", "sourceHandle": "out" }
   ]
 }
 ```
@@ -47,8 +47,8 @@ O motor le campos de `node.data.key` (formato achatado):
 | `data.prompt` | Prompt para a IA (ai) |
 | `data.history` | "on"/"off" - usar historico (ai) |
 | `data.system_prompt` | Override do system prompt (ai) |
-| `data.url` | URL para requisicao HTTP (http) |
-| `data.method` | Metodo HTTP (http) |
+| `data.url` | Reservado para HTTP; node indisponivel por seguranca |
+| `data.method` | Reservado para HTTP; node indisponivel por seguranca |
 | `data.body` | Corpo da requisicao (http) |
 | `data.code` | Codigo Python para execucao (code) |
 | `data.max_iterations` | Limite de iteracoes (loop) |
@@ -73,6 +73,21 @@ Templates suportam interpolecao com `{{ }}`:
 "Telefone: {{ data.customer.phone }}"
 ```
 
+## Validacao antes de ativar ou executar
+
+### Implementado
+
+Rascunhos podem ser salvos para edicao, mas o backend valida o grafo antes de
+ativar um workflow ou executa-lo pela API/webhook. A validacao exige:
+
+- listas `nodes` e `edges`, IDs unicos e referencias de conexao existentes;
+- exatamente um trigger, compativel com `trigger_type` (`message`, `webhook` ou `cron`);
+- ausencia de ciclos e de conexoes que entram no trigger;
+- configuracoes obrigatorias dos nodes implementados;
+- ausencia de nodes parciais ou bloqueados.
+
+Quando invalido, a ativacao retorna **422** com os ajustes necessarios. Isso nao
+altera o rascunho salvo e impede execucao de grafos legados inseguros.
 ## Ativacao de fluxos por mensagem
 
 ### Implementado

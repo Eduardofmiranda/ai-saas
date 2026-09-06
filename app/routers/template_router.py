@@ -5,7 +5,13 @@ from app.database.session import get_db
 from app.models.user import User
 from app.schemas.workflow_schema import WorkflowCreate
 from app.services.deps import get_current_user
-from app.services.templates import get_template, get_templates, prepare_template_data, template_trigger_type
+from app.services.templates import (
+    get_template,
+    get_templates,
+    prepare_template_data,
+    template_is_available,
+    template_trigger_type,
+)
 
 router = APIRouter(prefix="/templates", tags=["templates"])
 
@@ -20,6 +26,8 @@ def get_template_detail(template_id: str) -> dict:
     template = get_template(template_id)
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
+    if not template_is_available(template):
+        raise HTTPException(status_code=409, detail="Template indisponivel ate que seus nodes estejam prontos")
     return template
 
 
@@ -34,6 +42,9 @@ def use_template(
     template = get_template(template_id)
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
+
+    if not template_is_available(template):
+        raise HTTPException(status_code=409, detail="Template indisponivel ate que seus nodes estejam prontos")
 
     workflow = Workflow(
         company_id=current_user.company_id,

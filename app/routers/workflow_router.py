@@ -13,6 +13,7 @@ from app.schemas.workflow_schema import (
 from app.schemas.execution_schema import ExecutionResponse, TestRunRequest
 from app.services.deps import get_current_user
 from app.services.nodes import registry
+from app.services.workflow_validation import WorkflowValidationError, ensure_valid_workflow_graph
 from app.services.workflow_engine import WorkflowEngineError, execute_workflow
 
 router = APIRouter(prefix="/workflows", tags=["Workflows"])
@@ -88,6 +89,14 @@ def update_workflow(
 ):
     wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
     updates = data.model_dump(exclude_unset=True)
+
+    if updates.get("active") is True:
+        graph = updates.get("data", wf.data)
+        trigger_type = updates.get("trigger_type", wf.trigger_type)
+        try:
+            ensure_valid_workflow_graph(graph, trigger_type=trigger_type)
+        except WorkflowValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
 
     # Uma mensagem recebida deve ter um unico fluxo principal. O motor executa
     # apenas um trigger "message" por empresa; manter varios ativos tornava o

@@ -1,6 +1,11 @@
 """Templates prontos de workflows para novos usuarios."""
 from copy import deepcopy
 
+# Estes modelos dependem de recursos ainda parciais; ficam preservados no codigo
+# como referencia, mas nao sao oferecidos para criar novos workflows.
+UNAVAILABLE_TEMPLATE_IDS = frozenset({"verificacao_horario", "webhook_recebimento"})
+
+
 TEMPLATES = [
     {
         "id": "atendimento_basico",
@@ -301,6 +306,10 @@ def template_trigger_type(template: dict) -> str:
     return "message"
 
 
+def template_is_available(template: dict) -> bool:
+    return template["id"] not in UNAVAILABLE_TEMPLATE_IDS
+
+
 def get_templates() -> list[dict]:
     return [
         {
@@ -310,7 +319,7 @@ def get_templates() -> list[dict]:
             "category": t["category"],
             "trigger_type": template_trigger_type(t),
         }
-        for t in TEMPLATES
+        for t in TEMPLATES if template_is_available(t)
     ]
 
 

@@ -5,6 +5,7 @@ from app.services.nodes.registry import list_node_types
 from app.models.pending_flow import PendingFlow
 from app.models.user import User
 from app.models.workflow import Workflow
+from fastapi import HTTPException
 from app.routers.workflow_router import update_workflow
 from app.schemas.workflow_schema import WorkflowUpdate
 
@@ -186,6 +187,7 @@ def test_activating_message_workflow_deactivates_other_message_workflows(db_sess
         name="Target message workflow",
         trigger_type="message",
         active=False,
+        data={"nodes": [{"id": "trigger", "type": "trigger_message", "data": {}}], "edges": []},
     )
     manual = Workflow(
         company_id=company.id,
@@ -204,3 +206,28 @@ def test_activating_message_workflow_deactivates_other_message_workflows(db_sess
     assert target.active is True
     assert previous.active is False
     assert manual.active is True
+
+
+def test_activation_rejects_partial_node_graph(db_session, company):
+    user = User(company_id=company.id, name="Owner", email="owner2@example.com", password_hash="not-used", role="admin")
+    workflow = Workflow(
+        company_id=company.id,
+        name="Unsafe graph",
+        trigger_type="message",
+        active=False,
+        data={
+            "nodes": [
+                {"id": "trigger", "type": "trigger_message", "data": {}},
+                {"id": "code", "type": "code", "data": {"code": "result = 1"}},
+            ],
+            "edges": [{"source": "trigger", "target": "code"}],
+        },
+    )
+    db_session.add_all([user, workflow])
+    db_session.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        update_workflow(workflow.id, WorkflowUpdate(active=True), user, db_session)
+
+    assert exc.value.status_code == 422
+    assert "code" in exc.value.detail
