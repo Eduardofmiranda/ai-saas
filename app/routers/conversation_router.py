@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.database.session import get_db
 from app.models.conversation import Conversation
 from app.models.conversation_transfer import ConversationTransfer
+from app.models.customer import Customer
 from app.models.user import User
 from app.schemas.conversation_schema import (
     ConversationCreate,
@@ -75,9 +76,20 @@ def create_conversation(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    customer = (
+        db.query(Customer)
+        .filter(
+            Customer.id == conversation.customer_id,
+            Customer.company_id == current_user.company_id,
+        )
+        .first()
+    )
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
     new_conversation = Conversation(
         company_id=current_user.company_id,
-        customer_id=conversation.customer_id,
+        customer_id=customer.id,
     )
     db.add(new_conversation)
     db.commit()

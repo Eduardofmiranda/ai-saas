@@ -10,14 +10,14 @@
 | Set (variavel) | `set` | Define uma variavel no contexto |
 | Condicao | `condition` | Verifica condicao e bifurca o fluxo |
 | Delay (espera) | `delay` | Aguarda X segundos antes de continuar |
-| HTTP | `http` | Faz requisicao HTTP externa |
+| HTTP | `http` | **Indisponivel por seguranca**; sera reintroduzido com politica anti-SSRF |
 | WhatsApp (enviar) | `whatsapp_send` | Envia mensagem via WhatsApp |
 | Filtro | `filter` | Filtra dados do contexto |
 | Log | `log` | Registra mensagem nos logs |
 | Aguardar mensagem | `wait_until_message` | Pausa ate proxima mensagem do cliente |
 | Transferir para humano | `transfer_to_agent` | Marca conversa como pendente de atendimento humano (handoff) |
 | IA RAG | `ai_rag` | Busca na base de conhecimento e responde com IA |
-| Codigo | `code` | Executa Python customizado |
+| Codigo | `code` | **Indisponivel por seguranca**; sera reintroduzido apenas com sandbox real |
 | Loop | `loop` | Itera sobre uma lista |
 | Aggregate | `aggregate` | Junta itens em um resultado |
 | Schedule | `schedule` | Trigger por cron |
@@ -71,6 +71,8 @@
 - **Entrada:** Qualquer
 - **Saida:** `success`, `error`
 - **Dados:** `data.url`, `data.method`, `data.body`
+- **Status:** indisponivel para execucao e para novos fluxos. O registro e mantido apenas para que workflows legados possam ser visualizados e corrigidos.
+- **Motivo:** requisicoes a URLs arbitrarias permitiriam SSRF. A reintroducao depende de allowlist, bloqueio de redes privadas, limite de redirects e auditoria.
 
 ### whatsapp_send
 - **Icone:** MessageCircle (verde escuro)
@@ -109,6 +111,10 @@
 - **Saida:** `success`
 - **Dados:** `data.prompt` (pergunta), `data.top_k` (default 5), `data.system_prompt`
 - **Comportamento:** Busca contexto na base de conhecimento via cosine similarity, gera resposta via LLM com RAG
+
+### code
+- **Status:** indisponivel para execucao e para novos fluxos. O registro e mantido apenas para que workflows legados possam ser visualizados e corrigidos.
+- **Motivo:** `exec` em Python nao e um isolamento de seguranca suficiente. A reintroducao depende de sandbox isolado, limites de CPU/memoria e auditoria.
 
 ## Error Handling
 

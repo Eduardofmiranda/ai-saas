@@ -19,9 +19,15 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     payload = decode_access_token(token)
-    if not payload or not payload.get("sub"):
+    # O endpoint /auth/refresh aceita tokens de longa duracao, mas estes nunca
+    # devem autenticar chamadas comuns da API.
+    if not payload or payload.get("type") != "access" or not payload.get("sub"):
         raise credentials_exc
-    user = db.query(User).filter(User.id == int(payload["sub"])).first()
+    try:
+        user_id = int(payload["sub"])
+    except (TypeError, ValueError):
+        raise credentials_exc
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise credentials_exc
     return user

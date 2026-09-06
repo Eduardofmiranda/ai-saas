@@ -71,6 +71,7 @@ segredos. Pelo nginx de producao, use o prefixo `/api`, por exemplo
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
+| POST | `/conversations/` | Cria conversa para um cliente da mesma empresa (`{ "customer_id": 1 }`) | JWT |
 | GET | `/conversations/` | Lista conversas da empresa (cliente, ultima mensagem, contagem, ordenado por `updated_at` desc) | JWT |
 | GET | `/conversations/filter/?status=open` | Filtra por status (`open`, `pending_agent`, `closed`) | JWT |
 | GET | `/conversations/{id}` | Busca conversa (dados enriquecidos) | JWT |
@@ -81,6 +82,8 @@ segredos. Pelo nginx de producao, use o prefixo `/api`, por exemplo
 `id, company_id, customer_id, status, created_at, updated_at, customer`
 ({id, name, phone}), `last_message`, `last_message_at`, `message_count`,
 `transfers` (lista de `ConversationTransferResponse`: id, action, actor_type, user_name, created_at).
+
+A criacao retorna **404** se o cliente nao existir ou pertencer a outra empresa.
 
 Status possiveis: `open` (ativa), `pending_agent` (aguardando humano — handoff),
 `closed` (fechada).

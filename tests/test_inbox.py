@@ -69,6 +69,16 @@ def _seed_conversation(db_session, *, company_id=1, phone="5511999999999", name=
 
 
 class TestInboxList:
+    def test_create_conversation_rejects_customer_from_another_company(self, db_session, owner):
+        foreign_customer = Customer(company_id=99, phone="5511777777777", name="Outro")
+        db_session.add(foreign_customer)
+        db_session.commit()
+
+        for c in _make(db_session, owner):
+            res = c.post("/conversations/", json={"customer_id": foreign_customer.id})
+            assert res.status_code == 404
+
+        assert db_session.query(Conversation).count() == 0
     def test_list_has_customer_last_message_and_count(self, db_session, owner):
         conv = _seed_conversation(db_session)
         customer = conv.customer

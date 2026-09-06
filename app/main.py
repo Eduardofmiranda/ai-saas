@@ -11,6 +11,7 @@ import app.models  # registra todos os models no Base.metadata
 from app.config import get_secret
 from app.database.database import Base, engine, SessionLocal
 from app.services import llm
+from app.services.rate_limit import limiter
 
 from app.routers.auth_router import router as auth_router
 from app.routers.company_router import router as company_router
@@ -76,23 +77,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rate limiting via slowapi (se instalado)
-try:
-    from slowapi import Limiter
-    from slowapi.util import get_remote_address
-    from slowapi.errors import RateLimitExceeded
+# Rate limiting: a mesma instancia e usada pelos decorators das rotas auth.
+from slowapi.errors import RateLimitExceeded
 
-    limiter = Limiter(key_func=get_remote_address)
-    app.state.limiter = limiter
+app.state.limiter = limiter
 
-    @app.exception_handler(RateLimitExceeded)
-    async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
-        return JSONResponse(
-            status_code=429,
-            content={"detail": "Muitas requisicoes. Tente novamente em alguns segundos."},
-        )
-except ImportError:
-    pass
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Muitas requisicoes. Tente novamente em alguns segundos."},
+    )
 
 app.include_router(auth_router)
 app.include_router(company_router)

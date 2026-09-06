@@ -586,6 +586,15 @@ def list_node_types() -> list[dict]:
 async def run_node(ctx, node: dict) -> dict:
     """Executa um no. node: {"id":..., "type":..., "data":{...}}"""
     node_type = node.get("type", "")
+    # Estes nodes continuam registrados para que fluxos legados possam ser
+    # exibidos e corrigidos, mas sua execucao remota e bloqueada ate haver um
+    # modelo seguro (sandbox real para codigo e politica anti-SSRF para HTTP).
+    if node_type in {"code", "http"}:
+        raise NodeError(
+            f"O no '{node_type}' esta desativado por seguranca. "
+            "Use nodes suportados ou reconfigure o workflow.",
+            node.get("id", ""),
+        )
     spec = NODE_TYPES.get(node_type)
     if not spec:
         raise NodeError(f"Tipo de no desconhecido: {node_type}", node.get("id", ""))

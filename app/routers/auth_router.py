@@ -22,6 +22,7 @@ from app.schemas.auth_schema import (
 from app.schemas.user_schema import UserResponse
 from app.services import email_service
 from app.services.deps import get_current_user
+from app.services.rate_limit import limiter
 from app.services.security import (
     create_access_token,
     create_refresh_token,
@@ -33,22 +34,11 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 def _rate_limit_login():
-    """Aplica rate limit no login se slowapi estiver disponivel."""
-    try:
-        from app.main import limiter
-        return limiter.limit("5/minute")
-    except (ImportError, AttributeError):
-        return lambda func: func
+    return limiter.limit("5/minute")
 
 
 def _rate_limit_recovery():
-    """Rate limit do fluxo de recuperacao de senha (anti-spam de email)."""
-    try:
-        from app.main import limiter
-        return limiter.limit("10/minute")
-    except (ImportError, AttributeError):
-        return lambda func: func
-
+    return limiter.limit("10/minute")
 
 def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()

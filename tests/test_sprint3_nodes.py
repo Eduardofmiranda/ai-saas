@@ -16,7 +16,7 @@ class DummyConfig:
 
 class TestCodeNode:
     @pytest.mark.asyncio
-    async def test_code_simple(self, db_session, config):
+    async def test_code_is_blocked_server_side(self, db_session, config):
         node = {
             "id": "n1",
             "type": "code",
@@ -26,11 +26,12 @@ class TestCodeNode:
             db=db_session, company_id=config.company_id, execution_id=1,
             workflow_id=1, data={"message": {"text": "hello world"}}, config=config,
         )
-        result = await run_node(ctx, node)
-        assert result["outputs"]["result"] == 11
+        from app.services.nodes.context import NodeError
+        with pytest.raises(NodeError, match="desativado por seguranca"):
+            await run_node(ctx, node)
 
     @pytest.mark.asyncio
-    async def test_code_error(self, db_session, config):
+    async def test_code_is_blocked_before_execution(self, db_session, config):
         node = {
             "id": "n1",
             "type": "code",
@@ -41,8 +42,21 @@ class TestCodeNode:
             workflow_id=1, data={}, config=config,
         )
         from app.services.nodes.context import NodeError
-        with pytest.raises(NodeError):
+        with pytest.raises(NodeError, match="desativado por seguranca"):
             await run_node(ctx, node)
+
+
+class TestUnsafeNodes:
+    @pytest.mark.asyncio
+    async def test_http_is_blocked_server_side(self, db_session, config):
+        from app.services.nodes.context import NodeError
+
+        ctx = NodeContext(
+            db=db_session, company_id=config.company_id, execution_id=1,
+            workflow_id=1, data={}, config=config,
+        )
+        with pytest.raises(NodeError, match="desativado por seguranca"):
+            await run_node(ctx, {"id": "http-1", "type": "http", "data": {"url": "http://127.0.0.1"}})
 
 
 class TestLoopNode:
