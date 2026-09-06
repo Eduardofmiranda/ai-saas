@@ -16,7 +16,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { api } from "../api";
 import Header from "../components/Header";
-import { connectionIssue, nodeData } from "../workflowGraph";
+import { connectionIssue, nodeData, suggestedPrompt } from "../workflowGraph";
 
 const ICONS = {
   trigger: "▶",
@@ -473,7 +473,10 @@ export default function Editor() {
               ) : (
                 fields.map((f) => (
                   <label key={f.key} className="field">
-                    <span>{f.label}</span>
+                    <span>
+                      {f.label}
+                      {f.required && <small className="field-required">Obrigatorio</small>}
+                    </span>
                     {f.type === "textarea" ? (
                       <textarea
                         value={selectedNode.data?.[f.key] ?? ""}
@@ -507,6 +510,15 @@ export default function Editor() {
                         />
                         {f.help && <small className="field-help">{f.help}</small>}
                       </>
+                    )}
+                    {f.key === "prompt" && !String(selectedNode.data?.prompt || "").trim() && suggestedPrompt(selectedNode.type) && (
+                      <button
+                        className="btn ghost small field-suggestion"
+                        type="button"
+                        onClick={() => updateSelectedConfig("prompt", suggestedPrompt(selectedNode.type))}
+                      >
+                        Usar mensagem recebida
+                      </button>
                     )}
                   </label>
                 ))

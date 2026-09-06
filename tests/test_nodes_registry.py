@@ -100,3 +100,13 @@ class TestNodeRegistry:
         result = await run_node(ctx, node)
         assert result.get("wait_for_message") is True
         assert result.get("outputs", {}).get("waiting") is True
+
+
+def test_ai_nodes_expose_prompt_defaults():
+    types = {item["type"]: item for item in list_node_types()}
+
+    ai_prompt = next(field for field in types["ai"]["fields"] if field["key"] == "prompt")
+    rag_prompt = next(field for field in types["ai_rag"]["fields"] if field["key"] == "prompt")
+
+    assert "{{ data.message.text }}" in ai_prompt["default"]
+    assert rag_prompt["default"] == "{{ data.message.text }}"

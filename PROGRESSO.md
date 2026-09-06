@@ -174,7 +174,38 @@
 - [ ] Variaveis dinamicas no template (`{{1}}`, `{{2}}`)
 - [ ] Verificar status de envio do template (delivered, read, failed)
 
-### 8.6 — Paginacao e Busca
+### 8.6 — Agenda da Secretaria IA
+
+- [ ] Criar módulo de Agenda por empresa para gerenciamento de compromissos e agendamentos
+- [ ] Permitir que a Secretaria IA consulte a agenda da empresa e verifique disponibilidade de datas e horários
+- [ ] Permitir criação de agendamentos pela IA a partir de solicitações recebidas via WhatsApp
+- [ ] Permitir alteração e cancelamento de agendamentos através da IA
+- [ ] Verificar automaticamente conflitos antes de confirmar um agendamento
+- [ ] Quando o horário solicitado estiver ocupado, consultar horários alternativos disponíveis e apresentar opções ao cliente
+- [ ] Registrar no agendamento: cliente, telefone, data, horário, tipo do compromisso, observações e origem da solicitação
+- [ ] Identificar que o agendamento foi originado pelo atendimento via WhatsApp
+- [ ] Criar configuração no painel para vincular o número de WhatsApp utilizado pela Secretaria IA
+- [ ] Enviar automaticamente mensagem de confirmação pelo WhatsApp após criação do agendamento
+- [ ] Permitir configurar mensagem de confirmação de agendamento
+- [ ] Permitir configurar horários disponíveis para agendamento
+- [ ] Permitir configurar duração padrão dos compromissos
+- [ ] Permitir configurar antecedência mínima para novos agendamentos
+- [ ] Permitir configurar intervalos/bloqueios de horários
+- [ ] Permitir visualização dos agendamentos no painel administrativo
+- [ ] Permitir filtros por data, período, cliente e status
+- [ ] Registrar histórico de criação, alteração e cancelamento dos agendamentos
+- [ ] Criar ferramenta `consultar_agenda` para uso pelos agentes de IA
+- [ ] Criar ferramenta `verificar_disponibilidade` para uso pelos agentes de IA
+- [ ] Criar ferramenta `criar_agendamento` para uso pelos agentes de IA
+- [ ] Criar ferramenta `alterar_agendamento` para uso pelos agentes de IA
+- [ ] Criar ferramenta `cancelar_agendamento` para uso pelos agentes de IA
+- [ ] Permitir que a Agenda seja utilizada por diferentes agentes e workflows
+- [ ] Integrar a Agenda ao Workflow Engine como uma ferramenta/nó disponível para automações
+- [ ] Definir fluxo: WhatsApp -> IA -> identificar solicitação -> consultar agenda -> verificar disponibilidade -> criar agendamento -> confirmar via WhatsApp
+- [ ] Garantir que a IA nunca confirme um horário sem validar previamente a disponibilidade
+- [ ] Preparar arquitetura para futuras integrações com calendários externos (Google Calendar, Outlook etc.)
+
+### 8.7 — Paginacao e Busca
 - [ ] Conversations: `skip`/`limit` + busca por nome/status/data
 - [ ] Messages: `skip`/`limit` + busca por conteudo
 - [ ] Customers: `skip`/`limit` + busca por nome/telefone/email
@@ -183,7 +214,7 @@
 - [ ] Executions: `skip`/`limit` + filtro por status/data
 - [ ] Frontend: componentes de paginacao em todas as listas
 
-### 8.7 — Senha e Sessao ✅
+### 8.8 — Senha e Sessao ✅
 - [x] Endpoint `POST /auth/change-password` (senha atual + nova senha)
 - [x] Endpoint `POST /auth/forgot-password` (envia email com link de reset)
 - [x] Endpoint `POST /auth/reset-password` (token + nova senha)

@@ -1,4 +1,12 @@
 /** Regras puras do canvas; o backend continua sendo a autoridade final. */
+const PROMPT_SUGGESTIONS = Object.freeze({
+  ai: "Responda de forma clara e cordial: {{ data.message.text }}",
+  ai_rag: "{{ data.message.text }}",
+});
+
+export function suggestedPrompt(nodeType) {
+  return PROMPT_SUGGESTIONS[nodeType] || "";
+}
 export function nodeData(spec, data = {}) {
   return {
     ...data,

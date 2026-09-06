@@ -45,6 +45,15 @@ class LLMError(Exception):
     pass
 
 
+def provider_status_error_message(status_code: int) -> str:
+    if status_code == 429:
+        return (
+            "Limite temporario do provedor de IA atingido. Aguarde alguns instantes e tente novamente; "
+            "se persistir, confira a cota, credito e chave em Configuracao > IA."
+        )
+    return f"Provedor de IA retornou HTTP {status_code}"
+
+
 def _resolve(provider: str | None, model: str | None, api_key: str | None, base_url: str | None) -> dict:
     defaults = PROVIDER_DEFAULTS.get((provider or "").lower(), {})
     return {
@@ -106,7 +115,7 @@ async def generate_reply(
     except httpx.HTTPStatusError as exc:
         # A resposta externa pode conter dados enviados pelo cliente. Nunca a
         # propague para logs, banco ou API.
-        raise LLMError(f"Provedor de IA retornou HTTP {exc.response.status_code}") from exc
+        raise LLMError(provider_status_error_message(exc.response.status_code)) from exc
     except httpx.HTTPError as exc:
         raise LLMError("Falha de rede ao chamar o provedor de IA") from exc
 

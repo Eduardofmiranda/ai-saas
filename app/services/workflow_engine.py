@@ -295,8 +295,8 @@ async def _run_graph(
         try:
             result = await registry.run_node(ctx, current)
         except NodeError as exc:
-            ctx.log(f"ERRO no no '{current.get('type')}': {exc.message}")
             if on_error == "continue":
+                ctx.log(f"ERRO no no '{current.get('type')}': {exc.message}; fluxo continuou.")
                 result = {"outputs": {"error": exc.message}}
             elif on_error == "fallback_edge":
                 outgoing = build_outgoing_edges(edges, current["id"])
@@ -309,6 +309,7 @@ async def _run_graph(
                 if error_edge:
                     nxt = node_map.get(error_edge.get("target"))
                     if nxt:
+                        ctx.log(f"ERRO no no '{current.get('type')}': {exc.message}; seguindo pela saida de erro.")
                         current = nxt
                         continue
                 raise

@@ -51,6 +51,8 @@ body {
 }
 .field textarea { min-height: 70px; resize: vertical; font-family: inherit; }
 .field-help { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.field-required { display: inline; margin-left: 6px; color: #fca5a5; font-size: 10px; text-transform: uppercase; }
+.field-suggestion { display: block; margin-top: 7px; width: fit-content; }
 .toggle { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .toggle input { width: auto; }
 .toggle span { margin-bottom: 0; }

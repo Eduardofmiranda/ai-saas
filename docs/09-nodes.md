@@ -111,6 +111,8 @@
 - **Saida:** `success`
 - **Dados:** `data.prompt` (pergunta), `data.top_k` (default 5), `data.system_prompt`
 - **Comportamento:** Busca contexto na base de conhecimento via cosine similarity, gera resposta via LLM com RAG
+- **Editor:** novos nodes recebem `{{ data.message.text }}` como prompt; em nodes legados vazios, o botao **Usar mensagem recebida** preenche esse valor.
+- **Limite do provedor:** HTTP 429 indica limite temporario ou cota. O sistema orienta aguardar e, se persistir, verificar cota, credito e chave em **Configuracao > IA**. Nao ha retentativa automatica para evitar aumentar custo ou prolongar o bloqueio.
 
 ### code
 - **Status:** indisponivel para execucao e para novos fluxos. O registro e mantido apenas para que workflows legados possam ser visualizados e corrigidos.

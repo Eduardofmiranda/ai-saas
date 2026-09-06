@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { connectionIssue, nodeData } from "../src/workflowGraph.js";
+import { connectionIssue, nodeData, suggestedPrompt } from "../src/workflowGraph.js";
 
 const trigger = { id: "trigger", data: nodeData({ input_handles: [], output_handles: ["out"] }) };
 const ai = { id: "ai", data: nodeData({ input_handles: ["in"], output_handles: ["out", "error"] }) };
@@ -22,4 +22,9 @@ test("mantem os handles vindos do contrato do backend", () => {
   const data = nodeData({ label: "Condicao", input_handles: ["in"], output_handles: ["true", "false", "error"] });
   assert.deepEqual(data.input_handles, ["in"]);
   assert.deepEqual(data.output_handles, ["true", "false", "error"]);
+});
+test("oferece prompts seguros para IA e RAG", () => {
+  assert.match(suggestedPrompt("ai"), /data\.message\.text/);
+  assert.equal(suggestedPrompt("ai_rag"), "{{ data.message.text }}");
+  assert.equal(suggestedPrompt("log"), "");
 });
