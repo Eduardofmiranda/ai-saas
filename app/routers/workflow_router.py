@@ -60,6 +60,7 @@ def create_workflow(
 ):
     wf = Workflow(
         company_id=current_user.company_id,
+        user_id=current_user.id,
         name=data.name,
         description=data.description or "",
         data=data.data or {"nodes": [], "edges": []},
@@ -148,6 +149,7 @@ def duplicate_workflow(
     wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
     new_wf = Workflow(
         company_id=current_user.company_id,
+        user_id=current_user.id,
         name=f"{wf.name} (Copia)",
         description=wf.description or "",
         data=wf.data or {"nodes": [], "edges": []},

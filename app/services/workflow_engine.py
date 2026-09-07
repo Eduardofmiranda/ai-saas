@@ -120,6 +120,7 @@ async def execute_workflow(
         data={"message": payload.get("message", {}), "customer": payload.get("customer"), **payload},
         config=config,
         dry_run=dry_run,
+        user_id=workflow.user_id,
     )
 
     node_map = {n.get("id"): n for n in nodes}
@@ -231,6 +232,7 @@ async def resume_workflow(db: Session, *, pending: PendingFlow, payload: dict, c
         workflow_id=workflow.id,
         data=merged,
         config=config,
+        user_id=workflow.user_id,
     )
 
     try:

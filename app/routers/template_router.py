@@ -48,6 +48,7 @@ def use_template(
 
     workflow = Workflow(
         company_id=current_user.company_id,
+        user_id=current_user.id,
         name=template["name"],
         description=template["description"],
         data=prepare_template_data(template["data"]),

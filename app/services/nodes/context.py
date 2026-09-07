@@ -43,6 +43,7 @@ class NodeContext:
         data: dict,
         config: CompanyConfig,
         dry_run: bool = False,
+        user_id: int | None = None,
     ):
         self.db = db
         self.company_id = company_id
@@ -52,6 +53,7 @@ class NodeContext:
         self.data = data
         self.dry_run = dry_run
         self.config = config
+        self.user_id = user_id
         # log da execucao
         self.logs: list[str] = []
 
@@ -109,7 +111,7 @@ class NodeContext:
         system_prompt: str | None = None,
     ) -> str:
         """Chama o LLM usando a config da empresa (provedor/modelo/chave)."""
-        resolved_ai = resolve_ai_config(self.config, self.db)
+        resolved_ai = resolve_ai_config(self.config, self.db, user_id=self.user_id)
         provider = resolved_ai["provider"]
         model = resolved_ai["model"]
         api_key = resolved_ai["api_key"]
