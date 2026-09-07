@@ -160,11 +160,11 @@ export default function AI() {
           <div className="ai-grid">
             <label className="field">
               <span>Provedor de IA</span>
-              <input value={label(form.ai_provider)} disabled readOnly style={{ background: "#f3f4f6" }} />
+              <input value={label(form.ai_provider)} disabled readOnly />
             </label>
             <label className="field">
               <span>Modelo</span>
-              <input value={form.ai_model} disabled readOnly style={{ background: "#f3f4f6" }} />
+              <input value={form.ai_model} disabled readOnly />
             </label>
           </div>
         </div>

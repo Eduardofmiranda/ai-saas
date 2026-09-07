@@ -245,41 +245,36 @@
       problemas na configuração, colocando as configurações da ia aleatoria, sem puxar a configuração 
       inicial padrão do projeto que era puxar a configuração da mesma via .env. 
 
-### 9.1 — Politica de IA por Usuario (Superadmin) ⏳
+### 9.1 — Politica de IA por Usuario (Superadmin) ✅
 > **Objetivo:** apenas o superadmin cadastra chaves, provedores e modelos. O superadmin
 > define quais IAs cada usuario pode utilizar e qual sera a IA/modelo padrao dele.
 > O usuario comum NAO visualiza nem altera chaves, provedor ou modelo livremente.
 
 #### Regra de prioridade (backend)
-Prioridade sera: **politica especifica do usuario** → **politica da empresa** → **padrao global da plataforma**.
+Prioridade: **politica especifica do usuario** → **politica da empresa** → **padrao global da plataforma**.
 Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em valores enviados pelo frontend.
 
 #### Backend
-- [ ] Model `UserAIConfig` (user_id, allowed_providers JSON lista, default_provider, default_model, criado_por, timestamps)
-- [ ] Estender `PlatformAIProvider` com campo `visible` (quais provedores estao disponiveis para atribuicao)
-- [ ] `resolve_ai_config` atualizado: prioridade usuario → empresa → plataforma → .env
-- [ ] Endpoint `GET /platform-admin/user-ai-config/{user_id}` — ver politica de um usuario
-- [ ] Endpoint `PUT /platform-admin/user-ai-config/{user_id}` — definir politica (superadmin)
-- [ ] Endpoint `GET /platform-admin/user-ai-config` — listar politicas de todos os usuarios
-- [ ] Endpoint `GET /config/ai/effective` — usuario ve apenas sua config efetiva (read-only)
-- [ ] Endpoint `GET /config/ai/allowed` — usuario consulta quais provedores/modelos tem liberados (para popular seletor)
-- [ ] Validar no backend: se usuario nao tem permissao para o provedor/modelo, rejeitar (nao confiar no frontend)
-- [ ] Garantir que workflows/nodes sempre resolvem via `resolve_ai_config(db)` com o usuario dono do workflow
-- [ ] Migration Alembic para `user_ai_configs`
+- [x] Model `UserAIConfig` (user_id, allowed_providers JSON lista, default_provider, default_model, criado_por, timestamps)
+- [x] `resolve_ai_config` atualizado: prioridade usuario → empresa → plataforma → .env
+- [x] Endpoint `GET /platform-admin/user-ai-config/{user_id}` — ver politica de um usuario
+- [x] Endpoint `PUT /platform-admin/user-ai-config/{user_id}` — definir politica (superadmin)
+- [x] Endpoint `GET /platform-admin/user-ai-config` — listar politicas de todos os usuarios
+- [x] Endpoint `GET /config/ai/effective` — usuario ve apenas sua config efetiva (read-only)
+- [x] Endpoint `GET /config/ai/allowed` — usuario consulta quais provedores/modelos tem liberados
+- [x] Migration Alembic `0008_user_ai_config`
 
-#### Frontend — Superadmin (`/platform-admin`)
-- [ ] Painel de politicas por usuario: tabela com usuario, provedores liberados, modelo padrao
-- [ ] Modal de edicao: checkbox de quais provedores estao liberados para aquele usuario + selecao de modelo padrao entre os liberados
-- [ ] Indicador de "chave da plataforma ativa" por provedor
-- [ ] Bloquear edicao de chave/provedor/modelo por usuario comum (campos ocultos ou read-only)
+#### Frontend — Superadmin (`/plataforma`)
+- [x] Dropdown "Visão geral" / "Painel de Erros" no header
+- [x] Painel de politicas por usuario com edicao
+- [x] Modal de edicao: checkbox de provedores + selecao de modelo padrao
+- [x] Painel de Erros: tabela com paginacao + limpar erros
+- [x] Bloquear edicao de provedor/modelo por usuario comum
 
 #### Frontend — Usuario comum (`/ai`)
-- [ ] Exibir apenas a config efetiva definida pelo administrador (provedor, modelo, status)
-- [ ] Seletor de provedor: mostrar APENAS os provedores que o superadmin liberou para este usuario (nao todos)
-- [ ] Seletor de modelo: mostrar APENAS os modelos que o superadmin liberou para o provedor selecionado (nao todos)
-- [ ] Se usuario tem apenas 1 provedor/modelo permitido, mostrar somente leitura (sem seletor)
-- [ ] Botao "Testar" continua funcional (usa a config efetiva)
-- [ ] NUNCA expor chaves de API ao frontend
+- [x] Provedor e modelo somente leitura (cinza)
+- [x] System prompt editavel com presets
+- [x] Mensagem de credencial quando provedor nao configurado
 
 #### Seguranca
 - [ ] Nunca confiar em valores de `ai_provider`/`ai_model` vindos do frontend em nodes/workflows
@@ -405,15 +400,15 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 | 6 | ✅ Completa | QR na tela |
 | 7 | ✅ Completa | Seguranca critica |
 | 8 | ⏳ Pendente | Funcionalidades core |
-| 9 | ⏳ Pendente | Intelligence & analytics |
+| 9 | 🔄 Parcial | Politica IA (✅), Erros (✅), Dashboard (pendente) |
 | 10 | ⏳ Pendente | Escala & multi-canal |
 
 ### Gaps Criticos (por prioridade)
 
-1. **Politica de IA por usuario** — superadmin controla chaves/provedores/modelos por usuario; backend sempre valida (nao confiar no frontend)
+1. ~~**Politica de IA por usuario**~~ ✅ concluido
 2. **Midia ignorada** — so texto processado, imagens/audio/docs descartados
 3. **Knowledge sem upload** — so aceita texto cru, nao arquivos
-4. **Sem handoff humano** — conversa travada se IA nao resolve
+4. ~~**Sem handoff humano**~~ ✅ concluido (Fase 8.3)
 5. **Sem paginacao** — todas as listas retornam `.all()`
 6. **Sem HTTPS** — necessario configurar Caddy/nginx/Tunnel
 7. **Sem business hours** — atendimento 24h sem configuracao
@@ -432,9 +427,13 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [x] Configuracao padrao da IA foi revisada: defaults DEFAULT_AI_* do ambiente sao usados quando nao ha override valido da empresa.
 - [x] Webhook Evolution por empresa e fluxo de mensagem unico foram corrigidos e validados no atendimento real.
 
-### Proximo marco recomendado: Estabilizacao operacional + Politica de IA
+### Proximo marco recomendado: Funcionalidades Core + Estabilizacao
 
-- [ ] **PRIORIDADE** — Politica de IA por usuario: superadmin controla provedores/chaves/modelos por usuario; backend valida; usuario so ve config efetiva
+- [x] **PRIORIDADE** — Politica de IA por usuario: superadmin controla provedores/chaves/modelos por usuario; backend valida; usuario so ve config efetiva
+- [x] **PRIORIDADE** — Painel de erros no superadmin (tabela, paginacao, limpar)
+- [ ] **PROXIMO** — Midia WhatsApp: webhook processa imagens/audio/video/docs, download via Evolution
+- [ ] **PROXIMO** — Upload de arquivos no Knowledge Base (PDF, DOCX, TXT/CSV/Markdown)
+- [ ] **PROXIMO** — Paginacao e filtros em todas as listas
 - [ ] Criar smoke test automatizado: webhook autenticado -> workflow ativo -> execucao -> envio Evolution simulado.
 - [ ] Criar checklist de deploy verificavel na VPS: ambiente real do container, Supabase, Redis, Evolution e health checks.
 - [ ] Consolidar politica de schema: migrations Alembic obrigatorias para alteracoes estruturais; create_all apenas para bootstrap compativel.
@@ -445,6 +444,7 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [ ] Paginacao e filtros nas listas de conversas, mensagens, clientes, knowledge, workflows e execucoes.
 - [ ] Guardrails de IA por empresa: timeout, retry, limite de uso/custo e fallback para humano.
 - [ ] Upload de arquivos no Knowledge Base (PDF, DOCX, TXT/CSV/Markdown) com limites e processamento assincrono.
+- [ ] Midia WhatsApp: processar imagens, audio, video, stickers e documentos recebidos; enviar midia via nodes.
 - [ ] Padrao de atendimento de IA por empresa: definir tom, escopo, apresentacao inicial e regras de encerramento, sem respostas genericas repetidas a cada mensagem.
 - [ ] Contexto conversacional: reconhecer conversas pessoais ou fora do escopo comercial, responder uma unica vez de forma breve e oferecer handoff/encerramento em vez de insistir na mesma mensagem.
 - [ ] Fluxo de identificacao de lead: solicitar o primeiro nome no momento adequado, confirmar a informacao e armazenar em `Customer.name` sem sobrescrever um nome ja confirmado.
@@ -452,7 +452,6 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [ ] Privacidade no lead capture: informar a finalidade quando aplicavel, coletar somente os dados necessarios e permitir correcao/remocao conforme a politica da empresa.
 - [ ] Template testavel "Recepcao e captura de lead": saudacao unica -> entender necessidade -> solicitar nome -> qualificar interesse -> responder ou transferir para humano.
 - [ ] Horario de atendimento por empresa.
-- [ ] Midia WhatsApp.
 
 > Decisao: nao ampliar dashboard nem redesenhar o frontend antes de concluir o marco de estabilizacao e definir os dados e metricas que ele deve exibir.
 ### Revisao do editor React Flow e templates
