@@ -67,8 +67,12 @@ def _transfer_action(old: str, new: str) -> str | None:
     """Mapeia uma transicao de status para o registro de transferencia."""
     transitions = {
         ("pending_agent", "open"): "assumed",
+        ("pending_agent", "agent"): "assumed",
         ("pending_agent", "closed"): "closed",
         ("open", "closed"): "closed",
+        ("open", "agent"): "assumed",
+        ("agent", "open"): "released",
+        ("agent", "closed"): "closed",
         ("closed", "open"): "reopened",
     }
     return transitions.get((old, new))
@@ -211,3 +215,33 @@ def delete_conversation(
     db.delete(conversation)
     db.commit()
     return {"message": "Conversation deleted successfully"}
+
+
+@router.post("/{conversation_id}/assume", response_model=ConversationResponse)
+def assume_conversation(
+    conversation_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Assume atendimento manual: desliga IA e marca como 'agent'."""
+    conversation = _get_conversation(db, conversation_id, current_user.company_id)
+
+    if conversation.status == "agent":
+        raise HTTPException(status_code=400, detail="Conversa ja esta em atendimento humano")
+
+    old_status = conversation.status
+    conversation.status = "agent"
+
+    db.add(
+        ConversationTransfer(
+            conversation_id=conversation.id,
+            company_id=conversation.company_id,
+            actor_type="user",
+            user_id=current_user.id,
+            user_name=current_user.name or current_user.email or "Atendente",
+            action="assumed",
+        )
+    )
+    db.commit()
+    db.refresh(conversation)
+    return _to_response(conversation)

@@ -43,6 +43,12 @@ class Conversation(Base):
         default="open",
     )
 
+    department_id = Column(
+        Integer,
+        ForeignKey("departments.id"),
+        nullable=True,
+    )
+
     created_at = Column(
         DateTime(timezone=True),
         default=_utcnow,
@@ -57,6 +63,8 @@ class Conversation(Base):
     company = relationship("Company")
 
     customer = relationship("Customer")
+
+    department = relationship("Department")
 
     messages = relationship("Message", back_populates="conversation", order_by="Message.id")
 

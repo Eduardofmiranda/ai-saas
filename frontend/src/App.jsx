@@ -10,6 +10,7 @@ import Admin from "./pages/Admin";
 import WhatsApp from "./pages/WhatsApp";
 import Conversations from "./pages/Conversations";
 import Leads from "./pages/Leads";
+import Departments from "./pages/Departments";
 import Account from "./pages/Account";
 import ResetPassword from "./pages/ResetPassword";
 import PlatformAdmin from "./pages/PlatformAdmin";
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/fluxos" element={<Protected><Home /></Protected>} />
           <Route path="/conversas" element={<Protected><Conversations /></Protected>} />
           <Route path="/leads" element={<Protected><Leads /></Protected>} />
+          <Route path="/setores" element={<Protected><Departments /></Protected>} />
           <Route path="/conta" element={<Protected><Account /></Protected>} />
           <Route path="/editor/:id" element={<Protected><Editor /></Protected>} />
           <Route path="/ai" element={<Protected><AI /></Protected>} />

@@ -774,3 +774,11 @@ body {
   display: flex; align-items: center; gap: 6px;
   font-size: 12px; color: var(--muted);
 }
+
+/* --- Agent status --- */
+.inbox-status-dot-agent { background: #8b5cf6; }
+.inbox-status-pill-agent { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+
+/* --- Thread header actions --- */
+.inbox-thread-actions { display: flex; gap: 6px; align-items: center; }
+.inbox-thread-actions .btn { white-space: nowrap; }

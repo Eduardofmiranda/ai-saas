@@ -403,6 +403,76 @@ async def _run_transfer_to_agent(ctx, node):
     }
 
 
+async def _run_transfer_to_department(ctx, node):
+    """Transfere a conversa para um setor especifico."""
+    cfg = node.get("data", {})
+    department_id = cfg.get("department_id")
+    if not department_id:
+        raise NodeError("department_id e obrigatorio", node.get("id", ""))
+
+    conv_id = ctx.data.get("conversation_id") or (ctx.data.get("conversation") or {}).get("id")
+    if conv_id is not None:
+        try:
+            conv_id = int(conv_id)
+        except (TypeError, ValueError):
+            conv_id = None
+
+    if ctx.dry_run:
+        ctx.log("Teste: transferencia para setor foi simulada; nenhuma conversa foi alterada.")
+        return {
+            "outputs": {"transferred": False, "conversation_id": conv_id or "", "simulated": True},
+            "stop": True,
+        }
+
+    from app.models.department import Department
+
+    dept = (
+        ctx.db.query(Department)
+        .filter(
+            Department.id == int(department_id),
+            Department.company_id == ctx.company_id,
+        )
+        .first()
+    )
+    if not dept:
+        raise NodeError(f"Setor {department_id} nao encontrado", node.get("id", ""))
+
+    transferred = False
+    if not conv_id:
+        ctx.log("nenhuma conversation_id no contexto para transferir")
+    else:
+        conv = (
+            ctx.db.query(Conversation)
+            .filter(
+                Conversation.id == conv_id,
+                Conversation.company_id == ctx.company_id,
+            )
+            .first()
+        )
+        if not conv:
+            ctx.log(f"conversa {conv_id} nao encontrada para transferencia")
+        else:
+            conv.department_id = dept.id
+            if conv.status != "pending_agent":
+                conv.status = "pending_agent"
+            ctx.db.add(
+                ConversationTransfer(
+                    conversation_id=conv.id,
+                    company_id=conv.company_id,
+                    actor_type="workflow",
+                    action="transfer_department",
+                )
+            )
+            ctx.db.commit()
+            ctx.log(f"conversa {conv.id} transferida para setor '{dept.name}' (pending_agent)")
+            transferred = True
+
+    return {
+        "outputs": {"transferred": transferred, "conversation_id": conv_id or "", "department": dept.name if dept else ""},
+        "stop": transferred,
+    }
+
+
 # ---------------------------------------------------------------
 # Definicoes dos tipos (metadata para o editor + run)
 # ---------------------------------------------------------------
@@ -474,6 +544,13 @@ NODE_TYPES: dict[str, dict] = {
     "transfer_to_agent": {
         "type": "transfer_to_agent",
         **_make_node("Transferir para humano", "whatsapp", "Marca a conversa como aguardando atendimento humano (handoff).", [], _run_transfer_to_agent),
+    },
+    "transfer_to_department": {
+        "type": "transfer_to_department",
+        **_make_node("Transferir para setor", "whatsapp", "Encaminha a conversa para um setor especifico.", [], _run_transfer_to_department,
+            [{"key": "department_id", "label": "Setor", "type": "select_department",
+              "requires_explicit_value": True,
+              "help": "Selecione o setor para onde a conversa sera encaminhada."}]),
     },
     "ai": {
         "type": "ai",

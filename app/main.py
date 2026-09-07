@@ -27,6 +27,7 @@ from app.routers.knowledge_router import router as knowledge_router
 from app.routers.template_router import router as template_router
 from app.routers.users_router import router as users_router
 from app.routers.platform_admin_router import router as platform_admin_router
+from app.routers.department_router import router as department_router
 
 
 logger = logging.getLogger("ai_saas")
@@ -106,6 +107,7 @@ app.include_router(knowledge_router)
 app.include_router(template_router)
 app.include_router(users_router)
 app.include_router(platform_admin_router)
+app.include_router(department_router)
 
 
 @app.get("/")

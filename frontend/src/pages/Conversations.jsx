@@ -120,9 +120,18 @@ export default function Conversations() {
 
   async function toggleStatus() {
     if (!selectedConv) return;
-    const next = selectedConv.status === "pending_agent" ? "open" : selectedConv.status === "open" ? "closed" : "open";
+    const next = selectedConv.status === "pending_agent" ? "open" : selectedConv.status === "open" ? "closed" : selectedConv.status === "agent" ? "open" : "open";
     try {
       await api.updateConversation(selectedConv.id, { status: next });
+      const res = await api.getConversations();
+      setConversations(res.items || []);
+    } catch (e) { setError(e.message); }
+  }
+
+  async function assumeConversation() {
+    if (!selectedConv) return;
+    try {
+      await api.assumeConversation(selectedConv.id);
       const res = await api.getConversations();
       setConversations(res.items || []);
     } catch (e) { setError(e.message); }
@@ -132,6 +141,7 @@ export default function Conversations() {
   const filtered = conversations.filter((c) => {
     if (tab === "open" && c.status !== "open") return false;
     if (tab === "pending" && c.status !== "pending_agent") return false;
+    if (tab === "agent" && c.status !== "agent") return false;
     if (tab === "closed" && c.status !== "closed") return false;
     if (ql) {
       const hay = `${c.customer?.name || ""} ${c.customer?.phone || ""}`.toLowerCase();
@@ -144,6 +154,7 @@ export default function Conversations() {
     all: conversations.length,
     open: conversations.filter((c) => c.status === "open").length,
     pending: conversations.filter((c) => c.status === "pending_agent").length,
+    agent: conversations.filter((c) => c.status === "agent").length,
     closed: conversations.filter((c) => c.status === "closed").length,
   };
 
@@ -162,7 +173,7 @@ export default function Conversations() {
                 onChange={(e) => setQ(e.target.value)}
               />
               <div className="inbox-filters">
-                {[["all", "Todas"], ["open", "Abertas"], ["pending", "Aguardando"], ["closed", "Fechadas"]].map(([key, label]) => (
+                {[["all", "Todas"], ["open", "Abertas"], ["pending", "Aguardando"], ["agent", "Atendendo"], ["closed", "Fechadas"]].map(([key, label]) => (
                   <button
                     key={key}
                     className={`inbox-filter ${tab === key ? "active" : ""}`}
@@ -218,9 +229,20 @@ export default function Conversations() {
                       <span className="inbox-thread-phone">{formatPhone(selectedConv.customer?.phone)}</span>
                     </div>
                   </div>
-                  <button className="btn ghost small" onClick={toggleStatus}>
-                    {selectedConv.status === "pending_agent" ? "Assumir" : selectedConv.status === "open" ? "Fechar" : "Reabrir"}
-                  </button>
+                  <div className="inbox-thread-actions">
+                    {selectedConv.status === "pending_agent" && (
+                      <button className="btn primary small" onClick={assumeConversation}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Assumir
+                      </button>
+                    )}
+                    {selectedConv.status === "agent" && (
+                      <button className="btn ghost small" onClick={toggleStatus}>Liberar</button>
+                    )}
+                    <button className="btn ghost small" onClick={toggleStatus}>
+                      {selectedConv.status === "closed" ? "Reabrir" : "Fechar"}
+                    </button>
+                  </div>
                 </header>
 
                 <div className="inbox-msgs">
@@ -294,7 +316,7 @@ export default function Conversations() {
                   <div className="inbox-ctx-row">
                     <span className="inbox-ctx-label">Status</span>
                     <span className={`inbox-status-pill inbox-status-pill-${selectedConv.status}`}>
-                      {selectedConv.status === "open" ? "Aberta" : selectedConv.status === "pending_agent" ? "Aguardando" : "Fechada"}
+                      {selectedConv.status === "open" ? "Aberta" : selectedConv.status === "pending_agent" ? "Aguardando" : selectedConv.status === "agent" ? "Atendendo" : "Fechada"}
                     </span>
                   </div>
                   <div className="inbox-ctx-row"><span className="inbox-ctx-label">Mensagens</span><span className="inbox-ctx-value">{selectedConv.message_count}</span></div>
@@ -305,7 +327,7 @@ export default function Conversations() {
                     <div className="inbox-ctx-head">Histórico</div>
                     {[...(selectedConv.transfers || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map((t) => (
                       <div key={t.id} className="inbox-ctx-row">
-                        <span className="inbox-ctx-value" style={{ fontSize: 12 }}>{t.user_name || "Sistema"} {t.action === "transfer_requested" ? "solicitou humano" : t.action === "assumed" ? "assumiu" : t.action}</span>
+                        <span className="inbox-ctx-value" style={{ fontSize: 12 }}>{t.user_name || "Sistema"} {t.action === "transfer_requested" ? "solicitou humano" : t.action === "assumed" ? "assumiu" : t.action === "transfer_department" ? "encaminhou para setor" : t.action === "released" ? "liberou" : t.action}</span>
                         <span className="inbox-ctx-time">{timeHM(t.created_at)}</span>
                       </div>
                     ))}

@@ -138,6 +138,8 @@ export const api = {
   getConversationMessages: (id) => request("GET", `/messages/conversation/${id}`),
   replyToConversation: (conversationId, content) =>
     request("POST", `/messages/conversation/${conversationId}/reply`, { content }),
+  assumeConversation: (conversationId) =>
+    request("POST", `/conversations/${conversationId}/assume`),
   // Leads / Clientes
   getCustomers: (params = {}) => {
     const qs = new URLSearchParams();
@@ -145,4 +147,9 @@ export const api = {
     if (params.offset) qs.set("offset", params.offset);
     return request("GET", `/customers/?${qs.toString()}`);
   },
+  // Setores
+  getDepartments: () => request("GET", "/departments/"),
+  createDepartment: (body) => request("POST", "/departments/", body),
+  updateDepartment: (id, body) => request("PATCH", `/departments/${id}`, body),
+  deleteDepartment: (id) => request("DELETE", `/departments/${id}`),
 };

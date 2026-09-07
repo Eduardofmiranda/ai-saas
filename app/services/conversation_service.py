@@ -54,13 +54,13 @@ async def handle_incoming_message(
         customer.name = push_name
         db.flush()
 
-    # 3) Encontra ou cria a conversa ativa (open ou aguardando humano)
+    # 3) Encontra ou cria a conversa ativa (open, agent ou aguardando humano)
     conversation = (
         db.query(Conversation)
         .filter(
             Conversation.company_id == company_id,
             Conversation.customer_id == customer.id,
-            Conversation.status.in_(["open", "pending_agent"]),
+            Conversation.status.in_(["open", "pending_agent", "agent"]),
         )
         .order_by(Conversation.id.desc())
         .first()
@@ -85,9 +85,9 @@ async def handle_incoming_message(
     db.commit()
 
     # 5) Resolve configuracao da empresa (IA + Evolution) com fallback global
-    # O handoff pertence ao atendente humano: persiste a mensagem, cancela
+    # Handoff humano (pending_agent ou agent): persiste a mensagem, cancela
     # qualquer espera automatica e nao gera nem retoma respostas da IA.
-    if conversation.status == "pending_agent":
+    if conversation.status in ("pending_agent", "agent"):
         db.query(PendingFlow).filter(
             PendingFlow.company_id == company_id,
             PendingFlow.phone == phone,
@@ -205,13 +205,13 @@ async def handle_incoming_workflow(
         customer.name = push_name
         db.flush()
 
-    # 3) Conversa ativa (open ou aguardando humano)
+    # 3) Conversa ativa (open, agent ou aguardando humano)
     conversation = (
         db.query(Conversation)
         .filter(
             Conversation.company_id == company_id,
             Conversation.customer_id == customer.id,
-            Conversation.status.in_(["open", "pending_agent"]),
+            Conversation.status.in_(["open", "pending_agent", "agent"]),
         )
         .order_by(Conversation.id.desc())
         .first()
@@ -229,13 +229,13 @@ async def handle_incoming_workflow(
 
     # O handoff pertence ao atendente humano: persiste a mensagem, cancela
     # qualquer espera automatica e nao gera nem retoma respostas da IA.
-    if conversation.status == "pending_agent":
+    if conversation.status in ("pending_agent", "agent"):
         db.query(PendingFlow).filter(
             PendingFlow.company_id == company_id,
             PendingFlow.phone == phone,
         ).delete(synchronize_session=False)
         db.commit()
-        return {"status": "pending_agent", "conversation_id": conversation.id}
+        return {"status": conversation.status, "conversation_id": conversation.id}
 
     config = get_or_create_config(db, company_id)
 
