@@ -255,27 +255,29 @@ Prioridade sera: **politica especifica do usuario** → **politica da empresa** 
 Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em valores enviados pelo frontend.
 
 #### Backend
-- [ ] Model `UserAIConfig` (user_id, allowed_providers JSON, default_provider, default_model, criado_por, timestamps)
+- [ ] Model `UserAIConfig` (user_id, allowed_providers JSON lista, default_provider, default_model, criado_por, timestamps)
 - [ ] Estender `PlatformAIProvider` com campo `visible` (quais provedores estao disponiveis para atribuicao)
 - [ ] `resolve_ai_config` atualizado: prioridade usuario → empresa → plataforma → .env
 - [ ] Endpoint `GET /platform-admin/user-ai-config/{user_id}` — ver politica de um usuario
 - [ ] Endpoint `PUT /platform-admin/user-ai-config/{user_id}` — definir politica (superadmin)
 - [ ] Endpoint `GET /platform-admin/user-ai-config` — listar politicas de todos os usuarios
 - [ ] Endpoint `GET /config/ai/effective` — usuario ve apenas sua config efetiva (read-only)
+- [ ] Endpoint `GET /config/ai/allowed` — usuario consulta quais provedores/modelos tem liberados (para popular seletor)
 - [ ] Validar no backend: se usuario nao tem permissao para o provedor/modelo, rejeitar (nao confiar no frontend)
 - [ ] Garantir que workflows/nodes sempre resolvem via `resolve_ai_config(db)` com o usuario dono do workflow
 - [ ] Migration Alembic para `user_ai_configs`
 
 #### Frontend — Superadmin (`/platform-admin`)
-- [ ] Painel de politicas por usuario: tabela com usuario, provedores permitidos, modelo padrao
-- [ ] Modal de edicao: toggle de provedores permitidos + selecao de modelo padrao
+- [ ] Painel de politicas por usuario: tabela com usuario, provedores liberados, modelo padrao
+- [ ] Modal de edicao: checkbox de quais provedores estao liberados para aquele usuario + selecao de modelo padrao entre os liberados
 - [ ] Indicador de "chave da plataforma ativa" por provedor
 - [ ] Bloquear edicao de chave/provedor/modelo por usuario comum (campos ocultos ou read-only)
 
 #### Frontend — Usuario comum (`/ai`)
 - [ ] Exibir apenas a config efetiva definida pelo administrador (provedor, modelo, status)
-- [ ] Se usuario tem multiplos provedores permitidos, mostrar seletor limitado as opcoes autorizadas
-- [ ] Se usuario tem apenas 1 provedor permitido, mostrar somente leitura (sem seletor)
+- [ ] Seletor de provedor: mostrar APENAS os provedores que o superadmin liberou para este usuario (nao todos)
+- [ ] Seletor de modelo: mostrar APENAS os modelos que o superadmin liberou para o provedor selecionado (nao todos)
+- [ ] Se usuario tem apenas 1 provedor/modelo permitido, mostrar somente leitura (sem seletor)
 - [ ] Botao "Testar" continua funcional (usa a config efetiva)
 - [ ] NUNCA expor chaves de API ao frontend
 
