@@ -35,6 +35,12 @@ export default function PlatformAdmin() {
   const [userConfigs, setUserConfigs] = useState([]);
   const [editingUser, setEditingUser] = useState(null);
   const [userForm, setUserForm] = useState({ allowed_providers: [], default_provider: "", default_model: "" });
+  // Painel de erros
+  const [errors, setErrors] = useState([]);
+  const [errorsTotal, setErrorsTotal] = useState(0);
+  const [errorsLoading, setErrorsLoading] = useState(false);
+  const [errorsPage, setErrorsPage] = useState(0);
+  const ERRORS_PAGE = 20;
 
   async function load() {
     setError("");
@@ -116,6 +122,20 @@ export default function PlatformAdmin() {
 
   function getUserConfig(user) {
     return userConfigs.find((c) => c.user_id === user.id);
+  }
+
+  async function loadErrors(page = 0) {
+    setErrorsLoading(true);
+    try {
+      const res = await api.getPlatformErrors({ limit: ERRORS_PAGE, offset: page * ERRORS_PAGE });
+      setErrors(res.items);
+      setErrorsTotal(res.total);
+      setErrorsPage(page);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setErrorsLoading(false);
+    }
   }
 
   return <div className="layout">
@@ -206,6 +226,48 @@ export default function PlatformAdmin() {
       </section>
       <section className="ai-config"><h3>Usuários de todas as empresas</h3><p className="muted">Esta lista mostra contas cadastradas; ela não indica sessão ativa, pois o sistema ainda não possui rastreamento confiável de sessões.</p>
         <div className="platform-user-list">{users.map((user) => <div key={user.id} className="platform-user-row"><div><strong>{user.name}</strong><span>{user.email}</span></div><div><strong>{user.company_name}</strong><span>{user.role}{user.is_platform_admin ? " · operador da plataforma" : ""}</span></div></div>)}</div>
+      </section>
+      <section className="ai-config">
+        <h3>Painel de Erros</h3>
+        <p className="muted">Execuções que falharam. Mostra o erro, workflow, empresa e data/hora.</p>
+        <div style={{ marginBottom: 12 }}>
+          <button className="btn ghost" onClick={() => loadErrors(0)} disabled={errorsLoading}>
+            {errorsLoading ? "Carregando..." : errors.length > 0 ? "Atualizar" : "Carregar erros"}
+          </button>
+        </div>
+        {errors.length > 0 && <>
+          <p className="muted" style={{ marginBottom: 8 }}>{errorsTotal} erro{errorsTotal !== 1 ? "s" : ""} no total</p>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "2px solid #e5e7eb", textAlign: "left" }}>
+                  <th style={{ padding: "8px 6px" }}>ID</th>
+                  <th style={{ padding: "8px 6px" }}>Empresa</th>
+                  <th style={{ padding: "8px 6px" }}>Workflow</th>
+                  <th style={{ padding: "8px 6px" }}>Erro</th>
+                  <th style={{ padding: "8px 6px" }}>Quando</th>
+                </tr>
+              </thead>
+              <tbody>
+                {errors.map((e) => (
+                  <tr key={e.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                    <td style={{ padding: "6px", fontFamily: "monospace" }}>#{e.id}</td>
+                    <td style={{ padding: "6px" }}>{e.company_name}</td>
+                    <td style={{ padding: "6px" }}>{e.workflow_name}</td>
+                    <td style={{ padding: "6px", maxWidth: 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={e.error}>{e.error}</td>
+                    <td style={{ padding: "6px", whiteSpace: "nowrap" }}>{e.created_at ? new Date(e.created_at).toLocaleString("pt-BR") : "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
+            <button className="btn ghost" disabled={errorsPage === 0 || errorsLoading} onClick={() => loadErrors(errorsPage - 1)}>Anterior</button>
+            <span className="muted">Página {errorsPage + 1} de {Math.ceil(errorsTotal / ERRORS_PAGE)}</span>
+            <button className="btn ghost" disabled={(errorsPage + 1) * ERRORS_PAGE >= errorsTotal || errorsLoading} onClick={() => loadErrors(errorsPage + 1)}>Próxima</button>
+          </div>
+        </>}
+        {errors.length === 0 && !errorsLoading && <p className="muted">Nenhum erro registrado. Clique em "Carregar erros" para buscar.</p>}
       </section>
     </main>
   </div>;

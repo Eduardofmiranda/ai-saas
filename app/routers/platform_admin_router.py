@@ -68,6 +68,49 @@ def overview(
     }
 
 
+@router.get("/errors")
+def list_errors(
+    _: User = Depends(get_current_platform_admin),
+    db: Session = Depends(get_db),
+    limit: int = 50,
+    offset: int = 0,
+    company_id: int | None = None,
+    workflow_id: int | None = None,
+):
+    """Lista execuções com erro (painel de erros do superadmin)."""
+    q = (
+        db.query(Execution, Workflow.name.label("workflow_name"), Company.name.label("company_name"))
+        .join(Workflow, Workflow.id == Execution.workflow_id)
+        .join(Company, Company.id == Execution.company_id)
+        .filter(Execution.status == "error")
+    )
+    if company_id is not None:
+        q = q.filter(Execution.company_id == company_id)
+    if workflow_id is not None:
+        q = q.filter(Execution.workflow_id == workflow_id)
+    total = q.count()
+    rows = q.order_by(Execution.created_at.desc()).offset(offset).limit(limit).all()
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "items": [
+            {
+                "id": ex.id,
+                "workflow_id": ex.workflow_id,
+                "workflow_name": wf_name,
+                "company_id": ex.company_id,
+                "company_name": co_name,
+                "error": ex.error,
+                "started_at": ex.started_at.isoformat() if ex.started_at else None,
+                "finished_at": ex.finished_at.isoformat() if ex.finished_at else None,
+                "created_at": ex.created_at.isoformat() if ex.created_at else None,
+            }
+            for ex, wf_name, co_name in rows
+        ],
+    }
+
+
 @router.get("/users")
 def list_platform_users(
     _: User = Depends(get_current_platform_admin),

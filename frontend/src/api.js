@@ -103,6 +103,15 @@ export const api = {
   getUserAIConfigs: () => request("GET", "/platform-admin/user-ai-config"),
   getUserAIConfig: (userId) => request("GET", `/platform-admin/user-ai-config/${userId}`),
   saveUserAIConfig: (userId, body) => request("PUT", `/platform-admin/user-ai-config/${userId}`, body),
+  // Erros (superadmin)
+  getPlatformErrors: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.limit) qs.set("limit", params.limit);
+    if (params.offset) qs.set("offset", params.offset);
+    if (params.company_id) qs.set("company_id", params.company_id);
+    if (params.workflow_id) qs.set("workflow_id", params.workflow_id);
+    return request("GET", `/platform-admin/errors?${qs.toString()}`);
+  },
   // AI — allowed / effective (usuario comum)
   getAllowedAI: () => request("GET", "/config/ai/allowed"),
   getEffectiveAI: () => request("GET", "/config/ai/effective"),
