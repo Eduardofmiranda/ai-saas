@@ -775,6 +775,32 @@ body {
   font-size: 12px; color: var(--muted);
 }
 
+/* --- Lead selection --- */
+.lead-card-selected { border-color: var(--accent); background: rgba(79, 124, 255, 0.05); }
+.lead-checkbox { margin: 0; cursor: pointer; }
+.leads-select-all { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; margin-left: 12px; }
+.leads-actions { display: flex; align-items: center; gap: 8px; }
+
+/* --- Dropdown --- */
+.dropdown-wrap { position: relative; }
+.dropdown-menu {
+  position: absolute; top: 100%; right: 0; margin-top: 4px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15); z-index: 100; min-width: 150px;
+  padding: 4px 0;
+}
+.dropdown-menu button {
+  display: block; width: 100%; padding: 8px 14px; text-align: left;
+  background: none; border: none; color: var(--text); font-size: 13px; cursor: pointer;
+}
+.dropdown-menu button:hover { background: var(--bg); }
+
+/* --- Success message --- */
+.success {
+  padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px;
+  background: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
 /* --- Agent status --- */
 .inbox-status-dot-agent { background: #8b5cf6; }
 .inbox-status-pill-agent { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }

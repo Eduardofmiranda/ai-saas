@@ -150,6 +150,24 @@ export const api = {
     return request("GET", `/customers/?${qs.toString()}`);
   },
   deleteCustomer: (id) => request("DELETE", `/customers/${id}`),
+  exportCustomers: (format = "json") => {
+    const token = localStorage.getItem("token");
+    const url = `${API_BASE}/customers/export?format=${format}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    // Para download com auth, usamos fetch
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.blob())
+      .then((blob) => {
+        const blobUrl = URL.createObjectURL(blob);
+        a.href = blobUrl;
+        a.download = `leads.${format === "xlsx" ? "xlsx" : "json"}`;
+        a.click();
+        URL.revokeObjectURL(blobUrl);
+      });
+  },
+  bulkMessageCustomers: (body) => request("POST", "/customers/bulk-message", body),
   // Setores
   getDepartments: () => request("GET", "/departments/"),
   createDepartment: (body) => request("POST", "/departments/", body),

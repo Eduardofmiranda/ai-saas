@@ -31,5 +31,8 @@ slowapi==0.1.9
 pypdf==5.1.0
 python-docx==1.1.2
 
+# Export de leads
+openpyxl==3.1.5
+
 # Utils
 python-json-logger==3.3.0
