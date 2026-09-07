@@ -135,8 +135,8 @@ export default function Conversations() {
           : "open";
     try {
       await api.updateConversation(selectedConv.id, { status: next });
-      const list = await api.getConversations();
-      setConversations(list);
+      const res = await api.getConversations();
+      setConversations(res.items || []);
     } catch (e) {
       setError(e.message || "Erro ao atualizar status");
     }
@@ -147,6 +147,7 @@ export default function Conversations() {
     if (tab === "open" && c.status !== "open") return false;
     if (tab === "pending" && c.status !== "pending_agent") return false;
     if (tab === "closed" && c.status !== "closed") return false;
+    if (tab === "leads" && (c.status !== "open" || c.message_count > 1)) return false;
     if (ql) {
       const hay = `${c.customer?.name || ""} ${c.customer?.phone || ""}`.toLowerCase();
       if (!hay.includes(ql)) return false;
@@ -156,6 +157,7 @@ export default function Conversations() {
   const openCount = conversations.filter((c) => c.status === "open").length;
   const pendingCount = conversations.filter((c) => c.status === "pending_agent").length;
   const closedCount = conversations.filter((c) => c.status === "closed").length;
+  const leadsCount = conversations.filter((c) => c.status === "open" && c.message_count <= 1).length;
 
   return (
     <div className="layout">
@@ -182,6 +184,9 @@ export default function Conversations() {
             <div className="inbox-tabs">
               <button className={`inbox-tab ${tab === "all" ? "active" : ""}`} onClick={() => setTab("all")}>
                 Todas ({conversations.length})
+              </button>
+              <button className={`inbox-tab ${tab === "leads" ? "active" : ""}`} onClick={() => setTab("leads")}>
+                Leads ({leadsCount})
               </button>
               <button className={`inbox-tab ${tab === "open" ? "active" : ""}`} onClick={() => setTab("open")}>
                 Abertas ({openCount})

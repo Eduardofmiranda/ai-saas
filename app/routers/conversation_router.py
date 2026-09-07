@@ -25,6 +25,29 @@ def _to_response(conversation: Conversation) -> dict:
     """Serializa uma conversa com dados do cliente e da ultima mensagem (inbox)."""
     messages = conversation.messages or []
     last = messages[-1] if messages else None
+
+    customer = None
+    if conversation.customer:
+        customer = {
+            "id": conversation.customer.id,
+            "company_id": conversation.customer.company_id,
+            "name": conversation.customer.name,
+            "phone": conversation.customer.phone,
+        }
+
+    transfers = []
+    for t in (conversation.transfers or []):
+        transfers.append({
+            "id": t.id,
+            "conversation_id": t.conversation_id,
+            "company_id": t.company_id,
+            "actor_type": t.actor_type,
+            "user_id": t.user_id,
+            "user_name": t.user_name,
+            "action": t.action,
+            "created_at": t.created_at,
+        })
+
     return {
         "id": conversation.id,
         "company_id": conversation.company_id,
@@ -32,11 +55,11 @@ def _to_response(conversation: Conversation) -> dict:
         "status": conversation.status,
         "created_at": conversation.created_at,
         "updated_at": conversation.updated_at,
-        "customer": conversation.customer,
+        "customer": customer,
         "last_message": last.content if last else None,
         "last_message_at": last.created_at if last else None,
         "message_count": len(messages),
-        "transfers": conversation.transfers or [],
+        "transfers": transfers,
     }
 
 
