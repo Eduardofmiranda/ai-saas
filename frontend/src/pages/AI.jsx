@@ -118,9 +118,10 @@ export default function AI() {
     try {
       const res = await api.testAI();
       if (res.ok) {
-        setTestResult({ ok: true, detail: `${res.detail} Resposta: "${res.reply}"` });
+        const reply = res.reply ? `"${res.reply.substring(0, 120)}${res.reply.length > 120 ? "..." : ""}"` : "";
+        setTestResult({ ok: true, detail: `${res.detail}${reply ? " — " + reply : ""}` });
       } else {
-        setTestResult({ ok: false, detail: `Falhou: ${res.detail || "Erro ao testar a IA."}` });
+        setTestResult({ ok: false, detail: res.detail || "Erro ao testar a IA." });
       }
     } catch (e) {
       setTestResult({ ok: false, detail: e.message });
@@ -187,12 +188,12 @@ export default function AI() {
               <input value={form.ai_model} disabled readOnly />
             </label>
           </div>
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <button className="btn ghost" onClick={handleTest} disabled={testing || !form.ai_provider}>
               {testing ? "Testando..." : "Testar conexão com IA"}
             </button>
             {testResult && (
-              <span className={testResult.ok ? "success-msg" : "error"} style={{ marginLeft: 12 }}>
+              <span style={{ fontSize: 13, color: testResult.ok ? "#22c55e" : "#ef4444", flex: 1 }}>
                 {testResult.detail}
               </span>
             )}
