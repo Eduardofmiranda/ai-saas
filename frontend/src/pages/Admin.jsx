@@ -28,8 +28,8 @@ export default function Admin() {
 
   async function load() {
     try {
-      const data = await api.getUsers();
-      setUsers(data);
+      const res = await api.getUsers();
+      setUsers(res.items || []);
       setError("");
     } catch (e) {
       setError(e.message);

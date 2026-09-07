@@ -75,7 +75,7 @@ class TestUsers:
         for c in _make(db_session, owner):
             res = c.get("/users/")
             assert res.status_code == 200
-            emails = {u["email"] for u in res.json()}
+            emails = {u["email"] for u in res.json()["items"]}
             assert "owner@test.com" in emails
             assert "outro@test.com" not in emails
 

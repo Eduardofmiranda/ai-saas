@@ -20,8 +20,8 @@ export default function Knowledge() {
 
   async function load() {
     try {
-      const data = await api.getKnowledge();
-      setItems(data);
+      const res = await api.getKnowledge();
+      setItems(res.items || []);
       setError("");
     } catch (e) {
       setError(e.message);

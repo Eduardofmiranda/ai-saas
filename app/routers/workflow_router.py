@@ -39,16 +39,17 @@ def list_node_types():
     return {"node_types": registry.list_node_types()}
 
 
-@router.get("/", response_model=list[WorkflowResponse])
+@router.get("/")
 def list_workflows(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    limit: int = 50,
+    offset: int = 0,
 ):
-    return (
-        db.query(Workflow)
-        .filter(Workflow.company_id == current_user.company_id)
-        .all()
-    )
+    q = db.query(Workflow).filter(Workflow.company_id == current_user.company_id)
+    total = q.count()
+    items = q.order_by(Workflow.id.desc()).offset(offset).limit(limit).all()
+    return {"total": total, "items": items}
 
 
 @router.post("/", response_model=WorkflowResponse)

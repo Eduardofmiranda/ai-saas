@@ -97,12 +97,14 @@ def create_conversation(
     return new_conversation
 
 
-@router.get("/", response_model=list[ConversationResponse])
+@router.get("/")
 def get_conversations(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    limit: int = 50,
+    offset: int = 0,
 ):
-    conversations = (
+    q = (
         db.query(Conversation)
         .options(
             selectinload(Conversation.customer),
@@ -110,28 +112,30 @@ def get_conversations(
             selectinload(Conversation.transfers),
         )
         .filter(Conversation.company_id == current_user.company_id)
-        .order_by(Conversation.updated_at.desc())
-        .all()
     )
-    return [_to_response(conversation) for conversation in conversations]
+    total = q.count()
+    conversations = q.order_by(Conversation.updated_at.desc()).offset(offset).limit(limit).all()
+    return {"total": total, "items": [_to_response(c) for c in conversations]}
 
 
-@router.get("/filter/", response_model=list[ConversationResponse])
+@router.get("/filter/")
 def filter_conversations(
     status: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    limit: int = 50,
+    offset: int = 0,
 ):
-    query = db.query(Conversation).options(
+    q = db.query(Conversation).options(
         selectinload(Conversation.customer),
         selectinload(Conversation.messages),
         selectinload(Conversation.transfers),
-    )
-    query = query.filter(Conversation.company_id == current_user.company_id)
+    ).filter(Conversation.company_id == current_user.company_id)
     if status:
-        query = query.filter(Conversation.status == status)
-    conversations = query.order_by(Conversation.updated_at.desc()).all()
-    return [_to_response(conversation) for conversation in conversations]
+        q = q.filter(Conversation.status == status)
+    total = q.count()
+    conversations = q.order_by(Conversation.updated_at.desc()).offset(offset).limit(limit).all()
+    return {"total": total, "items": [_to_response(c) for c in conversations]}
 
 
 @router.get("/{conversation_id}", response_model=ConversationResponse)

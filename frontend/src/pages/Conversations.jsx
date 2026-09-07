@@ -66,13 +66,13 @@ export default function Conversations() {
     let active = true;
     async function tick() {
       try {
-        const list = await api.getConversations();
+        const res = await api.getConversations();
         if (!active) return;
-        setConversations(list);
+        setConversations(res.items || []);
         setError("");
-        if (selected && list.some((c) => c.id === selected)) {
-          const msgs = await api.getConversationMessages(selected);
-          if (active) setMessages(msgs);
+        if (selected && (res.items || []).some((c) => c.id === selected)) {
+          const msgRes = await api.getConversationMessages(selected);
+          if (active) setMessages(msgRes.items || []);
         }
       } catch (e) {
         if (active) setError(e.message || "Erro ao atualizar conversas");

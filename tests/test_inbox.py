@@ -89,7 +89,7 @@ class TestInboxList:
         for c in _make(db_session, owner):
             res = c.get("/conversations/")
             assert res.status_code == 200
-            data = res.json()
+            data = res.json()["items"]
             assert len(data) == 1
             row = data[0]
             assert row["customer"]["name"] == "Cliente"
@@ -106,7 +106,7 @@ class TestInboxList:
         for c in _make(db_session, owner):
             res = c.get("/conversations/")
             assert res.status_code == 200
-            data = res.json()
+            data = res.json()["items"]
             assert len(data) == 1
             assert data[0]["customer"]["phone"] == "5511888888888"
 

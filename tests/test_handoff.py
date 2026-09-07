@@ -255,7 +255,7 @@ class TestTransferHistoryHttp:
         for c in self._make(db_session, owner):
             res = c.get("/conversations/")
             assert res.status_code == 200
-            row = res.json()[0]
+            row = res.json()["items"][0]
             assert row["status"] == "pending_agent"
             assert len(row["transfers"]) == 1
             assert row["transfers"][0]["action"] == "transfer_requested"

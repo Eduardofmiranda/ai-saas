@@ -17,19 +17,18 @@ def _require_manager(current_user: User) -> None:
         raise HTTPException(status_code=403, detail="Apenas administradores podem gerenciar a equipe")
 
 
-@router.get("/", response_model=list[UserResponse])
+@router.get("/")
 def list_users(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    limit: int = 50,
+    offset: int = 0,
 ):
     """Lista os membros (users) da empresa do usuario atual."""
-    users = (
-        db.query(User)
-        .filter(User.company_id == current_user.company_id)
-        .order_by(User.id)
-        .all()
-    )
-    return users
+    q = db.query(User).filter(User.company_id == current_user.company_id)
+    total = q.count()
+    users = q.order_by(User.id).offset(offset).limit(limit).all()
+    return {"total": total, "items": users}
 
 
 @router.post("/", response_model=UserResponse)

@@ -31,13 +31,12 @@ router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 def list_knowledge(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[KnowledgeResponse]:
-    items = (
-        db.query(Knowledge)
-        .filter(Knowledge.company_id == current_user.company_id)
-        .order_by(Knowledge.created_at.desc())
-        .all()
-    )
+    limit: int = 50,
+    offset: int = 0,
+) -> dict:
+    q = db.query(Knowledge).filter(Knowledge.company_id == current_user.company_id)
+    total = q.count()
+    items = q.order_by(Knowledge.created_at.desc()).offset(offset).limit(limit).all()
     result = []
     for item in items:
         chunks = get_chunks_by_knowledge(db, item.id)
@@ -51,7 +50,7 @@ def list_knowledge(
             created_at=item.created_at,
             updated_at=item.updated_at,
         ))
-    return result
+    return {"total": total, "items": result}
 
 
 @router.get("/{knowledge_id}")

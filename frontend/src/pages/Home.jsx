@@ -13,11 +13,11 @@ export default function Home() {
 
   async function load() {
     try {
-      const [wfData, tplData] = await Promise.all([
+      const [wfRes, tplData] = await Promise.all([
         api.getWorkflows(),
         api.getTemplates(),
       ]);
-      setWorkflows(wfData);
+      setWorkflows(wfRes.items || []);
       setTemplates(tplData);
       setError("");
     } catch (e) {

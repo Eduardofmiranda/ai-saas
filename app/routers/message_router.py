@@ -53,11 +53,13 @@ def create_message(
     return new_message
 
 
-@router.get("/conversation/{conversation_id}", response_model=list[MessageResponse])
+@router.get("/conversation/{conversation_id}")
 def get_messages(
     conversation_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    limit: int = 100,
+    offset: int = 0,
 ):
     conversation = (
         db.query(Conversation)
@@ -70,11 +72,10 @@ def get_messages(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    return (
-        db.query(Message)
-        .filter(Message.conversation_id == conversation_id)
-        .all()
-    )
+    q = db.query(Message).filter(Message.conversation_id == conversation_id)
+    total = q.count()
+    messages = q.order_by(Message.created_at.asc()).offset(offset).limit(limit).all()
+    return {"total": total, "items": messages}
 
 
 @router.get("/{message_id}", response_model=MessageResponse)
