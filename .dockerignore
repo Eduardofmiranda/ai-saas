@@ -39,8 +39,8 @@ Dockerfile*
 docker-compose*
 .dockerignore
 
-# Alembic
-alembic/versions/*.py
+# Alembic (manter migration files no build)
+# alembic/versions/*.py  # NAO excluir — necessario para alembic upgrade head
 
 # Celery
 celerybeat-schedule
