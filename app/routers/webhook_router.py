@@ -17,7 +17,7 @@ MEDIA_RESPONSE = (
 )
 
 
-def _run_pipeline(company_id: int, phone: str, text: str, wa_message_id: str) -> None:
+def _run_pipeline(company_id: int, phone: str, text: str, wa_message_id: str, push_name: str = "") -> None:
     db: Session = SessionLocal()
     try:
         asyncio.run(
@@ -27,6 +27,7 @@ def _run_pipeline(company_id: int, phone: str, text: str, wa_message_id: str) ->
                 phone=phone,
                 text=text,
                 wa_message_id=wa_message_id,
+                push_name=push_name,
             )
         )
     finally:
@@ -99,5 +100,6 @@ async def whatsapp_webhook(
         extracted["phone"],
         extracted["text"],
         extracted["wa_message_id"],
+        extracted.get("push_name", ""),
     )
     return {"status": "accepted"}

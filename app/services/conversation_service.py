@@ -22,6 +22,7 @@ async def handle_incoming_message(
     phone: str,
     text: str,
     wa_message_id: str = "",
+    push_name: str = "",
 ) -> dict:
     """Pipeline de atendimento: mensagem recebida -> IA -> resposta no WhatsApp."""
 
@@ -46,8 +47,11 @@ async def handle_incoming_message(
         .first()
     )
     if not customer:
-        customer = Customer(company_id=company_id, phone=phone, name=phone)
+        customer = Customer(company_id=company_id, phone=phone, name=push_name or phone)
         db.add(customer)
+        db.flush()
+    elif push_name and customer.name == phone:
+        customer.name = push_name
         db.flush()
 
     # 3) Encontra ou cria a conversa ativa (open ou aguardando humano)
@@ -173,6 +177,7 @@ async def handle_incoming_workflow(
     phone: str,
     text: str,
     wa_message_id: str = "",
+    push_name: str = "",
 ) -> dict:
     """Persiste a mensagem recebida e a roteia pelo MOTOR DE WORKFLOWS.
 
@@ -193,8 +198,11 @@ async def handle_incoming_workflow(
         .first()
     )
     if not customer:
-        customer = Customer(company_id=company_id, phone=phone, name=phone)
+        customer = Customer(company_id=company_id, phone=phone, name=push_name or phone)
         db.add(customer)
+        db.flush()
+    elif push_name and customer.name == phone:
+        customer.name = push_name
         db.flush()
 
     # 3) Conversa ativa (open ou aguardando humano)

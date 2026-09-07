@@ -79,7 +79,7 @@ def build_history(messages: list) -> list[dict]:
 def extract_webhook_message(payload: dict) -> dict | None:
     """Extrai os dados uteis de um webhook da Evolution.
 
-    Evolucao v2 envia: {"event":"messages.upsert","data":{"key":{...},"message":{...}}}
+    Evolucao v2 envia: {"event":"messages.upsert","data":{"key":{...},"message":{...},"pushName":"Nome"}}
     Retorna None se for grupo/mensagem propria.
     Retorna dict com "type":"text" ou "type":"media".
     """
@@ -98,6 +98,7 @@ def extract_webhook_message(payload: dict) -> dict | None:
 
         wa_id = key.get("id") or ""
         phone = remote_jid.split("@")[0]
+        push_name = (data.get("pushName") or "").strip()
 
         # Texto normal
         conversation_text = message.get("conversation")
@@ -105,7 +106,7 @@ def extract_webhook_message(payload: dict) -> dict | None:
             conversation_text = message["extendedTextMessage"].get("text")
 
         if conversation_text:
-            return {"type": "text", "wa_message_id": wa_id, "phone": phone, "text": conversation_text}
+            return {"type": "text", "wa_message_id": wa_id, "phone": phone, "text": conversation_text, "push_name": push_name}
 
         # Midia (imagem, audio, video, documento, sticker)
         media_type = None
@@ -121,7 +122,7 @@ def extract_webhook_message(payload: dict) -> dict | None:
             media_type = "sticker"
 
         if media_type:
-            return {"type": "media", "wa_message_id": wa_id, "phone": phone, "media_type": media_type}
+            return {"type": "media", "wa_message_id": wa_id, "phone": phone, "media_type": media_type, "push_name": push_name}
 
         return None
     except Exception:

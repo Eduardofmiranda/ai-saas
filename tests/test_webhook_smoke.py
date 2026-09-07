@@ -61,12 +61,13 @@ def test_incoming_message_executes_active_workflow_and_sends_response(db_session
 def test_authenticated_webhook_schedules_extracted_message(monkeypatch):
     scheduled = {}
 
-    def fake_pipeline(company_id, phone, text, wa_message_id):
+    def fake_pipeline(company_id, phone, text, wa_message_id, push_name=""):
         scheduled.update(
             company_id=company_id,
             phone=phone,
             text=text,
             wa_message_id=wa_message_id,
+            push_name=push_name,
         )
 
     monkeypatch.setattr(webhook_router, "get_secret", lambda name: "webhook-secret")
@@ -100,4 +101,5 @@ def test_authenticated_webhook_schedules_extracted_message(monkeypatch):
         "phone": "5511999999999",
         "text": "ola",
         "wa_message_id": "smoke-2",
+        "push_name": "",
     }
