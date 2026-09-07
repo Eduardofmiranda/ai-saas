@@ -1,10 +1,11 @@
+import asyncio
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 
 from sqlalchemy.orm import Session
 
-from app.database.session import get_db
+from app.database.session import get_db, SessionLocal
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.user import User
@@ -23,6 +24,26 @@ router = APIRouter(
     prefix="/messages",
     tags=["Messages"],
 )
+
+
+def _send_whatsapp_background(company_id: int, phone: str, content: str) -> None:
+    """Envia mensagem pelo WhatsApp em background (fire-and-forget)."""
+    db: Session = SessionLocal()
+    try:
+        config = get_or_create_config(db, company_id)
+        base_url, api_key, instance = _evo_config(config)
+        if base_url and api_key and instance:
+            asyncio.run(evolution.send_text(
+                to_phone=phone,
+                text=content,
+                base_url=base_url,
+                api_key=api_key,
+                instance=instance,
+            ))
+    except Exception:
+        pass
+    finally:
+        db.close()
 
 
 @router.post("/", response_model=MessageResponse)
@@ -147,17 +168,17 @@ def delete_message(
 
 
 @router.post("/conversation/{conversation_id}/reply", response_model=MessageResponse)
-async def reply_in_conversation(
+def reply_in_conversation(
     conversation_id: int,
     data: MessageReply,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    background_tasks: BackgroundTasks = None,
 ):
-    """Resposta MANUAL do atendente humano dentro de uma conversa.
+    """Resposta MANUAL do atendente humano — retorna IMEDIATAMENTE.
 
-    Envia a mensagem pelo WhatsApp (Evolution) e registra na thread como
-    sender_type="agent" (para o LLM tratar como mensagem do assistente e nao
-    confundir com uma nova mensagem de cliente).
+    Salva a mensagem no banco e envia pelo WhatsApp em background.
+    O frontend recebe a resposta instantaneamente (optimistic UI).
     """
     conversation = (
         db.query(Conversation)
@@ -176,27 +197,9 @@ async def reply_in_conversation(
 
     customer = conversation.customer
     if not customer:
-        raise HTTPException(status_code=400, detail="Cliente da conversa não encontrado")
+        raise HTTPException(status_code=400, detail="Cliente da conversa nao encontrado")
 
-    config = get_or_create_config(db, current_user.company_id)
-    base_url, api_key, instance = _evo_config(config)
-    if not base_url or not api_key or not instance:
-        raise HTTPException(
-            status_code=400,
-            detail="WhatsApp não configurado para esta empresa (falta URL/chave/instância).",
-        )
-
-    try:
-        await evolution.send_text(
-            to_phone=customer.phone,
-            text=content,
-            base_url=base_url,
-            api_key=api_key,
-            instance=instance,
-        )
-    except evolution.EvolutionError as exc:
-        raise HTTPException(status_code=502, detail=f"Falha ao enviar no WhatsApp: {exc}")
-
+    # Salva no banco IMEDIATAMENTE
     message = Message(
         conversation_id=conversation.id,
         sender_type="agent",
@@ -208,4 +211,14 @@ async def reply_in_conversation(
     conversation.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(message)
+
+    # Envia WhatsApp em background (nao bloqueia o usuario)
+    if background_tasks:
+        background_tasks.add_task(
+            _send_whatsapp_background,
+            current_user.company_id,
+            customer.phone,
+            content,
+        )
+
     return message

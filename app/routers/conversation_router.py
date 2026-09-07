@@ -1,12 +1,14 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import func, desc
 
-from app.database.session import get_db
+from app.database.session import get_db, SessionLocal
 from app.models.conversation import Conversation
 from app.models.conversation_transfer import ConversationTransfer
 from app.models.customer import Customer
+from app.models.message import Message
 from app.models.user import User
 from app.schemas.conversation_schema import (
     ConversationCreate,
@@ -21,11 +23,8 @@ router = APIRouter(
 )
 
 
-def _to_response(conversation: Conversation) -> dict:
+def _to_response(conversation: Conversation, last_message: Message | None = None) -> dict:
     """Serializa uma conversa com dados do cliente e da ultima mensagem (inbox)."""
-    messages = conversation.messages or []
-    last = messages[-1] if messages else None
-
     customer = None
     if conversation.customer:
         customer = {
@@ -56,9 +55,9 @@ def _to_response(conversation: Conversation) -> dict:
         "created_at": conversation.created_at,
         "updated_at": conversation.updated_at,
         "customer": customer,
-        "last_message": last.content if last else None,
-        "last_message_at": last.created_at if last else None,
-        "message_count": len(messages),
+        "last_message": last_message.content if last_message else None,
+        "last_message_at": last_message.created_at if last_message else None,
+        "message_count": conversation._msg_count if hasattr(conversation, "_msg_count") else 0,
         "transfers": transfers,
     }
 
@@ -83,8 +82,6 @@ def _get_conversation(db: Session, conversation_id: int, company_id: int) -> Con
         db.query(Conversation)
         .options(
             selectinload(Conversation.customer),
-            selectinload(Conversation.messages),
-            selectinload(Conversation.transfers),
         )
         .filter(
             Conversation.id == conversation_id,
@@ -131,18 +128,53 @@ def get_conversations(
     limit: int = 50,
     offset: int = 0,
 ):
+    # Subquery: ultima mensagem de cada conversa
+    last_msg_sq = (
+        db.query(
+            Message.conversation_id,
+            func.max(Message.id).label("last_msg_id"),
+        )
+        .group_by(Message.conversation_id)
+        .subquery()
+    )
+
+    # Subquery: contagem de mensagens
+    msg_count_sq = (
+        db.query(
+            Message.conversation_id,
+            func.count(Message.id).label("msg_count"),
+        )
+        .group_by(Message.conversation_id)
+        .subquery()
+    )
+
     q = (
-        db.query(Conversation)
+        db.query(Conversation, Message)
+        .outerjoin(last_msg_sq, Conversation.id == last_msg_sq.c.conversation_id)
+        .outerjoin(Message, last_msg_sq.c.last_msg_id == Message.id)
+        .outerjoin(msg_count_sq, Conversation.id == msg_count_sq.c.conversation_id)
         .options(
             selectinload(Conversation.customer),
-            selectinload(Conversation.messages),
             selectinload(Conversation.transfers),
         )
         .filter(Conversation.company_id == current_user.company_id)
     )
-    total = q.count()
-    conversations = q.order_by(Conversation.updated_at.desc()).offset(offset).limit(limit).all()
-    return {"total": total, "items": [_to_response(c) for c in conversations]}
+
+    total = db.query(Conversation).filter(Conversation.company_id == current_user.company_id).count()
+    rows = q.order_by(desc(Conversation.updated_at)).offset(offset).limit(limit).all()
+
+    items = []
+    for conv, last_msg in rows:
+        # Pega contagem do subquery
+        count_row = (
+            db.query(msg_count_sq.c.msg_count)
+            .filter(msg_count_sq.c.conversation_id == conv.id)
+            .first()
+        )
+        conv._msg_count = count_row[0] if count_row else 0
+        items.append(_to_response(conv, last_msg))
+
+    return {"total": total, "items": items}
 
 
 @router.get("/filter/")
@@ -153,26 +185,72 @@ def filter_conversations(
     limit: int = 50,
     offset: int = 0,
 ):
-    q = db.query(Conversation).options(
-        selectinload(Conversation.customer),
-        selectinload(Conversation.messages),
-        selectinload(Conversation.transfers),
-    ).filter(Conversation.company_id == current_user.company_id)
+    last_msg_sq = (
+        db.query(
+            Message.conversation_id,
+            func.max(Message.id).label("last_msg_id"),
+        )
+        .group_by(Message.conversation_id)
+        .subquery()
+    )
+
+    msg_count_sq = (
+        db.query(
+            Message.conversation_id,
+            func.count(Message.id).label("msg_count"),
+        )
+        .group_by(Message.conversation_id)
+        .subquery()
+    )
+
+    q = (
+        db.query(Conversation, Message)
+        .outerjoin(last_msg_sq, Conversation.id == last_msg_sq.c.conversation_id)
+        .outerjoin(Message, last_msg_sq.c.last_msg_id == Message.id)
+        .outerjoin(msg_count_sq, Conversation.id == msg_count_sq.c.conversation_id)
+        .options(
+            selectinload(Conversation.customer),
+            selectinload(Conversation.transfers),
+        )
+        .filter(Conversation.company_id == current_user.company_id)
+    )
     if status:
         q = q.filter(Conversation.status == status)
+
     total = q.count()
-    conversations = q.order_by(Conversation.updated_at.desc()).offset(offset).limit(limit).all()
-    return {"total": total, "items": [_to_response(c) for c in conversations]}
+    rows = q.order_by(desc(Conversation.updated_at)).offset(offset).limit(limit).all()
+
+    items = []
+    for conv, last_msg in rows:
+        count_row = (
+            db.query(msg_count_sq.c.msg_count)
+            .filter(msg_count_sq.c.conversation_id == conv.id)
+            .first()
+        )
+        conv._msg_count = count_row[0] if count_row else 0
+        items.append(_to_response(conv, last_msg))
+
+    return {"total": total, "items": items}
 
 
-@router.get("/{conversation_id}", response_model=ConversationResponse)
+@router.get("/{conversation_id}")
 def get_conversation(
     conversation_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     conversation = _get_conversation(db, conversation_id, current_user.company_id)
-    return _to_response(conversation)
+
+    last_msg = (
+        db.query(Message)
+        .filter(Message.conversation_id == conversation_id)
+        .order_by(Message.id.desc())
+        .first()
+    )
+    msg_count = db.query(Message).filter(Message.conversation_id == conversation_id).count()
+    conversation._msg_count = msg_count
+
+    return _to_response(conversation, last_msg)
 
 
 @router.patch("/{conversation_id}", response_model=ConversationResponse)
@@ -201,7 +279,17 @@ def update_conversation(
     conversation.status = data.status
     db.commit()
     db.refresh(conversation)
-    return _to_response(conversation)
+
+    last_msg = (
+        db.query(Message)
+        .filter(Message.conversation_id == conversation_id)
+        .order_by(Message.id.desc())
+        .first()
+    )
+    msg_count = db.query(Message).filter(Message.conversation_id == conversation_id).count()
+    conversation._msg_count = msg_count
+
+    return _to_response(conversation, last_msg)
 
 
 @router.delete("/{conversation_id}")
@@ -244,4 +332,14 @@ def assume_conversation(
     )
     db.commit()
     db.refresh(conversation)
-    return _to_response(conversation)
+
+    last_msg = (
+        db.query(Message)
+        .filter(Message.conversation_id == conversation_id)
+        .order_by(Message.id.desc())
+        .first()
+    )
+    msg_count = db.query(Message).filter(Message.conversation_id == conversation_id).count()
+    conversation._msg_count = msg_count
+
+    return _to_response(conversation, last_msg)

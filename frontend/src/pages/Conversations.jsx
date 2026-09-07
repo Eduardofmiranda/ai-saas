@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { api } from "../api";
 import Header from "../components/Header";
 
-const POLL_MS = 3000;
+const POLL_MS = 5000;
 
 function relativeTime(iso) {
   if (!iso) return "";
@@ -58,20 +58,35 @@ export default function Conversations() {
 
   const selectedConv = conversations.find((c) => c.id === selected) || null;
 
+  // Polling: lista de conversas (sempre)
   useEffect(() => {
     let active = true;
     async function tick() {
       try {
-        const [res, msgRes] = await Promise.all([
-          api.getConversations(),
-          selected ? api.getConversationMessages(selected) : Promise.resolve(null),
-        ]);
+        const res = await api.getConversations();
         if (!active) return;
         setConversations(res.items || []);
         setError("");
-        if (selected && msgRes) setMessages(msgRes.items || []);
       } catch (e) {
         if (active) setError(e.message || "Erro ao carregar conversas");
+      }
+    }
+    tick();
+    const id = setInterval(tick, POLL_MS);
+    return () => { active = false; clearInterval(id); };
+  }, []);
+
+  // Polling: mensagens da conversa selecionada
+  useEffect(() => {
+    if (!selected) { setMessages(null); return; }
+    let active = true;
+    async function tick() {
+      try {
+        const msgRes = await api.getConversationMessages(selected);
+        if (!active) return;
+        setMessages(msgRes.items || []);
+      } catch (e) {
+        if (active) setError(e.message || "Erro ao carregar mensagens");
       }
     }
     tick();
@@ -94,19 +109,20 @@ export default function Conversations() {
     if (!content || !selected || sendingRef.current) return;
     sendingRef.current = true;
     setComposerError("");
+
+    // Optimistic: adiciona mensagem imediatamente
     const tempId = `temp-${Date.now()}`;
     setMessages((prev) => [...(prev || []), { id: tempId, sender_type: "agent", content, created_at: new Date().toISOString() }]);
     setDraft("");
     inputRef.current?.focus();
+
     try {
+      // Reply é fire-and-forget: retorna instantaneamente
       await api.replyToConversation(selected, content);
-      const [msgRes, convRes] = await Promise.all([
-        api.getConversationMessages(selected),
-        api.getConversations(),
-      ]);
-      setMessages(msgRes.items || []);
-      setConversations(convRes.items || []);
+      // Nao precisa re-fetch: o optimistic update ja mostrou a mensagem
+      // O proximo poll de messages vai buscar a versao real do banco
     } catch (e) {
+      // Remove optimistic message em caso de erro
       setMessages((prev) => (prev || []).filter((m) => m.id !== tempId));
       setComposerError(e.message || "Falha ao enviar");
     } finally {
@@ -123,8 +139,7 @@ export default function Conversations() {
     const next = selectedConv.status === "pending_agent" ? "open" : selectedConv.status === "open" ? "closed" : selectedConv.status === "agent" ? "open" : "open";
     try {
       await api.updateConversation(selectedConv.id, { status: next });
-      const res = await api.getConversations();
-      setConversations(res.items || []);
+      // Poll vai atualizar
     } catch (e) { setError(e.message); }
   }
 
@@ -132,8 +147,7 @@ export default function Conversations() {
     if (!selectedConv) return;
     try {
       await api.assumeConversation(selectedConv.id);
-      const res = await api.getConversations();
-      setConversations(res.items || []);
+      // Poll vai atualizar
     } catch (e) { setError(e.message); }
   }
 

@@ -136,11 +136,10 @@ class TestReply:
 
         captured = {}
 
-        async def fake_send_text(*, to_phone, text, base_url, api_key, instance, timeout=30.0):
-            captured.update(to_phone=to_phone, text=text, base_url=base_url, api_key=api_key, instance=instance)
-            return {"key": {"id": "wamid_manual"}}
+        def fake_send_bg(company_id, phone, text):
+            captured.update(company_id=company_id, phone=phone, text=text)
 
-        monkeypatch.setattr(message_router.evolution, "send_text", fake_send_text)
+        monkeypatch.setattr(message_router, "_send_whatsapp_background", fake_send_bg)
 
         for c in _make(db_session, owner):
             res = c.post(f"/messages/conversation/{conv.id}/reply", json={"content": "  Tudo certo!  "})
@@ -149,13 +148,8 @@ class TestReply:
             assert data["sender_type"] == "agent"
             assert data["content"] == "Tudo certo!"
 
-        assert captured == {
-            "to_phone": customer.phone,
-            "text": "Tudo certo!",
-            "base_url": "http://evo",
-            "api_key": "evo-key",
-            "instance": "inst-1",
-        }
+        assert captured["phone"] == customer.phone
+        assert captured["text"] == "Tudo certo!"
 
         persisted = db_session.query(Message).filter_by(conversation_id=conv.id).all()
         assert len(persisted) == 1
@@ -176,20 +170,22 @@ class TestReply:
             assert res.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_reply_send_failure_returns_502(self, db_session, owner, monkeypatch):
+    async def test_reply_saves_message_even_if_whatsapp_fails(self, db_session, owner, monkeypatch):
+        """Reply e fire-and-forget: mensagem sempre e salva, WhatsApp vai em background."""
         conv = _seed_conversation(db_session)
 
-        async def fail_send_text(**kwargs):
-            raise evolution_module.EvolutionError("Evolution offline")
+        def fail_send_bg(company_id, phone, text):
+            pass  # Simula falha silenciosa em background
 
-        monkeypatch.setattr(message_router.evolution, "send_text", fail_send_text)
+        monkeypatch.setattr(message_router, "_send_whatsapp_background", fail_send_bg)
 
         for c in _make(db_session, owner):
             res = c.post(f"/messages/conversation/{conv.id}/reply", json={"content": "oi"})
-            assert res.status_code == 502
-            assert "Evolution offline" in res.json()["detail"]
+            assert res.status_code == 200
+            assert res.json()["content"] == "oi"
 
-        assert db_session.query(Message).filter_by(conversation_id=conv.id).count() == 0
+        # Mensagem foi salva mesmo com falha no WhatsApp
+        assert db_session.query(Message).filter_by(conversation_id=conv.id).count() == 1
 
 
 class TestBuildHistory:
