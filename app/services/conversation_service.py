@@ -37,13 +37,16 @@ async def handle_incoming_message(
         if existing:
             return {"status": "duplicated"}
 
-    # 2) Encontra ou cria o cliente
+    # 2) Encontra ou cria o cliente (com lock para evitar race condition)
+    from sqlalchemy import select
+
     customer = (
-        db.query(Customer)
-        .filter(
-            Customer.company_id == company_id,
-            Customer.phone == phone,
+        db.execute(
+            select(Customer)
+            .where(Customer.company_id == company_id, Customer.phone == phone)
+            .with_for_update()
         )
+        .scalars()
         .first()
     )
     if not customer:
@@ -191,10 +194,16 @@ async def handle_incoming_workflow(
         if existing:
             return {"status": "duplicated"}
 
-    # 2) Cliente
+    # 2) Cliente (com lock para evitar race condition na criacao de conversas)
+    from sqlalchemy import select
+
     customer = (
-        db.query(Customer)
-        .filter(Customer.company_id == company_id, Customer.phone == phone)
+        db.execute(
+            select(Customer)
+            .where(Customer.company_id == company_id, Customer.phone == phone)
+            .with_for_update()
+        )
+        .scalars()
         .first()
     )
     if not customer:
