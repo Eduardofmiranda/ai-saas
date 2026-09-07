@@ -3,16 +3,10 @@ import { api } from "../api";
 import Header from "../components/Header";
 import KnowledgeSummaryCard from "../components/KnowledgeSummaryCard";
 
-const PROVIDERS = [
-  { value: "groq", label: "Groq" },
-  { value: "openai", label: "OpenAI" },
-  { value: "deepseek", label: "DeepSeek" },
-  { value: "mistral", label: "Mistral" },
-  { value: "ollama", label: "Ollama" },
-];
+const PROVIDER_LABELS = { groq: "Groq", openai: "OpenAI", deepseek: "DeepSeek", mistral: "Mistral", ollama: "Ollama" };
 
 function label(value) {
-  return PROVIDERS.find((p) => p.value === value)?.label || value;
+  return PROVIDER_LABELS[value] || value || "Não definido";
 }
 
 const PRESETS = [
@@ -177,7 +171,10 @@ export default function AI() {
 
         {config?.ai_credential_source === "missing" && (
           <div className="error">
-            Não há chave disponível para o provedor selecionado. Peça ao administrador da plataforma para cadastrar a chave de {label(form.ai_provider)}.
+            {!form.ai_provider
+              ? "Nenhum provedor de IA foi configurado pelo administrador da plataforma."
+              : `Não há chave disponível para ${label(form.ai_provider)}. Peça ao administrador para cadastrar a chave.`
+            }
           </div>
         )}
         {config?.ai_credential_source === "platform" && (
