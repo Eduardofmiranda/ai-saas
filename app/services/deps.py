@@ -9,6 +9,8 @@ from app.services.platform_access import is_platform_admin
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+COMPANY_MANAGER_ROLES = {"owner", "admin"}
+
 
 def get_current_user(
     token: str = Depends(oauth2_scheme),
@@ -38,6 +40,21 @@ def get_current_company(
     current_user: User = Depends(get_current_user),
 ) -> int:
     return current_user.company_id
+
+
+def require_company_manager(current_user: User = Depends(get_current_user)) -> User:
+    """Exige um papel de gestão dentro da própria empresa.
+
+    Workflows, integrações e configurações alteram recursos compartilhados da
+    empresa. Um atendente pode operar conversas, mas não deve conseguir mudar
+    a automação ou credenciais usadas por toda a organização.
+    """
+    if current_user.role not in COMPANY_MANAGER_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas donos ou administradores podem alterar esta configuração",
+        )
+    return current_user
 
 
 def get_current_platform_admin(

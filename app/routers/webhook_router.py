@@ -57,7 +57,12 @@ def _verify_webhook_auth(request: Request) -> None:
     """
     auth_key = get_secret("EVOLUTION_AUTH_KEY")
     if not auth_key:
-        return
+        # Falhar fechado. Um webhook sem autenticação pode disparar fluxos e
+        # mensagens em qualquer empresa pela URL pública.
+        raise HTTPException(
+            status_code=503,
+            detail="Webhook WhatsApp indisponível: autenticação não configurada",
+        )
 
     received = request.headers.get("evolution-auth", "")
     if not hmac.compare_digest(received, auth_key):

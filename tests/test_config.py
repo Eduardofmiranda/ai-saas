@@ -121,6 +121,9 @@ class TestConfigRouter:
 
     def test_patch_encrypts_keys_and_returns_no_secret(self, router_context):
         client, db_session, company = router_context
+        operator = db_session.query(User).filter(User.company_id == company.id).one()
+        operator.is_platform_admin = True
+        db_session.commit()
         response = client.patch(
             "/config/",
             json={
@@ -147,6 +150,9 @@ class TestConfigRouter:
 
     def test_patch_masked_keys_preserves_existing_values(self, router_context):
         client, db_session, company = router_context
+        operator = db_session.query(User).filter(User.company_id == company.id).one()
+        operator.is_platform_admin = True
+        db_session.commit()
         existing = get_or_create_config(db_session, company.id)
         existing.ai_api_key = "mock-key"
         existing.evolution_api_key = "evo-key"

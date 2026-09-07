@@ -1,5 +1,11 @@
 # 04 — Configuracao
 
+> Atualização de segurança (07/09/2026): consulte
+> [a primeira etapa de proteção](SEGURANCA-2026-09-07.md) para as restrições
+> atuais da API. Os campos de infraestrutura dos exemplos abaixo exigem
+> superadmin; as rotas WhatsApp usam URL/chave do ambiente. A política de IA
+> por usuário está parcialmente implementada, com pendências registradas ali.
+
 ## Arquivos de Configuracao
 
 | Arquivo | Finalidade |

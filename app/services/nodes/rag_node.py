@@ -55,7 +55,7 @@ async def run_rag_node(ctx: NodeContext, node: dict) -> dict:
     # ---------------------------------------------------------
     # Configuração da IA
     # ---------------------------------------------------------
-    resolved_ai = resolve_ai_config(ctx.config, ctx.db)
+    resolved_ai = resolve_ai_config(ctx.config, ctx.db, user_id=ctx.user_id)
     provider = resolved_ai["provider"]
     api_key = resolved_ai["api_key"]
 

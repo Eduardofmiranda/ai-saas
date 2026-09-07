@@ -12,6 +12,7 @@ from app.services import llm
 from app.services.config_service import get_or_create_config, resolve_ai_config
 from app.services.deps import get_current_user
 from app.services.field_crypto import decrypt_field, encrypt_field
+from app.services.platform_access import is_platform_admin
 
 router = APIRouter(prefix="/config", tags=["Config"])
 
@@ -19,6 +20,10 @@ router = APIRouter(prefix="/config", tags=["Config"])
 _MASKED = "__MASKED__"
 
 # campos sensiveis que devem ser criptografados em repouso
+
+# Somente o superadmin pode alterar endpoints, provedores ou credenciais.
+_PLATFORM_ONLY_FIELDS = {"ai_provider", "ai_model", "ai_api_key", "ai_base_url", "evolution_base_url", "evolution_api_key", "evolution_instance"}
+
 _SENSITIVE_FIELDS = ("ai_api_key", "evolution_api_key")
 
 class AITestRequest(BaseModel):
@@ -62,6 +67,12 @@ def update_config(
     config = get_or_create_config(db, current_user.company_id)
 
     updates = data.model_dump(exclude_unset=True)
+    protected_updates = set(updates) & _PLATFORM_ONLY_FIELDS
+    if protected_updates and not is_platform_admin(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Provedores, credenciais e infraestrutura são gerenciados pelo superadmin",
+        )
     requested_provider = (updates.get("ai_provider") or "").strip().lower()
     current_provider = (config.ai_provider or get_secret("DEFAULT_AI_PROVIDER") or "groq").strip().lower()
     # O campo legado ai_api_key não informa a qual provedor pertence. Ao trocar
@@ -207,16 +218,10 @@ def _evo_config(config) -> tuple[str | None, str | None, str | None]:
     pois cada empresa tem seu proprio numero de WhatsApp na Evolution. NUNCA
     usar uma instancia global compartilhada.
     """
-    base_url = (
-        decrypt_field(config.evolution_base_url)
-        or get_secret("EVOLUTION_BASE_URL")
-        or config.evolution_base_url
-    )
-    api_key = (
-        decrypt_field(config.evolution_api_key)
-        or get_secret("EVOLUTION_API_KEY")
-        or config.evolution_api_key
-    )
+    # A Evolution é infraestrutura da plataforma. URL e chave nunca vêm de
+    # uma configuração editável por uma empresa.
+    base_url = get_secret("EVOLUTION_BASE_URL")
+    api_key = get_secret("EVOLUTION_API_KEY")
     instance = config.evolution_instance or f"inst-{config.company_id}"
     return (base_url or None, api_key or None, instance or None)
 
@@ -294,9 +299,7 @@ async def whatsapp_test(
 ):
     """Testa a conexao com a Evolution API (alcance + credenciais)."""
     config = get_or_create_config(db, current_user.company_id)
-    base_url = data.base_url or (decrypt_field(config.evolution_base_url) or config.evolution_base_url)
-    api_key = data.api_key or (decrypt_field(config.evolution_api_key) or config.evolution_api_key)
-    instance = data.instance or config.evolution_instance
+    base_url, api_key, instance = _evo_config(config)
 
     if not base_url:
         raise HTTPException(status_code=400, detail="Informe a URL da Evolution API")

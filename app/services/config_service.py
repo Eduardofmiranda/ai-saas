@@ -24,7 +24,11 @@ def get_user_allowed_providers(db: Session, user_id: int) -> list[str]:
     uc = get_user_ai_config(db, user_id)
     if not uc:
         return []
-    return json.loads(uc.allowed_providers or "[]")
+    try:
+        allowed = json.loads(uc.allowed_providers or "[]")
+    except (TypeError, json.JSONDecodeError):
+        return []
+    return [str(provider).strip().lower() for provider in allowed if str(provider).strip()]
 
 
 def resolve_ai_config(
@@ -44,9 +48,9 @@ def resolve_ai_config(
 
     # 1) Politica do usuario (prioridade maxima)
     user_ai = get_user_ai_config(db, user_id) if db and user_id else None
-    user_allowed = json.loads(user_ai.allowed_providers or "[]") if user_ai else []
+    user_allowed = get_user_allowed_providers(db, user_id) if user_ai else []
 
-    if user_ai and user_ai.default_provider:
+    if user_ai and user_ai.default_provider and user_ai.default_provider.lower().strip() in user_allowed:
         provider = user_ai.default_provider.lower().strip()
     else:
         provider = ((config.ai_provider if config else "") or default_provider).lower().strip()
@@ -55,8 +59,12 @@ def resolve_ai_config(
 
     platform_provider = get_platform_provider(db, provider)
 
-    company_key = decrypt_field(config.ai_api_key) if config else ""
-    company_base_url = decrypt_field(config.ai_base_url) if config else ""
+    configured_provider = ((config.ai_provider if config else "") or default_provider).lower().strip()
+    # Credenciais/URL de empresa são legadas. Nunca podem acompanhar outro
+    # provedor, pois isso vazaria uma chave para uma API diferente.
+    company_credentials_match_provider = configured_provider == provider
+    company_key = decrypt_field(config.ai_api_key) if config and company_credentials_match_provider else ""
+    company_base_url = decrypt_field(config.ai_base_url) if config and company_credentials_match_provider else ""
     platform_key = decrypt_platform_api_key(platform_provider)
     is_environment_provider = provider == default_provider.lower().strip()
     environment_key = get_secret("DEFAULT_AI_API_KEY") if is_environment_provider else ""
@@ -83,9 +91,10 @@ def resolve_ai_config(
         "model": model,
         "api_key": company_key or platform_key or environment_key,
         "base_url": (
-            company_base_url
-            or (platform_provider.base_url if platform_provider else "")
-            or environment_base_url
+            company_base_url if company_key else (
+                (platform_provider.base_url or "") if platform_key
+                else environment_base_url
+            )
         ),
     }
     if db is not None:

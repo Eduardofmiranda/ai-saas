@@ -44,7 +44,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-}
       REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY:-changeme-in-production}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY obrigatoria no .env}
       DEFAULT_AI_PROVIDER: ${DEFAULT_AI_PROVIDER:-groq}
       DEFAULT_AI_MODEL: ${DEFAULT_AI_MODEL:-qwen/qwen3.8-27b}
       DEFAULT_AI_API_KEY: ${DEFAULT_AI_API_KEY:-}
@@ -82,7 +82,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-}
       REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY:-changeme-in-production}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY obrigatoria no .env}
       DEFAULT_AI_PROVIDER: ${DEFAULT_AI_PROVIDER:-groq}
       DEFAULT_AI_MODEL: ${DEFAULT_AI_MODEL:-qwen/qwen3.8-27b}
       DEFAULT_AI_API_KEY: ${DEFAULT_AI_API_KEY:-}
