@@ -143,6 +143,6 @@ export const api = {
     const qs = new URLSearchParams();
     if (params.limit) qs.set("limit", params.limit);
     if (params.offset) qs.set("offset", params.offset);
-    return request("GET", `/customers?${qs.toString()}`);
+    return request("GET", `/customers/?${qs.toString()}`);
   },
 };
