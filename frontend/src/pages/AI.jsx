@@ -51,6 +51,8 @@ export default function AI() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
 
   const [form, setForm] = useState({
     ai_on: false,
@@ -107,6 +109,24 @@ export default function AI() {
 
   function applyPreset(preset) {
     set("system_prompt", preset.prompt);
+  }
+
+  async function handleTest() {
+    setTesting(true);
+    setTestResult(null);
+    setError("");
+    try {
+      const res = await api.testAI();
+      if (res.ok) {
+        setTestResult({ ok: true, detail: `${res.detail} Resposta: "${res.reply}"` });
+      } else {
+        setTestResult({ ok: false, detail: `Falhou: ${res.detail || "Erro ao testar a IA."}` });
+      }
+    } catch (e) {
+      setTestResult({ ok: false, detail: e.message });
+    } finally {
+      setTesting(false);
+    }
   }
 
   if (loading) {
@@ -166,6 +186,16 @@ export default function AI() {
               <span>Modelo</span>
               <input value={form.ai_model} disabled readOnly />
             </label>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <button className="btn ghost" onClick={handleTest} disabled={testing || !form.ai_provider}>
+              {testing ? "Testando..." : "Testar conexão com IA"}
+            </button>
+            {testResult && (
+              <span className={testResult.ok ? "success-msg" : "error"} style={{ marginLeft: 12 }}>
+                {testResult.detail}
+              </span>
+            )}
           </div>
         </div>
 
