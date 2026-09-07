@@ -104,12 +104,12 @@ export default function Conversations() {
     try {
       await api.replyToConversation(selected, content);
       setDraft("");
-      const [msgs, list] = await Promise.all([
+      const [msgRes, convRes] = await Promise.all([
         api.getConversationMessages(selected),
         api.getConversations(),
       ]);
-      setMessages(msgs);
-      setConversations(list);
+      setMessages(msgRes.items || []);
+      setConversations(convRes.items || []);
     } catch (e) {
       setComposerError(e.message || "Falha ao enviar resposta");
     } finally {
