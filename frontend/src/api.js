@@ -138,4 +138,11 @@ export const api = {
   getConversationMessages: (id) => request("GET", `/messages/conversation/${id}`),
   replyToConversation: (conversationId, content) =>
     request("POST", `/messages/conversation/${conversationId}/reply`, { content }),
+  // Leads / Clientes
+  getCustomers: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.limit) qs.set("limit", params.limit);
+    if (params.offset) qs.set("offset", params.offset);
+    return request("GET", `/customers?${qs.toString()}`);
+  },
 };
