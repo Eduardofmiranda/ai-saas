@@ -93,7 +93,7 @@ async def handle_incoming_message(
 
     config = get_or_create_config(db, company_id)
 
-    resolved_ai = resolve_ai_config(config)
+    resolved_ai = resolve_ai_config(config, db)
     ai_provider = resolved_ai["provider"]
     ai_model = resolved_ai["model"]
     ai_api_key = resolved_ai["api_key"]

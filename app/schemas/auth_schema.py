@@ -17,6 +17,7 @@ class LoginResponse(BaseModel):
     name: str
     email: str
     role: str
+    is_platform_admin: bool = False
 
 
 class ChangePasswordRequest(BaseModel):

@@ -205,3 +205,16 @@ Authorization: Bearer <token>
 ## Tamanho Maximo
 
 - `MAX_MESSAGE_LENGTH = 4096` caracteres
+
+## Administração da plataforma
+
+Todos os endpoints abaixo exigem JWT de um operador global e não devolvem
+chaves, prompts ou conteúdo de conversas.
+
+| Método | Rota | Finalidade |
+|--------|------|------------|
+| GET | `/platform-admin/overview` | Totais globais e estado público das credenciais |
+| GET | `/platform-admin/users` | Usuários cadastrados e empresa vinculada |
+| GET | `/platform-admin/providers` | Estado público de cada provedor suportado |
+| PUT | `/platform-admin/providers/{provider}` | Cadastra/atualiza modelo, URL, chave cifrada e disponibilidade |
+| POST | `/platform-admin/providers/deepseek/balance` | Consulta saldo oficial do DeepSeek, sem expor a chave |

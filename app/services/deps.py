@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.models.user import User
 from app.services.security import decode_access_token
+from app.services.platform_access import is_platform_admin
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -37,3 +38,15 @@ def get_current_company(
     current_user: User = Depends(get_current_user),
 ) -> int:
     return current_user.company_id
+
+
+def get_current_platform_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Exige privilegio global sem reaproveitar o papel da empresa."""
+    if not is_platform_admin(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito a administracao da plataforma",
+        )
+    return current_user

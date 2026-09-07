@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 
 from app.database.database import Base
@@ -27,6 +27,9 @@ class User(Base):
     password_hash = Column(String, nullable=False)
 
     role = Column(String, nullable=False, default="agent")
+
+    # Papel de plataforma separado dos papeis internos de uma empresa.
+    is_platform_admin = Column(Boolean, nullable=False, default=False)
 
     company = relationship("Company")
 

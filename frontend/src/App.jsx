@@ -11,7 +11,16 @@ import WhatsApp from "./pages/WhatsApp";
 import Conversations from "./pages/Conversations";
 import Account from "./pages/Account";
 import ResetPassword from "./pages/ResetPassword";
+import PlatformAdmin from "./pages/PlatformAdmin";
 
+
+function PlatformProtected({ children }) {
+  const { user, ready } = useAuth();
+  if (!ready) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!user.is_platform_admin) return <Navigate to="/" replace />;
+  return children;
+}
 function Protected({ children }) {
   const { user, ready } = useAuth();
   if (!ready) return null;
@@ -35,6 +44,7 @@ export default function App() {
           <Route path="/editor/:id" element={<Protected><Editor /></Protected>} />
           <Route path="/knowledge" element={<Protected><Knowledge /></Protected>} />
           <Route path="/admin" element={<Protected><Admin /></Protected>} />
+          <Route path="/plataforma" element={<PlatformProtected><PlatformAdmin /></PlatformProtected>} />
           <Route path="/whatsapp" element={<Protected><WhatsApp /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

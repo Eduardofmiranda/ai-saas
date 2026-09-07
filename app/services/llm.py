@@ -22,7 +22,7 @@ PROVIDER_DEFAULTS: dict[str, dict] = {
     },
     "deepseek": {
         "base_url": "https://api.deepseek.com/v1",
-        "model": "deepseek-chat",
+        "model": "deepseek-v4-flash",
     },
     "mistral": {
         "base_url": "https://api.mistral.ai/v1",
@@ -90,6 +90,12 @@ async def generate_reply(
         return (
             f"Ola! Recebi sua mensagem e ja estou analisando. "
             f"(modo demonstracao - sem IA real). Voce perguntou: '{last_user[:60]}'"
+        )
+
+    if cfg["provider"] not in {"ollama", "mock"} and not cfg["api_key"]:
+        raise LLMError(
+            f"Nenhuma chave de API foi configurada para o provedor {cfg['provider']}. "
+            "Peça ao administrador da plataforma para cadastrar uma chave deste provedor."
         )
 
     if not cfg["base_url"]:

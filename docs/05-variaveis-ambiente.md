@@ -141,3 +141,32 @@ embeddings.
 5. **NAO use a chave da Groq como `EVOLUTION_API_KEY`** — sao chaves diferentes
 6. O `docker-compose.evolution.yml` **nao usa `env_file`** — vazar variaveis do app para a Evolution causa conflitos no `AUTHENTICATION_API_KEY`
 7. **`SEED_DEFAULT_USER`**: habilitar apenas em desenvolvimento local. Em producao, NAO definir.
+
+## Operador global da plataforma
+
+| Variável | Default | Finalidade |
+|----------|---------|------------|
+| `PLATFORM_ADMIN_EMAILS` | — | Lista de emails, separados por vírgula, autorizados a acessar `/plataforma` no bootstrap. Não concede acesso por ser `owner` ou `admin` de uma empresa. |
+
+> Em produção, defina somente o email do operador responsável, por exemplo
+> `PLATFORM_ADMIN_EMAILS=gestor@exemplo.com`. Após editar `.env`, recrie o
+> `backend` e o `celery-worker`; `restart` isolado não recarrega variáveis.
+> As chaves dos provedores são cadastradas no painel `/plataforma`, ficam
+> cifradas no banco e não devem ser adicionadas ao `.env` uma a uma.
+### Bootstrap da primeira conta global
+
+**Implementado:** quando os dois valores abaixo existem na inicialização, o
+backend cria a primeira conta global ou promove a conta de mesmo email. A senha
+é aplicada apenas nessa primeira promoção/criação; reinícios seguintes não a
+sobrescrevem.
+
+```env
+PLATFORM_ADMIN_BOOTSTRAP_EMAIL=gestor@exemplo.com
+PLATFORM_ADMIN_BOOTSTRAP_PASSWORD=<senha-temporaria-forte-com-12-ou-mais-caracteres>
+PLATFORM_ADMIN_NAME=Administrador da Plataforma
+PLATFORM_ADMIN_COMPANY_NAME=Administracao da Plataforma
+```
+
+Não há senha padrão no repositório. Gere uma senha forte, entre pelo formulário
+normal de login e altere-a em **Senha** após o primeiro acesso. Mantenha esses
+valores fora do Git; eles são segredos do deploy.

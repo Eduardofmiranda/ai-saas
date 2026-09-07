@@ -19,6 +19,7 @@ class UserResponse(BaseModel):
     name: str
     email: str
     role: str
+    is_platform_admin: bool = False
 
     class Config:
         from_attributes = True

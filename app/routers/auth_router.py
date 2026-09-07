@@ -22,6 +22,7 @@ from app.schemas.auth_schema import (
 from app.schemas.user_schema import UserResponse
 from app.services import email_service
 from app.services.deps import get_current_user
+from app.services.platform_access import is_platform_admin
 from app.services.rate_limit import limiter
 from app.services.security import (
     create_access_token,
@@ -64,6 +65,7 @@ def _build_login_response(user: User) -> LoginResponse:
         name=user.name,
         email=user.email,
         role=user.role,
+        is_platform_admin=is_platform_admin(user),
     )
 
 
@@ -115,7 +117,14 @@ def me(
     current_user: User = Depends(get_current_user),
 ):
     """Retorna os dados do usuario logado (usado no reload para restaurar role)."""
-    return current_user
+    return {
+        "id": current_user.id,
+        "company_id": current_user.company_id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "role": current_user.role,
+        "is_platform_admin": is_platform_admin(current_user),
+    }
 
 
 @router.post("/change-password")

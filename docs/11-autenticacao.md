@@ -95,3 +95,21 @@ def list_items(current_user: User = Depends(get_current_user)):
 - Nao armazenadas em texto puro
 - Verificadas com `verify_password(plain, hashed)`
 - Geracao de senha nova nao impoe complexidade (somente minimo de 6 caracteres nos fluxos de troca/reset)
+
+## Operador da plataforma
+
+**Implementado:** `is_platform_admin` é um privilégio separado de `role`.
+Acesso a `/platform-admin/*` exige esse privilégio; `owner` e `admin` de uma
+empresa não obtêm acesso global. O bootstrap opcional por
+`PLATFORM_ADMIN_EMAILS` é avaliado no login e em cada rota protegida.
+
+**Não implementado:** rastreamento de sessões ativas. A lista global de
+usuários indica contas cadastradas, não presença online.
+### Primeiro acesso sem SMTP
+
+**Implementado:** se SMTP ainda não estiver configurado, o operador pode ser
+criado por `PLATFORM_ADMIN_BOOTSTRAP_EMAIL` e
+`PLATFORM_ADMIN_BOOTSTRAP_PASSWORD` no `.env`. O login continua sendo a mesma
+tela normal; não existe uma tela ou senha especial de superadmin. A senha de
+bootstrap é usada uma vez e deve ser trocada pela página **Senha** após o
+primeiro login.

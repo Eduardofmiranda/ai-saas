@@ -15,7 +15,7 @@ export default function Header({ children }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const isManager = user?.role === "owner" || user?.role === "admin";
-  const nav = NAV.filter(([, label]) => !(label === "Administração" && !isManager));
+  const nav = [...NAV, ...(user?.is_platform_admin ? [["/plataforma", "Plataforma"]] : [])].filter(([, label]) => !(label === "Administração" && !isManager));
 
   return (
     <header className="topbar">
@@ -41,6 +41,7 @@ export default function Header({ children }) {
       <div className="topbar-right">
         <span className="user">
           {user?.name || user?.email}
+          {user?.is_platform_admin && <span className="role-chip role-platform">Plataforma</span>}
           {user?.role && (
             <span className={`role-chip role-${user.role}`}>
               {user.role === "owner" ? "Dono" : user.role === "admin" ? "Admin" : "Atendente"}

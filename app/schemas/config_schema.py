@@ -38,3 +38,4 @@ class ConfigResponse(BaseModel):
     # Valores efetivos para a interface; a chave nunca e exposta.
     resolved_ai_provider: str
     resolved_ai_model: str
+    ai_credential_source: str

@@ -109,7 +109,7 @@ class NodeContext:
         system_prompt: str | None = None,
     ) -> str:
         """Chama o LLM usando a config da empresa (provedor/modelo/chave)."""
-        resolved_ai = resolve_ai_config(self.config)
+        resolved_ai = resolve_ai_config(self.config, self.db)
         provider = resolved_ai["provider"]
         model = resolved_ai["model"]
         api_key = resolved_ai["api_key"]

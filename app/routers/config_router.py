@@ -21,9 +21,13 @@ _MASKED = "__MASKED__"
 # campos sensiveis que devem ser criptografados em repouso
 _SENSITIVE_FIELDS = ("ai_api_key", "evolution_api_key")
 
+class AITestRequest(BaseModel):
+    ai_provider: str | None = None
+    ai_model: str | None = None
 
-def _to_response(config) -> ConfigResponse:
-    resolved_ai = resolve_ai_config(config)
+
+def _to_response(config, db: Session) -> ConfigResponse:
+    resolved_ai = resolve_ai_config(config, db)
     return ConfigResponse(
         company_id=config.company_id,
         ai_provider=config.ai_provider,
@@ -36,6 +40,7 @@ def _to_response(config) -> ConfigResponse:
         ai_on=config.ai_on,
         resolved_ai_provider=resolved_ai["provider"],
         resolved_ai_model=resolved_ai["model"],
+        ai_credential_source=resolved_ai["credential_source"],
     )
 
 
@@ -45,7 +50,7 @@ def get_config(
     db: Session = Depends(get_db),
 ):
     config = get_or_create_config(db, current_user.company_id)
-    return _to_response(config)
+    return _to_response(config, db)
 
 
 @router.patch("/", response_model=ConfigResponse)
@@ -57,6 +62,14 @@ def update_config(
     config = get_or_create_config(db, current_user.company_id)
 
     updates = data.model_dump(exclude_unset=True)
+    requested_provider = (updates.get("ai_provider") or "").strip().lower()
+    current_provider = (config.ai_provider or get_secret("DEFAULT_AI_PROVIDER") or "groq").strip().lower()
+    # O campo legado ai_api_key não informa a qual provedor pertence. Ao trocar
+    # de provedor sem enviar outra chave, descartamos a antiga para impedir que
+    # uma chave DeepSeek, por exemplo, seja enviada à OpenAI por engano.
+    if requested_provider and requested_provider != current_provider and "ai_api_key" not in updates:
+        config.ai_api_key = ""
+        config.ai_base_url = ""
     for field, value in updates.items():
         if field in _SENSITIVE_FIELDS:
             if value in (None, "", _MASKED):
@@ -67,11 +80,12 @@ def update_config(
 
     db.commit()
     db.refresh(config)
-    return _to_response(config)
+    return _to_response(config, db)
 
 
 @router.post("/ai/test")
 async def ai_test(
+    data: AITestRequest | None = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -82,7 +96,22 @@ async def ai_test(
     """
     config = get_or_create_config(db, current_user.company_id)
 
-    resolved_ai = resolve_ai_config(config)
+    data = data or AITestRequest()
+
+    selected = config
+    if data.ai_provider is not None or data.ai_model is not None:
+        # O teste usa o que está selecionado na tela, sem persistir o override.
+        from types import SimpleNamespace
+        selected_provider = data.ai_provider if data.ai_provider is not None else config.ai_provider
+        current_provider = config.ai_provider or get_secret("DEFAULT_AI_PROVIDER") or "groq"
+        keeps_company_credential = selected_provider.strip().lower() == current_provider.strip().lower()
+        selected = SimpleNamespace(
+            ai_provider=selected_provider,
+            ai_model=data.ai_model if data.ai_model is not None else config.ai_model,
+            ai_api_key=config.ai_api_key if keeps_company_credential else "",
+            ai_base_url=config.ai_base_url if keeps_company_credential else "",
+        )
+    resolved_ai = resolve_ai_config(selected, db)
     provider = resolved_ai["provider"]
     model = resolved_ai["model"]
     api_key = resolved_ai["api_key"]

@@ -12,6 +12,7 @@ from app.config import get_secret
 from app.database.database import Base, engine, SessionLocal
 from app.services import llm
 from app.services.rate_limit import limiter
+from app.services.platform_bootstrap import bootstrap_platform_admin
 
 from app.routers.auth_router import router as auth_router
 from app.routers.company_router import router as company_router
@@ -25,6 +26,7 @@ from app.routers.workflow_router import router as workflow_router
 from app.routers.knowledge_router import router as knowledge_router
 from app.routers.template_router import router as template_router
 from app.routers.users_router import router as users_router
+from app.routers.platform_admin_router import router as platform_admin_router
 
 
 logger = logging.getLogger("ai_saas")
@@ -57,6 +59,7 @@ async def lifespan(app: FastAPI):
     try:
         from app.seed import seed_default_user
         seed_default_user(db)
+        bootstrap_platform_admin(db)
     finally:
         db.close()
 
@@ -102,6 +105,7 @@ app.include_router(workflow_router)
 app.include_router(knowledge_router)
 app.include_router(template_router)
 app.include_router(users_router)
+app.include_router(platform_admin_router)
 
 
 @app.get("/")

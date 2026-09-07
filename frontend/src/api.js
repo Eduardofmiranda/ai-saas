@@ -76,7 +76,7 @@ export const api = {
   getExecutions: (id) => request("GET", `/workflows/${id}/executions`),
   getConfig: () => request("GET", "/config/"),
   updateConfig: (body) => request("PATCH", "/config/", body),
-  testAI: () => request("POST", "/config/ai/test"),
+  testAI: (body = {}) => request("POST", "/config/ai/test", body),
   getDashboard: () => request("GET", "/dashboard/"),
   getKnowledge: () => request("GET", "/knowledge/"),
   getKnowledgeDetail: (id) => request("GET", `/knowledge/${id}`),
@@ -93,7 +93,13 @@ export const api = {
   createUser: (body) => request("POST", "/users/", body),
   updateUser: (id, body) => request("PATCH", `/users/${id}`, body),
   deleteUser: (id) => request("DELETE", `/users/${id}`),
-  // WhatsApp / Evolution
+  // Administração global da plataforma (somente operador autorizado)
+  getPlatformOverview: () => request("GET", "/platform-admin/overview"),
+  getPlatformUsers: () => request("GET", "/platform-admin/users"),
+  getPlatformProviders: () => request("GET", "/platform-admin/providers"),
+  updatePlatformProvider: (provider, body) => request("PUT", `/platform-admin/providers/${provider}`, body),
+  getPlatformProviderBalance: (provider) => request("POST", `/platform-admin/providers/${provider}/balance`, {}),
+    // WhatsApp / Evolution
   getWhatsAppStatus: () => request("GET", "/config/whatsapp"),
   testWhatsApp: (body) => request("POST", "/config/whatsapp/test", body),
   connectWhatsApp: () => request("POST", "/config/whatsapp/connect", {}),

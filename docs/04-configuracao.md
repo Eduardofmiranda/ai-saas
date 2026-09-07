@@ -65,3 +65,26 @@ A integracao com WhatsApp e feita via **Evolution API**. Configuracao:
 3. `EVOLUTION_INSTANCE`: Nome da instancia
 
 O webhook deve apontar para: `POST /webhook/whatsapp/{company_id}`
+
+## Credenciais por provedor e administração da plataforma
+
+**Implementado:** a resolução do chat não usa mais a chave do `.env` de um
+provedor para autenticar outro. A ordem é: chave própria legada da empresa,
+credencial global ativa do **mesmo** provedor, e `DEFAULT_AI_*` somente quando
+o provedor selecionado é o provedor padrão do ambiente. Sem chave compatível, o
+teste e o workflow retornam uma orientação explícita em vez de uma chamada
+ambígua.
+
+O botão **Testar resposta da IA** testa o provedor/modelo atualmente escolhido
+na tela, ainda que o usuário não tenha salvo a alteração. O teste não persiste
+o override.
+
+**Implementado:** `/plataforma` é uma área separada de `/admin`. Apenas um
+operador da plataforma pode cadastrar credenciais globais por provedor. Elas
+são criptografadas em repouso e nunca retornam pela API ou pelo frontend.
+Papéis `owner`, `admin` e `agent` continuam restritos à sua própria empresa.
+
+**Parcial:** o painel consulta o saldo monetário oficial do DeepSeek quando há
+credencial cadastrada. Não existe uma equivalência confiável de saldo para
+“tokens restantes”; o rastreamento de tokens efetivamente usados pelo sistema
+ainda é planejado.

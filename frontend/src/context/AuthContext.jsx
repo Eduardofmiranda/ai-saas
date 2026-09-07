@@ -46,6 +46,7 @@ export function AuthProvider({ children }) {
       email: data.email,
       company_id: data.company_id,
       role: data.role,
+      is_platform_admin: Boolean(data.is_platform_admin),
     });
     return data;
   }
@@ -59,6 +60,7 @@ export function AuthProvider({ children }) {
       email: data.email,
       company_id: data.company_id,
       role: data.role,
+      is_platform_admin: Boolean(data.is_platform_admin),
     });
     return data;
   }

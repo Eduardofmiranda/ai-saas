@@ -50,7 +50,7 @@ Seja breve mas calorosa. Encaminhe dúvidas específicas para o setor correto.`,
 const MODELS = {
   groq: ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b", "qwen/qwen3.8-27b"],
   openai: ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"],
-  deepseek: ["deepseek-chat", "deepseek-reasoner"],
+  deepseek: ["deepseek-v4-flash", "deepseek-v4-pro"],
   mistral: ["mistral-large-latest", "mistral-small-latest"],
   ollama: ["llama3.1", "mistral", "codellama"],
 };
@@ -146,11 +146,11 @@ export default function AI() {
     setTestResult(null);
     setError("");
     try {
-      const res = await api.testAI();
+      const res = await api.testAI({ ai_provider: form.ai_provider, ai_model: form.ai_model });
       if (res.ok) {
         setTestResult({ ok: true, detail: `${res.detail} Resposta: "${res.reply}"` });
       } else {
-        setTestResult({ ok: false, detail: res.detail || "Erro ao testar a IA." });
+        setTestResult({ ok: false, detail: `Falhou via ${res.provider || form.ai_provider} / ${res.model || form.ai_model}: ${res.detail || "Erro ao testar a IA."}` });
       }
     } finally {
       setTesting(false);
@@ -257,6 +257,14 @@ export default function AI() {
           </div>
         </div>
 
+        {config?.ai_credential_source === "missing" && (
+          <div className="error">
+            Não há chave disponível para o provedor selecionado. Peça ao administrador da plataforma para cadastrar a chave de {form.ai_provider}.
+          </div>
+        )}
+        {config?.ai_credential_source === "platform" && (
+          <div className="success-msg">A chave deste provedor é administrada pela plataforma.</div>
+        )}
         {/* Base de Conhecimento */}
         <KnowledgeSummaryCard />
 
