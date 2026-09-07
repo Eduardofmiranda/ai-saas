@@ -133,15 +133,11 @@
 
 ## FASE 8 — Funcionalidades Core ⏳
 
-### 8.1 — Midia WhatsApp
-- [ ] Webhook processa imagens (`imageMessage`)
-- [ ] Webhook processa audio (`audioMessage`)
-- [ ] Webhook processa video (`videoMessage`)
-- [ ] Webhook processa documentos (`documentMessage`)
-- [ ] Webhook processa stickers (`stickerMessage`)
-- [ ] Download de midias via Evolution API (`/chat/getMediaMessage`)
-- [ ] Nodes de workflow suportam midia (envio/recebimento)
-- [ ] Resposta IA com midia (ex.: enviar imagem do catalogo)
+### 8.1 — Midia WhatsApp (resposta automatica) ✅
+- [x] Webhook detecta `imageMessage`, `audioMessage`, `videoMessage`, `documentMessage`, `stickerMessage`
+- [x] Responde automaticamente: "No momento, não é possível processar arquivos. Envie apenas mensagens de texto."
+- [x] Não ignora silenciosamente midias mais
+- [ ] (futuro) Download e processamento real de midias
 
 ### 8.2 — Upload de arquivos no Knowledge Base
 - [ ] Endpoint `POST /knowledge/upload` com `UploadFile`
@@ -406,7 +402,7 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 ### Gaps Criticos (por prioridade)
 
 1. ~~**Politica de IA por usuario**~~ ✅ concluido
-2. **Midia ignorada** — so texto processado, imagens/audio/docs descartados
+2. ~~**Midia ignorada**~~ ✅ resposta automatica implementada
 3. **Knowledge sem upload** — so aceita texto cru, nao arquivos
 4. ~~**Sem handoff humano**~~ ✅ concluido (Fase 8.3)
 5. **Sem paginacao** — todas as listas retornam `.all()`
