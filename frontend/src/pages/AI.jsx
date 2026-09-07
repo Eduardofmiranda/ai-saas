@@ -65,6 +65,7 @@ export default function AI() {
   const [testing, setTesting] = useState(false);
   const [aiFieldsChanged, setAiFieldsChanged] = useState(false);
   const [resetAiDefaults, setResetAiDefaults] = useState(false);
+  const [allowedProviders, setAllowedProviders] = useState([]);
 
   const [form, setForm] = useState({
     ai_on: false,
@@ -74,12 +75,10 @@ export default function AI() {
   });
 
   useEffect(() => {
-    api
-      .getConfig()
-      .then((cfg) => {
-        // A API fornece os valores efetivos: empresa quando houver override,
-        // caso contrario os DEFAULT_AI_* do .env do backend.
+    Promise.all([api.getConfig(), api.getAllowedAI()])
+      .then(([cfg, allowed]) => {
         setConfig(cfg);
+        setAllowedProviders(allowed.allowed_providers || []);
         setForm({
           ai_on: cfg.ai_on ?? false,
           ai_provider: cfg.resolved_ai_provider || cfg.ai_provider || "groq",
@@ -171,7 +170,17 @@ export default function AI() {
   }
 
   const provider = PROVIDERS.find((p) => p.value === form.ai_provider);
+  const hasRestriction = allowedProviders.length > 0;
+  const visibleProviders = hasRestriction
+    ? PROVIDERS.filter((p) => allowedProviders.includes(p.value))
+    : PROVIDERS;
   const models = [...new Set([form.ai_model, ...(MODELS[form.ai_provider] || [])].filter(Boolean))];
+  const visibleModels = hasRestriction
+    ? models.filter((m) => {
+        const providerModels = MODELS[form.ai_provider] || [];
+        return providerModels.includes(m);
+      })
+    : models;
 
   return (
     <div className="layout">
@@ -211,6 +220,7 @@ export default function AI() {
         {/* Provedor e Modelo */}
         <div className="ai-config">
           <h3>Provedor e Modelo</h3>
+          {hasRestriction && <p className="muted" style={{ marginBottom: 8 }}>Mostrando apenas provedores e modelos liberados pelo administrador.</p>}
           <div className="ai-grid">
             <label className="field">
               <span>Provedor de IA</span>
@@ -222,7 +232,7 @@ export default function AI() {
                   if (newModels.length > 0) set("ai_model", newModels[0]);
                 }}
               >
-                {PROVIDERS.map((p) => (
+                {visibleProviders.map((p) => (
                   <option key={p.value} value={p.value}>{p.label}</option>
                 ))}
               </select>
@@ -235,7 +245,7 @@ export default function AI() {
                 value={form.ai_model}
                 onChange={(e) => set("ai_model", e.target.value)}
               >
-                {models.map((m) => (
+                {visibleModels.map((m) => (
                   <option key={m} value={m}>{m}</option>
                 ))}
               </select>

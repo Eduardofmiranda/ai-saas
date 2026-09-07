@@ -201,3 +201,113 @@ async def provider_balance(
             if isinstance(item, dict)
         ],
     }
+
+
+# ---------------------------------------------------------------------------
+# Politica de IA por usuario
+# ---------------------------------------------------------------------------
+
+import json
+
+from app.models.user_ai_config import UserAIConfig
+
+
+class UserAIConfigUpdate(BaseModel):
+    allowed_providers: list[str] | None = None
+    default_provider: str | None = None
+    default_model: str | None = None
+
+
+def _user_ai_config_dict(uc: UserAIConfig) -> dict:
+    return {
+        "user_id": uc.user_id,
+        "allowed_providers": json.loads(uc.allowed_providers or "[]"),
+        "default_provider": uc.default_provider,
+        "default_model": uc.default_model,
+        "created_by": uc.created_by,
+        "updated_at": uc.updated_at.isoformat() if uc.updated_at else None,
+    }
+
+
+@router.get("/user-ai-config")
+def list_user_ai_configs(
+    _: User = Depends(get_current_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """Lista politicas de IA de todos os usuarios."""
+    rows = (
+        db.query(UserAIConfig, User.email, User.name)
+        .join(User, User.id == UserAIConfig.user_id)
+        .order_by(User.id)
+        .all()
+    )
+    result = []
+    for uc, email, name in rows:
+        d = _user_ai_config_dict(uc)
+        d["email"] = email
+        d["name"] = name
+        result.append(d)
+    return result
+
+
+@router.get("/user-ai-config/{user_id}")
+def get_user_ai_config(
+    user_id: int,
+    _: User = Depends(get_current_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """Retorna a politica de IA de um usuario especifico."""
+    uc = db.query(UserAIConfig).filter(UserAIConfig.user_id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario nao encontrado")
+    if not uc:
+        return {
+            "user_id": user_id,
+            "email": user.email,
+            "name": user.name,
+            "allowed_providers": [],
+            "default_provider": "",
+            "default_model": "",
+        }
+    d = _user_ai_config_dict(uc)
+    d["email"] = user.email
+    d["name"] = user.name
+    return d
+
+
+@router.put("/user-ai-config/{user_id}")
+def save_user_ai_config(
+    user_id: int,
+    data: UserAIConfigUpdate,
+    admin: User = Depends(get_current_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """Cria ou atualiza a politica de IA de um usuario (superadmin)."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario nao encontrado")
+
+    uc = db.query(UserAIConfig).filter(UserAIConfig.user_id == user_id).first()
+    if not uc:
+        uc = UserAIConfig(user_id=user_id, created_by=admin.id)
+        db.add(uc)
+
+    if data.allowed_providers is not None:
+        invalid = [p for p in data.allowed_providers if p not in _ALLOWED_PROVIDERS]
+        if invalid:
+            raise HTTPException(status_code=400, detail=f"Provedores nao suportados: {invalid}")
+        uc.allowed_providers = json.dumps(data.allowed_providers)
+
+    if data.default_provider is not None:
+        uc.default_provider = data.default_provider
+
+    if data.default_model is not None:
+        uc.default_model = data.default_model
+
+    db.commit()
+    db.refresh(uc)
+    d = _user_ai_config_dict(uc)
+    d["email"] = user.email
+    d["name"] = user.name
+    return d

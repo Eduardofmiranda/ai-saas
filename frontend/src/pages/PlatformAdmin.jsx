@@ -2,6 +2,24 @@ import { useEffect, useState } from "react";
 import Header from "../components/Header";
 import { api } from "../api";
 
+const PROVIDERS = [
+  { value: "groq", label: "Groq" },
+  { value: "openai", label: "OpenAI" },
+  { value: "deepseek", label: "DeepSeek" },
+  { value: "mistral", label: "Mistral" },
+  { value: "ollama", label: "Ollama" },
+  { value: "mock", label: "Demonstração" },
+];
+
+const MODELS = {
+  groq: ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b", "qwen/qwen3.8-27b"],
+  openai: ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"],
+  deepseek: ["deepseek-v4-flash", "deepseek-v4-pro"],
+  mistral: ["mistral-large-latest", "mistral-small-latest"],
+  ollama: ["llama3.1", "mistral", "codellama"],
+  mock: ["mock-response"],
+};
+
 const label = (value) => ({ groq: "Groq", openai: "OpenAI", deepseek: "DeepSeek", mistral: "Mistral", ollama: "Ollama", mock: "Demonstração" }[value] || value);
 
 export default function PlatformAdmin() {
@@ -13,16 +31,22 @@ export default function PlatformAdmin() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState("");
   const [balances, setBalances] = useState({});
+  // Politica de IA por usuario
+  const [userConfigs, setUserConfigs] = useState([]);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userForm, setUserForm] = useState({ allowed_providers: [], default_provider: "", default_model: "" });
 
   async function load() {
     setError("");
     try {
-      const [nextOverview, nextProviders, nextUsers] = await Promise.all([
+      const [nextOverview, nextProviders, nextUsers, nextUserConfigs] = await Promise.all([
         api.getPlatformOverview(), api.getPlatformProviders(), api.getPlatformUsers(),
+        api.getUserAIConfigs(),
       ]);
       setOverview(nextOverview);
       setProviders(nextProviders);
       setUsers(nextUsers);
+      setUserConfigs(nextUserConfigs);
       setForms(Object.fromEntries(nextProviders.map((item) => [item.provider, {
         model: item.model || "", base_url: item.base_url || "", enabled: item.enabled, api_key: "",
       }])));
@@ -53,6 +77,45 @@ export default function PlatformAdmin() {
       const result = await api.getPlatformProviderBalance(provider);
       setBalances((current) => ({ ...current, [provider]: result }));
     } catch (err) { setError(err.message); }
+  }
+
+  // --- Politica de IA por usuario ---
+  function openUserConfig(user) {
+    const existing = userConfigs.find((c) => c.user_id === user.id);
+    setEditingUser(user);
+    setUserForm({
+      allowed_providers: existing?.allowed_providers || [],
+      default_provider: existing?.default_provider || "",
+      default_model: existing?.default_model || "",
+    });
+  }
+
+  function toggleProvider(provider) {
+    setUserForm((f) => {
+      const allowed = f.allowed_providers.includes(provider)
+        ? f.allowed_providers.filter((p) => p !== provider)
+        : [...f.allowed_providers, provider];
+      const default_provider = allowed.includes(f.default_provider) ? f.default_provider : (allowed[0] || "");
+      const modelsForDefault = MODELS[default_provider] || [];
+      const default_model = modelsForDefault.includes(f.default_model) ? f.default_model : (modelsForDefault[0] || "");
+      return { ...f, allowed_providers: allowed, default_provider, default_model };
+    });
+  }
+
+  async function saveUserConfig() {
+    if (!editingUser) return;
+    setSaving("user-" + editingUser.id); setMessage(""); setError("");
+    try {
+      await api.saveUserAIConfig(editingUser.id, userForm);
+      setMessage(`Política de IA de ${editingUser.name} salva.`);
+      setEditingUser(null);
+      await load();
+    } catch (err) { setError(err.message); }
+    finally { setSaving(""); }
+  }
+
+  function getUserConfig(user) {
+    return userConfigs.find((c) => c.user_id === user.id);
   }
 
   return <div className="layout">
@@ -88,6 +151,56 @@ export default function PlatformAdmin() {
             <label className="toggle"><input type="checkbox" checked={Boolean(form.enabled)} onChange={(e) => set(provider.provider, "enabled", e.target.checked)} /><span>Disponível para empresas</span></label>
             <div className="btn-group"><button className="btn primary" disabled={saving === provider.provider} onClick={() => saveProvider(provider.provider)}>{saving === provider.provider ? "Salvando..." : "Salvar"}</button>{provider.provider === "deepseek" && provider.has_api_key && <button className="btn ghost" onClick={() => checkBalance(provider.provider)}>Consultar saldo</button>}</div>
             {balance && <p className="field-help">{balance.balances ? balance.balances.map((item) => `${item.total_balance} ${item.currency}`).join(" · ") : balance.detail}</p>}
+          </div>;
+        })}</div>
+      </section>
+      <section className="ai-config"><h3>Política de IA por usuário</h3>
+        <p className="muted">Defina quais provedores e modelos cada usuário pode utilizar. O usuário comum só visualiza as opções liberadas.</p>
+        {editingUser && <div className="platform-provider" style={{ marginBottom: 16 }}>
+          <div className="platform-provider-head"><strong>Editar: {editingUser.name}</strong><span>{editingUser.email}</span></div>
+          <label className="field"><span>Provedores liberados</span>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+              {PROVIDERS.map((p) => (
+                <label key={p.value} className="toggle" style={{ fontSize: 13 }}>
+                  <input type="checkbox" checked={userForm.allowed_providers.includes(p.value)} onChange={() => toggleProvider(p.value)} />
+                  <span>{p.label}</span>
+                </label>
+              ))}
+            </div>
+          </label>
+          {userForm.allowed_providers.length > 0 && <>
+            <label className="field"><span>Provedor padrão</span>
+              <select value={userForm.default_provider} onChange={(e) => {
+                const dp = e.target.value;
+                const models = MODELS[dp] || [];
+                setUserForm((f) => ({ ...f, default_provider: dp, default_model: models[0] || "" }));
+              }}>
+                {userForm.allowed_providers.map((p) => <option key={p} value={p}>{label(p)}</option>)}
+              </select>
+            </label>
+            <label className="field"><span>Modelo padrão</span>
+              <select value={userForm.default_model} onChange={(e) => setUserForm((f) => ({ ...f, default_model: e.target.value }))}>
+                {(MODELS[userForm.default_provider] || []).map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </label>
+          </>}
+          <div className="btn-group">
+            <button className="btn primary" disabled={saving === "user-" + editingUser.id} onClick={saveUserConfig}>
+              {saving === "user-" + editingUser.id ? "Salvando..." : "Salvar política"}
+            </button>
+            <button className="btn ghost" onClick={() => setEditingUser(null)}>Cancelar</button>
+          </div>
+        </div>}
+        <div className="platform-user-list">{users.map((user) => {
+          const cfg = getUserConfig(user);
+          return <div key={user.id} className="platform-user-row">
+            <div><strong>{user.name}</strong><span>{user.email}</span></div>
+            <div>
+              {cfg && cfg.allowed_providers.length > 0
+                ? <span>{cfg.allowed_providers.map(label).join(", ")} · padrão: {label(cfg.default_provider)}/{cfg.default_model}</span>
+                : <span className="muted">Sem política (usa empresa/.env)</span>}
+              <button className="btn ghost" style={{ marginLeft: 8, fontSize: 12 }} onClick={() => openUserConfig(user)}>Editar</button>
+            </div>
           </div>;
         })}</div>
       </section>

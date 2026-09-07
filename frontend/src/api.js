@@ -99,6 +99,13 @@ export const api = {
   getPlatformProviders: () => request("GET", "/platform-admin/providers"),
   updatePlatformProvider: (provider, body) => request("PUT", `/platform-admin/providers/${provider}`, body),
   getPlatformProviderBalance: (provider) => request("POST", `/platform-admin/providers/${provider}/balance`, {}),
+  // Politica de IA por usuario (superadmin)
+  getUserAIConfigs: () => request("GET", "/platform-admin/user-ai-config"),
+  getUserAIConfig: (userId) => request("GET", `/platform-admin/user-ai-config/${userId}`),
+  saveUserAIConfig: (userId, body) => request("PUT", `/platform-admin/user-ai-config/${userId}`, body),
+  // AI — allowed / effective (usuario comum)
+  getAllowedAI: () => request("GET", "/config/ai/allowed"),
+  getEffectiveAI: () => request("GET", "/config/ai/effective"),
     // WhatsApp / Evolution
   getWhatsAppStatus: () => request("GET", "/config/whatsapp"),
   testWhatsApp: (body) => request("POST", "/config/whatsapp/test", body),

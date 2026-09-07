@@ -26,8 +26,8 @@ class AITestRequest(BaseModel):
     ai_model: str | None = None
 
 
-def _to_response(config, db: Session) -> ConfigResponse:
-    resolved_ai = resolve_ai_config(config, db)
+def _to_response(config, db: Session, user_id: int | None = None) -> ConfigResponse:
+    resolved_ai = resolve_ai_config(config, db, user_id=user_id)
     return ConfigResponse(
         company_id=config.company_id,
         ai_provider=config.ai_provider,
@@ -50,7 +50,7 @@ def get_config(
     db: Session = Depends(get_db),
 ):
     config = get_or_create_config(db, current_user.company_id)
-    return _to_response(config, db)
+    return _to_response(config, db, user_id=current_user.id)
 
 
 @router.patch("/", response_model=ConfigResponse)
@@ -80,7 +80,7 @@ def update_config(
 
     db.commit()
     db.refresh(config)
-    return _to_response(config, db)
+    return _to_response(config, db, user_id=current_user.id)
 
 
 @router.post("/ai/test")
@@ -111,7 +111,7 @@ async def ai_test(
             ai_api_key=config.ai_api_key if keeps_company_credential else "",
             ai_base_url=config.ai_base_url if keeps_company_credential else "",
         )
-    resolved_ai = resolve_ai_config(selected, db)
+    resolved_ai = resolve_ai_config(selected, db, user_id=current_user.id)
     provider = resolved_ai["provider"]
     model = resolved_ai["model"]
     api_key = resolved_ai["api_key"]
@@ -138,6 +138,50 @@ async def ai_test(
         "model": resolved["model"],
         "reply": reply[:200],
         "detail": f"IA respondeu via {resolved['provider']} com {resolved['model']}.",
+    }
+
+
+# ---------------------------------------------------------------------------
+# AI — politica por usuario (allowed / effective)
+# ---------------------------------------------------------------------------
+
+import json
+
+from app.services.config_service import get_user_ai_config, get_user_allowed_providers
+
+
+@router.get("/ai/allowed")
+def ai_allowed(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retorna os provedores/modelos liberados para o usuario logado.
+
+    Se nao houver politica de usuario, retorna vazio (fallback para empresa/.env).
+    """
+    allowed = get_user_allowed_providers(db, current_user.id)
+    uc = get_user_ai_config(db, current_user.id)
+    return {
+        "allowed_providers": allowed,
+        "default_provider": uc.default_provider if uc else "",
+        "default_model": uc.default_model if uc else "",
+    }
+
+
+@router.get("/ai/effective")
+def ai_effective(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retorna a config efetiva de IA do usuario (somente leitura)."""
+    config = get_or_create_config(db, current_user.company_id)
+    resolved = resolve_ai_config(config, db, user_id=current_user.id)
+    allowed = get_user_allowed_providers(db, current_user.id)
+    return {
+        "provider": resolved["provider"],
+        "model": resolved["model"],
+        "credential_source": resolved.get("credential_source", "unknown"),
+        "allowed_providers": allowed,
     }
 
 

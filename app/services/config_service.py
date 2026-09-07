@@ -1,7 +1,10 @@
+import json
+
 from sqlalchemy.orm import Session
 
 from app.config import get_secret
 from app.models.company_config import CompanyConfig
+from app.models.user_ai_config import UserAIConfig
 from app.services.field_crypto import decrypt_field
 from app.services.platform_ai_provider_service import (
     decrypt_platform_api_key,
@@ -9,17 +12,47 @@ from app.services.platform_ai_provider_service import (
 )
 
 
+def get_user_ai_config(db: Session, user_id: int) -> UserAIConfig | None:
+    """Retorna a politica de IA atribuida ao usuario pelo superadmin."""
+    if not user_id:
+        return None
+    return db.query(UserAIConfig).filter(UserAIConfig.user_id == user_id).first()
+
+
+def get_user_allowed_providers(db: Session, user_id: int) -> list[str]:
+    """Retorna a lista de provedores liberados para o usuario."""
+    uc = get_user_ai_config(db, user_id)
+    if not uc:
+        return []
+    return json.loads(uc.allowed_providers or "[]")
+
+
 def resolve_ai_config(
     config: CompanyConfig | None,
     db: Session | None = None,
+    user_id: int | None = None,
 ) -> dict[str, str]:
-    """Resolve a IA sem reutilizar uma chave de outro provedor.
+    """Resolve a IA com prioridade: usuario → empresa → plataforma → .env.
 
-    Ordem: override da empresa -> credencial global do mesmo provedor -> .env
-    do provedor padrão. O .env não é usado para autenticar outro provedor.
+    1. Se usuario tem politica (UserAIConfig), usa provedor/modelo dela.
+       Valida se o provedor esta na lista de permitidos.
+    2. Senao, override da empresa (company_configs).
+    3. Credencial global do mesmo provedor (platform_ai_providers).
+    4. .env do provedor padrao.
     """
     default_provider = get_secret("DEFAULT_AI_PROVIDER") or "groq"
-    provider = ((config.ai_provider if config else "") or default_provider).lower().strip()
+
+    # 1) Politica do usuario (prioridade maxima)
+    user_ai = get_user_ai_config(db, user_id) if db and user_id else None
+    user_allowed = json.loads(user_ai.allowed_providers or "[]") if user_ai else []
+
+    if user_ai and user_ai.default_provider:
+        provider = user_ai.default_provider.lower().strip()
+    else:
+        provider = ((config.ai_provider if config else "") or default_provider).lower().strip()
+        if user_allowed and provider not in user_allowed:
+            provider = user_allowed[0]
+
     platform_provider = get_platform_provider(db, provider)
 
     company_key = decrypt_field(config.ai_api_key) if config else ""
@@ -38,13 +71,16 @@ def resolve_ai_config(
     else:
         credential_source = "missing"
 
+    model = (
+        (user_ai.default_model if user_ai and user_ai.default_model else "")
+        or (config.ai_model if config else "")
+        or (platform_provider.model if platform_provider else "")
+        or (get_secret("DEFAULT_AI_MODEL") if is_environment_provider else "")
+    )
+
     resolved = {
         "provider": provider,
-        "model": (
-            (config.ai_model if config else "")
-            or (platform_provider.model if platform_provider else "")
-            or (get_secret("DEFAULT_AI_MODEL") if is_environment_provider else "")
-        ),
+        "model": model,
         "api_key": company_key or platform_key or environment_key,
         "base_url": (
             company_base_url
@@ -52,10 +88,10 @@ def resolve_ai_config(
             or environment_base_url
         ),
     }
-    # Compatibilidade: chamadas antigas sem sessão continuam recebendo o
-    # contrato original. As rotas e execuções reais sempre passam ``db``.
     if db is not None:
         resolved["credential_source"] = credential_source
+        if user_ai:
+            resolved["user_allowed_providers"] = user_allowed
     return resolved
 
 
