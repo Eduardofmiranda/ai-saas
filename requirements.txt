@@ -27,5 +27,9 @@ redis==6.2.0
 # Rate limiting
 slowapi==0.1.9
 
+# Knowledge Base — parsing de arquivos
+pypdf==5.1.0
+python-docx==1.1.2
+
 # Utils
 python-json-logger==3.3.0

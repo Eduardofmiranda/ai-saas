@@ -29,7 +29,9 @@ async function request(method, path, body, form) {
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   let options = { method, headers };
-  if (form) {
+  if (body instanceof FormData) {
+    options.body = body;
+  } else if (form) {
     headers["Content-Type"] = "application/x-www-form-urlencoded";
     options.body = new URLSearchParams(form).toString();
   } else if (body !== undefined) {
@@ -81,6 +83,13 @@ export const api = {
   getKnowledge: () => request("GET", "/knowledge/"),
   getKnowledgeDetail: (id) => request("GET", `/knowledge/${id}`),
   createKnowledge: (body) => request("POST", "/knowledge/", body),
+  uploadKnowledge: (file, name = "", description = "") => {
+    const fd = new FormData();
+    fd.append("file", file);
+    if (name) fd.append("name", name);
+    if (description) fd.append("description", description);
+    return request("POST", "/knowledge/upload", fd, true);
+  },
   updateKnowledge: (id, body) => request("PATCH", `/knowledge/${id}`, body),
   deleteKnowledge: (id) => request("DELETE", `/knowledge/${id}`),
   searchKnowledge: (query, topK = 5) => request("POST", "/knowledge/search", { query, top_k: topK }),

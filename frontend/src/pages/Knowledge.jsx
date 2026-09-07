@@ -15,6 +15,8 @@ export default function Knowledge() {
   const [searchResults, setSearchResults] = useState(null);
   const [searching, setSearching] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   async function load() {
     try {
@@ -38,6 +40,7 @@ export default function Knowledge() {
     setForm({ name: "", description: "", content: "" });
     setEditingId(null);
     setShowForm(false);
+    setUploadFile(null);
   }
 
   function startEdit(item) {
@@ -54,6 +57,10 @@ export default function Knowledge() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (uploadFile) {
+      await handleUpload();
+      return;
+    }
     if (!form.name.trim() || (!editingId && !form.content.trim())) {
       setError("Nome e conteúdo são obrigatórios");
       return;
@@ -74,6 +81,21 @@ export default function Knowledge() {
       setError("Erro ao salvar: " + e.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleUpload() {
+    if (!uploadFile) return;
+    setUploading(true);
+    setError("");
+    try {
+      await api.uploadKnowledge(uploadFile, form.name, form.description);
+      resetForm();
+      load();
+    } catch (e) {
+      setError("Erro no upload: " + e.message);
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -156,22 +178,61 @@ export default function Knowledge() {
               />
             </label>
             {!editingId && (
-              <label className="field">
-                <span>Conteúdo</span>
-                <textarea
-                  placeholder="Cole ou digite o conteúdo que a IA usará como referência..."
-                  value={form.content}
-                  onChange={(e) => set("content", e.target.value)}
-                  rows={8}
-                  required
-                />
-                <small className="field-help">
-                  O conteúdo será dividido em pedaços (chunks) para busca semantica.
-                </small>
-              </label>
+              <>
+                <div className="field">
+                  <span>Arquivo</span>
+                  <div
+                    style={{
+                      border: "2px dashed #374151",
+                      borderRadius: 8,
+                      padding: "24px 16px",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      background: uploadFile ? "#1a2332" : "transparent",
+                      marginTop: 4,
+                    }}
+                    onClick={() => document.getElementById("kb-file-input").click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files[0]) setUploadFile(e.dataTransfer.files[0]); }}
+                  >
+                    <input
+                      id="kb-file-input"
+                      type="file"
+                      accept=".pdf,.docx,.doc,.txt,.csv,.md,.markdown,.json,.xml,.html"
+                      style={{ display: "none" }}
+                      onChange={(e) => { if (e.target.files[0]) setUploadFile(e.target.files[0]); }}
+                    />
+                    {uploadFile ? (
+                      <p style={{ margin: 0 }}>
+                        <strong>{uploadFile.name}</strong>
+                        <br />
+                        <small className="muted">{(uploadFile.size / 1024).toFixed(1)} KB · Clique para trocar</small>
+                      </p>
+                    ) : (
+                      <p style={{ margin: 0 }}>
+                        Arraste um arquivo aqui ou <strong>clique para selecionar</strong>
+                        <br />
+                        <small className="muted">PDF, DOCX, TXT, CSV, Markdown (max 10MB)</small>
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <label className="field">
+                  <span>Ou cole o conteúdo como texto</span>
+                  <textarea
+                    placeholder="Se preferir, cole o conteúdo diretamente..."
+                    value={form.content}
+                    onChange={(e) => { set("content", e.target.value); if (e.target.value) setUploadFile(null); }}
+                    rows={6}
+                  />
+                  <small className="field-help">
+                    O conteúdo será dividido em pedaços (chunks) para busca semântica.
+                  </small>
+                </label>
+              </>
             )}
-            <button className="btn primary" type="submit" disabled={saving}>
-              {saving ? "Salvando..." : editingId ? "Atualizar" : "Salvar e indexar"}
+            <button className="btn primary" type="submit" disabled={saving || uploading}>
+              {uploading ? "Enviando..." : saving ? "Salvando..." : editingId ? "Atualizar" : "Salvar e indexar"}
             </button>
           </form>
         )}
@@ -218,7 +279,7 @@ export default function Knowledge() {
         {!loading && items.length === 0 && !showForm && !searchResults && (
           <div className="empty">
             <h3>Nenhum documento ainda</h3>
-            <p>Adicione documentos para sua IA usar como referência. Você pode configurar o comportamento da IA em <strong>IA → Personalidade</strong>.</p>
+            <p>Adicione documentos (PDF, Word, texto) ou cole conteúdo para sua IA usar como referência.</p>
             <button className="btn primary" onClick={() => setShowForm(true)}>
               + Adicionar primeiro documento
             </button>

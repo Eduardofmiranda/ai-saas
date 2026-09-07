@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -22,6 +22,7 @@ from app.services.vector_store import (
 )
 from app.services.config_service import resolve_embedding_config
 from app.services.embedding import EmbeddingError
+from app.services.file_parser import parse_file
 
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
@@ -114,6 +115,60 @@ async def create_knowledge(
         name=item.name,
         description=item.description or "",
         source_type=item.source_type or "text",
+        chunk_count=chunks_saved,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    )
+
+
+@router.post("/upload")
+async def upload_knowledge(
+    file: UploadFile = File(...),
+    name: str | None = None,
+    description: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> KnowledgeResponse:
+    """Upload de arquivo (PDF, DOCX, TXT, CSV, Markdown) para a base de conhecimento."""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Arquivo invalido")
+
+    data = await file.read()
+
+    try:
+        content = parse_file(file.filename, data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    item = Knowledge(
+        company_id=current_user.company_id,
+        name=name or file.filename,
+        description=description,
+        source_type="file",
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+
+    embedding_config = resolve_embedding_config()
+
+    try:
+        chunks_saved = await upsert_knowledge(
+            db, current_user.company_id, item.id, content,
+            provider=embedding_config["provider"], api_key=embedding_config["api_key"],
+            embedding_model=embedding_config["model"], base_url=embedding_config["base_url"],
+        )
+    except EmbeddingError as exc:
+        db.delete(item)
+        db.commit()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    return KnowledgeResponse(
+        id=item.id,
+        company_id=item.company_id,
+        name=item.name,
+        description=item.description or "",
+        source_type=item.source_type or "file",
         chunk_count=chunks_saved,
         created_at=item.created_at,
         updated_at=item.updated_at,
