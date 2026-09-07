@@ -201,14 +201,15 @@
 - [ ] Garantir que a IA nunca confirme um horário sem validar previamente a disponibilidade
 - [ ] Preparar arquitetura para futuras integrações com calendários externos (Google Calendar, Outlook etc.)
 
-### 8.7 — Paginacao e Busca
-- [ ] Conversations: `skip`/`limit` + busca por nome/status/data
-- [ ] Messages: `skip`/`limit` + busca por conteudo
-- [ ] Customers: `skip`/`limit` + busca por nome/telefone/email
-- [ ] Workflows: `skip`/`limit` + busca por nome
-- [ ] Knowledge: `skip`/`limit` + busca por titulo/conteudo
-- [ ] Executions: `skip`/`limit` + filtro por status/data
-- [ ] Frontend: componentes de paginacao em todas as listas
+### 8.7 — Paginacao e Busca ✅
+- [x] Conversations: `skip`/`limit` com paginação server-side
+- [x] Messages: `skip`/`limit` com paginação server-side
+- [x] Knowledge: `skip`/`limit` com paginação server-side
+- [x] Workflows: `skip`/`limit` com paginação server-side
+- [x] Users: `skip`/`limit` com paginação server-side
+- [x] Frontend: todas as paginas consomem `{total, items}`
+- [ ] Filtros por nome/status/data (melhoria futura)
+- [ ] Botoes de paginacao no frontend (melhoria futura)
 
 ### 8.8 — Senha e Sessao ✅
 - [x] Endpoint `POST /auth/change-password` (senha atual + nova senha)
