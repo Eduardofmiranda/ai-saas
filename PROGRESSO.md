@@ -139,14 +139,14 @@
 - [x] Não ignora silenciosamente midias mais
 - [ ] (futuro) Download e processamento real de midias
 
-### 8.2 — Upload de arquivos no Knowledge Base
-- [ ] Endpoint `POST /knowledge/upload` com `UploadFile`
-- [ ] Parser de PDF (PyMuPDF ou pdfplumber)
-- [ ] Parser de DOCX (python-docx)
-- [ ] Parser de TXT/CSV/Markdown
-- [ ] Chunking por tamanho de pagina/paragrafo
-- [ ] Progresso de upload no frontend
-- [ ] Limite de tamanho por arquivo (configuravel)
+### 8.2 — Upload de arquivos no Knowledge Base ✅
+- [x] Endpoint `POST /knowledge/upload` com `UploadFile`
+- [x] Parser de PDF (pypdf)
+- [x] Parser de DOCX (python-docx)
+- [x] Parser de TXT/CSV/Markdown
+- [x] Frontend: area de upload com drag & drop
+- [x] Limite de tamanho: 10MB
+- [ ] Progresso de upload no frontend (melhoria futura)
 
 ### 8.3 — Handoff Humano ✅
 - [x] Status de conversa `"pending_agent"` (novo valor no enum)
@@ -403,7 +403,7 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 
 1. ~~**Politica de IA por usuario**~~ ✅ concluido
 2. ~~**Midia ignorada**~~ ✅ resposta automatica implementada
-3. **Knowledge sem upload** — so aceita texto cru, nao arquivos
+3. ~~**Knowledge sem upload**~~ ✅ upload de PDF, DOCX, TXT, CSV, MD concluido
 4. ~~**Sem handoff humano**~~ ✅ concluido (Fase 8.3)
 5. **Sem paginacao** — todas as listas retornam `.all()`
 6. **Sem HTTPS** — necessario configurar Caddy/nginx/Tunnel
