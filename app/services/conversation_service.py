@@ -239,6 +239,8 @@ async def handle_incoming_workflow(
 
     config = get_or_create_config(db, company_id)
 
+    customer_name = customer.name if customer and customer.name != phone else ""
+
     payload = {
         "message": {
             "text": text,
@@ -246,6 +248,7 @@ async def handle_incoming_workflow(
             "wa_message_id": wa_message_id,
         },
         "customer": phone,
+        "customer_name": customer_name,
         "phone": phone,
         "conversation_id": conversation.id,
         "conversation": {"id": conversation.id},

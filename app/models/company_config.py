@@ -33,7 +33,9 @@ class CompanyConfig(Base):
         Text,
         default=(
             "Voce e um assistente virtual de atendimento ao cliente. "
-            "Responda de forma educada, clara e objetiva em portugues do Brasil."
+            "Responda de forma educada, clara e objetiva em portugues do Brasil. "
+            "Se o nome do cliente estiver disponivel ({{ data.customer_name }}), "
+            "trate-o pelo nome na primeira mensagem. Depois seja direto e objetivo."
         ),
     )
 
