@@ -151,6 +151,14 @@ export default function Conversations() {
     } catch (e) { setError(e.message); }
   }
 
+  async function pauseWorkflow() {
+    if (!selectedConv) return;
+    try {
+      await api.pauseConversationWorkflow(selectedConv.id);
+      // Poll vai atualizar
+    } catch (e) { setError(e.message); }
+  }
+
   const ql = q.trim().toLowerCase();
   const filtered = conversations.filter((c) => {
     if (tab === "open" && c.status !== "open") return false;
@@ -244,6 +252,12 @@ export default function Conversations() {
                     </div>
                   </div>
                   <div className="inbox-thread-actions">
+                    {selectedConv.has_pending_flow && (
+                      <button className="btn warning small" onClick={pauseWorkflow} title="Pausar fluxo e assumir atendimento">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                        Pausar fluxo
+                      </button>
+                    )}
                     {selectedConv.status === "pending_agent" && (
                       <button className="btn primary small" onClick={assumeConversation}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>

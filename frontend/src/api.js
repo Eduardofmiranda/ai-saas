@@ -140,6 +140,8 @@ export const api = {
     request("POST", `/messages/conversation/${conversationId}/reply`, { content }),
   assumeConversation: (conversationId) =>
     request("POST", `/conversations/${conversationId}/assume`),
+  pauseConversationWorkflow: (conversationId) =>
+    request("POST", `/conversations/${conversationId}/pause-workflow`),
   // Leads / Clientes
   getCustomers: (params = {}) => {
     const qs = new URLSearchParams();

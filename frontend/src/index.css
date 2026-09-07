@@ -782,3 +782,7 @@ body {
 /* --- Thread header actions --- */
 .inbox-thread-actions { display: flex; gap: 6px; align-items: center; }
 .inbox-thread-actions .btn { white-space: nowrap; }
+
+/* --- Warning button --- */
+.btn.warning { background: #f59e0b; color: #fff; }
+.btn.warning:hover { background: #d97706; }

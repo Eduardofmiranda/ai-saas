@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func, desc
+from app.models.pending_flow import PendingFlow
 
 from app.database.session import get_db, SessionLocal
 from app.models.conversation import Conversation
@@ -23,7 +24,7 @@ router = APIRouter(
 )
 
 
-def _to_response(conversation: Conversation, last_message: Message | None = None) -> dict:
+def _to_response(conversation: Conversation, last_message: Message | None = None, has_pending_flow: bool = False) -> dict:
     """Serializa uma conversa com dados do cliente e da ultima mensagem (inbox)."""
     customer = None
     if conversation.customer:
@@ -59,6 +60,7 @@ def _to_response(conversation: Conversation, last_message: Message | None = None
         "last_message_at": last_message.created_at if last_message else None,
         "message_count": conversation._msg_count if hasattr(conversation, "_msg_count") else 0,
         "transfers": transfers,
+        "has_pending_flow": has_pending_flow,
     }
 
 
@@ -163,16 +165,25 @@ def get_conversations(
     total = db.query(Conversation).filter(Conversation.company_id == current_user.company_id).count()
     rows = q.order_by(desc(Conversation.updated_at)).offset(offset).limit(limit).all()
 
+    # Pega phones com pending_flow ativo
+    pending_phones = set(
+        row[0] for row in (
+            db.query(PendingFlow.phone)
+            .filter(PendingFlow.company_id == current_user.company_id)
+            .all()
+        )
+    )
+
     items = []
     for conv, last_msg in rows:
-        # Pega contagem do subquery
         count_row = (
             db.query(msg_count_sq.c.msg_count)
             .filter(msg_count_sq.c.conversation_id == conv.id)
             .first()
         )
         conv._msg_count = count_row[0] if count_row else 0
-        items.append(_to_response(conv, last_msg))
+        has_pending = conv.customer.phone in pending_phones if conv.customer else False
+        items.append(_to_response(conv, last_msg, has_pending_flow=has_pending))
 
     return {"total": total, "items": items}
 
@@ -220,6 +231,14 @@ def filter_conversations(
     total = q.count()
     rows = q.order_by(desc(Conversation.updated_at)).offset(offset).limit(limit).all()
 
+    pending_phones = set(
+        row[0] for row in (
+            db.query(PendingFlow.phone)
+            .filter(PendingFlow.company_id == current_user.company_id)
+            .all()
+        )
+    )
+
     items = []
     for conv, last_msg in rows:
         count_row = (
@@ -228,7 +247,8 @@ def filter_conversations(
             .first()
         )
         conv._msg_count = count_row[0] if count_row else 0
-        items.append(_to_response(conv, last_msg))
+        has_pending = conv.customer.phone in pending_phones if conv.customer else False
+        items.append(_to_response(conv, last_msg, has_pending_flow=has_pending))
 
     return {"total": total, "items": items}
 
@@ -250,7 +270,14 @@ def get_conversation(
     msg_count = db.query(Message).filter(Message.conversation_id == conversation_id).count()
     conversation._msg_count = msg_count
 
-    return _to_response(conversation, last_msg)
+    has_pending = False
+    if conversation.customer:
+        has_pending = db.query(PendingFlow).filter(
+            PendingFlow.company_id == current_user.company_id,
+            PendingFlow.phone == conversation.customer.phone,
+        ).first() is not None
+
+    return _to_response(conversation, last_msg, has_pending_flow=has_pending)
 
 
 @router.patch("/{conversation_id}", response_model=ConversationResponse)
@@ -343,3 +370,42 @@ def assume_conversation(
     conversation._msg_count = msg_count
 
     return _to_response(conversation, last_msg)
+
+
+@router.post("/{conversation_id}/pause-workflow", response_model=ConversationResponse)
+def pause_conversation_workflow(
+    conversation_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Pausa qualquer fluxo ativo para esta conversa (cancela PendingFlow)."""
+    conversation = _get_conversation(db, conversation_id, current_user.company_id)
+
+    if not conversation.customer:
+        raise HTTPException(status_code=400, detail="Conversa sem cliente associado")
+
+    deleted = (
+        db.query(PendingFlow)
+        .filter(
+            PendingFlow.company_id == current_user.company_id,
+            PendingFlow.phone == conversation.customer.phone,
+        )
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+
+    if deleted == 0:
+        raise HTTPException(status_code=400, detail="Nenhum fluxo ativo para esta conversa")
+
+    db.refresh(conversation)
+
+    last_msg = (
+        db.query(Message)
+        .filter(Message.conversation_id == conversation_id)
+        .order_by(Message.id.desc())
+        .first()
+    )
+    msg_count = db.query(Message).filter(Message.conversation_id == conversation_id).count()
+    conversation._msg_count = msg_count
+
+    return _to_response(conversation, last_msg, has_pending_flow=False)
