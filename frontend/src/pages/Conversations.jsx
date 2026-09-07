@@ -56,11 +56,12 @@ export default function Conversations() {
   const [tab, setTab] = useState("all");
   const [q, setQ] = useState("");
   const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [composerError, setComposerError] = useState("");
   const endRef = useRef(null);
   const inputRef = useRef(null);
+
+  const sendingRef = useRef(false);
 
   const selectedConv = conversations.find((c) => c.id === selected) || null;
 
@@ -100,31 +101,32 @@ export default function Conversations() {
 
   const sendReply = useCallback(async () => {
     const content = draft.trim();
-    if (!content || !selected || sending) return;
-    setSending(true);
+    if (!content || !selected || sendingRef.current) return;
+    sendingRef.current = true;
     setComposerError("");
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg = {
+      id: tempId,
+      sender_type: "agent",
+      content,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...(prev || []), optimisticMsg]);
+    setDraft("");
+    inputRef.current?.focus();
     try {
-      const tempId = Date.now();
-      const optimisticMsg = {
-        id: `temp-${tempId}`,
-        sender_type: "agent",
-        content,
-        created_at: new Date().toISOString(),
-      };
-      setMessages((prev) => [...(prev || []), optimisticMsg]);
-      setDraft("");
       await api.replyToConversation(selected, content);
       const msgRes = await api.getConversationMessages(selected);
       setMessages(msgRes.items || []);
       const convRes = await api.getConversations();
       setConversations(convRes.items || []);
     } catch (e) {
+      setMessages((prev) => (prev || []).filter((m) => m.id !== tempId));
       setComposerError(e.message || "Falha ao enviar resposta");
     } finally {
-      setSending(false);
-      inputRef.current?.focus();
+      sendingRef.current = false;
     }
-  }, [draft, selected, sending]);
+  }, [draft, selected]);
 
   function onKeyDown(e) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -331,22 +333,18 @@ export default function Conversations() {
                     rows="1"
                     placeholder={selectedConv.status === "closed" ? "Esta conversa está fechada..." : "Escreva sua resposta..."}
                     value={draft}
-                    disabled={sending || selectedConv.status === "closed"}
+                    disabled={selectedConv.status === "closed"}
                     onChange={(e) => setDraft(e.target.value)}
                     onKeyDown={onKeyDown}
                   />
                   <button
                     className="btn primary inbox-send-btn"
                     onClick={sendReply}
-                    disabled={sending || !draft.trim() || selectedConv.status === "closed"}
+                    disabled={!draft.trim() || selectedConv.status === "closed"}
                   >
-                    {sending ? (
-                      <span className="inbox-send-spinner" />
-                    ) : (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                      </svg>
-                    )}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
                   </button>
                 </div>
                 {composerError && <div className="error" style={{ margin: "0 12px 8px" }}>{composerError}</div>}
