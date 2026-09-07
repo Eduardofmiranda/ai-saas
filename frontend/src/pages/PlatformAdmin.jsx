@@ -138,6 +138,21 @@ export default function PlatformAdmin() {
     }
   }
 
+  async function clearErrors() {
+    if (!confirm("Tem certeza que deseja apagar TODOS os erros?")) return;
+    setErrorsLoading(true);
+    try {
+      const res = await api.clearPlatformErrors();
+      setMessage(`${res.deleted} erro(s) removido(s).`);
+      setErrors([]);
+      setErrorsTotal(0);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setErrorsLoading(false);
+    }
+  }
+
   return <div className="layout">
     <Header />
     <main className="content platform-admin">
@@ -230,10 +245,13 @@ export default function PlatformAdmin() {
       <section className="ai-config">
         <h3>Painel de Erros</h3>
         <p className="muted">Execuções que falharam. Mostra o erro, workflow, empresa e data/hora.</p>
-        <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
           <button className="btn ghost" onClick={() => loadErrors(0)} disabled={errorsLoading}>
             {errorsLoading ? "Carregando..." : errors.length > 0 ? "Atualizar" : "Carregar erros"}
           </button>
+          {errorsTotal > 0 && <button className="btn ghost" style={{ color: "#dc2626" }} onClick={clearErrors} disabled={errorsLoading}>
+            Limpar todos os erros
+          </button>}
         </div>
         {errors.length > 0 && <>
           <p className="muted" style={{ marginBottom: 8 }}>{errorsTotal} erro{errorsTotal !== 1 ? "s" : ""} no total</p>

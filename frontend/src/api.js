@@ -112,6 +112,7 @@ export const api = {
     if (params.workflow_id) qs.set("workflow_id", params.workflow_id);
     return request("GET", `/platform-admin/errors?${qs.toString()}`);
   },
+  clearPlatformErrors: () => request("DELETE", "/platform-admin/errors"),
   // AI — allowed / effective (usuario comum)
   getAllowedAI: () => request("GET", "/config/ai/allowed"),
   getEffectiveAI: () => request("GET", "/config/ai/effective"),

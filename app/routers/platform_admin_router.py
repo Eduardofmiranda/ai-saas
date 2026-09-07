@@ -111,6 +111,17 @@ def list_errors(
     }
 
 
+@router.delete("/errors")
+def clear_errors(
+    _: User = Depends(get_current_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """Remove todas as execuções com erro."""
+    count = db.query(Execution).filter(Execution.status == "error").delete(synchronize_session=False)
+    db.commit()
+    return {"deleted": count}
+
+
 @router.get("/users")
 def list_platform_users(
     _: User = Depends(get_current_platform_admin),
