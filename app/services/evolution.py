@@ -80,35 +80,49 @@ def extract_webhook_message(payload: dict) -> dict | None:
     """Extrai os dados uteis de um webhook da Evolution.
 
     Evolucao v2 envia: {"event":"messages.upsert","data":{"key":{...},"message":{...}}}
-    Retorna None se nao for uma mensagem de texto de usuario.
+    Retorna None se for grupo/mensagem propria.
+    Retorna dict com "type":"text" ou "type":"media".
     """
     try:
         data = payload.get("data") or {}
-        event = payload.get("event")
         message = data.get("message") or {}
         key = data.get("key") or {}
 
         remote_jid = key.get("remoteJid") or ""
-        # ignora mensagens provenientes do proprio numero (grupos recados etc)
         if not remote_jid or "@g.us" in remote_jid:
             return None
 
-        conversation_text = message.get("conversation")
-        if conversation_text is None and message.get("extendedTextMessage"):
-            conversation_text = message["extendedTextMessage"].get("text")
-
-        if not conversation_text:
-            return None
-
-        wa_id = key.get("id") or ""
         from_me = key.get("fromMe", False)
         if from_me:
             return None
 
-        return {
-            "wa_message_id": wa_id,
-            "phone": remote_jid.split("@")[0],
-            "text": conversation_text,
-        }
+        wa_id = key.get("id") or ""
+        phone = remote_jid.split("@")[0]
+
+        # Texto normal
+        conversation_text = message.get("conversation")
+        if conversation_text is None and message.get("extendedTextMessage"):
+            conversation_text = message["extendedTextMessage"].get("text")
+
+        if conversation_text:
+            return {"type": "text", "wa_message_id": wa_id, "phone": phone, "text": conversation_text}
+
+        # Midia (imagem, audio, video, documento, sticker)
+        media_type = None
+        if message.get("imageMessage"):
+            media_type = "image"
+        elif message.get("audioMessage"):
+            media_type = "audio"
+        elif message.get("videoMessage"):
+            media_type = "video"
+        elif message.get("documentMessage"):
+            media_type = "document"
+        elif message.get("stickerMessage"):
+            media_type = "sticker"
+
+        if media_type:
+            return {"type": "media", "wa_message_id": wa_id, "phone": phone, "media_type": media_type}
+
+        return None
     except Exception:
         return None

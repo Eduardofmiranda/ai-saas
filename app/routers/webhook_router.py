@@ -11,6 +11,11 @@ from app.services.conversation_service import handle_incoming_workflow
 
 router = APIRouter(prefix="/webhook", tags=["Webhooks"])
 
+MEDIA_RESPONSE = (
+    "No momento, não é possível processar arquivos. "
+    "Envie apenas mensagens de texto."
+)
+
 
 def _run_pipeline(company_id: int, phone: str, text: str, wa_message_id: str) -> None:
     db: Session = SessionLocal()
@@ -24,6 +29,21 @@ def _run_pipeline(company_id: int, phone: str, text: str, wa_message_id: str) ->
                 wa_message_id=wa_message_id,
             )
         )
+    finally:
+        db.close()
+
+
+def _reply_media_not_supported(company_id: int, phone: str) -> None:
+    """Responde ao cliente que midia nao e suportada."""
+    db: Session = SessionLocal()
+    try:
+        from app.models.company_config import CompanyConfig
+        config = db.query(CompanyConfig).filter(CompanyConfig.company_id == company_id).first()
+        instance = config.evolution_instance if config else None
+        if instance:
+            asyncio.run(evolution.send_text(instance, phone, MEDIA_RESPONSE))
+    except Exception:
+        pass
     finally:
         db.close()
 
@@ -64,6 +84,14 @@ async def whatsapp_webhook(
     extracted = evolution.extract_webhook_message(payload)
     if not extracted:
         return {"status": "ignored"}
+
+    if extracted["type"] == "media":
+        background_tasks.add_task(
+            _reply_media_not_supported,
+            company_id,
+            extracted["phone"],
+        )
+        return {"status": "media_not_supported"}
 
     background_tasks.add_task(
         _run_pipeline,
