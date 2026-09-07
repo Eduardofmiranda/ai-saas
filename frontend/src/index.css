@@ -769,7 +769,7 @@ body {
 .lead-info { display: flex; flex-direction: column; min-width: 0; }
 .lead-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lead-phone { font-size: 12px; color: var(--muted); }
-.lead-card-bottom { display: flex; align-items: center; }
+.lead-card-bottom { display: flex; align-items: center; justify-content: space-between; }
 .lead-conversations {
   display: flex; align-items: center; gap: 6px;
   font-size: 12px; color: var(--muted);

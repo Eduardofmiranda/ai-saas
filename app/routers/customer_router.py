@@ -86,3 +86,33 @@ def get_customer(
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     return customer
+
+
+@router.delete("/{customer_id}")
+def delete_customer(
+    customer_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    customer = (
+        db.query(Customer)
+        .filter(
+            Customer.id == customer_id,
+            Customer.company_id == current_user.company_id,
+        )
+        .first()
+    )
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    from app.models.message import Message
+    from app.models.conversation import Conversation
+
+    conv_ids = [c.id for c in db.query(Conversation.id).filter(Conversation.customer_id == customer.id).all()]
+    if conv_ids:
+        db.query(Message).filter(Message.conversation_id.in_(conv_ids)).delete(synchronize_session=False)
+        db.query(Conversation).filter(Conversation.id.in_(conv_ids)).delete(synchronize_session=False)
+
+    db.delete(customer)
+    db.commit()
+    return {"message": "Lead removido com sucesso"}

@@ -52,6 +52,15 @@ export default function Leads() {
     return () => { active = false; };
   }, []);
 
+  async function remove(id, name) {
+    if (!confirm(`Remover lead "${name}"? Isso apagará todas as conversas e mensagens.`)) return;
+    try {
+      await api.deleteCustomer(id);
+      setLeads((prev) => prev.filter((c) => c.id !== id));
+      setTotal((prev) => prev - 1);
+    } catch (e) { setError(e.message); }
+  }
+
   const ql = q.trim().toLowerCase();
   const filtered = leads.filter((c) => {
     if (!ql) return true;
@@ -113,6 +122,11 @@ export default function Leads() {
                     </svg>
                     {c.conversation_count} {c.conversation_count === 1 ? "conversa" : "conversas"}
                   </span>
+                  <button className="btn danger ghost small" onClick={() => remove(c.id, c.name || c.phone)} title="Remover lead">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                  </button>
                 </div>
               </div>
             ))}

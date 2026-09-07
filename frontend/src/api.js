@@ -147,6 +147,7 @@ export const api = {
     if (params.offset) qs.set("offset", params.offset);
     return request("GET", `/customers/?${qs.toString()}`);
   },
+  deleteCustomer: (id) => request("DELETE", `/customers/${id}`),
   // Setores
   getDepartments: () => request("GET", "/departments/"),
   createDepartment: (body) => request("POST", "/departments/", body),
