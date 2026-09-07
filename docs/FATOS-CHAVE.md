@@ -65,6 +65,13 @@
 - Recuperacao de senha: link por email (SMTP; 503 se nao configurado), token com hash SHA-256 + uso unico.
 - CORS via `ALLOWED_ORIGINS` (env).
 
+## 5.1 Politica de IA por usuario (Fase 9.1 — Planejado)
+
+- Superadmin controla provedores/chaves/modelos por usuario.
+- Prioridade: **usuario → empresa → plataforma → .env**.
+- Backend sempre valida (nao confia no frontend).
+- Usuario so ve config efetiva; chaves nunca expostas.
+
 ## 6. Variaveis de ambiente essenciais (producao)
 
 | Variavel | Valor |

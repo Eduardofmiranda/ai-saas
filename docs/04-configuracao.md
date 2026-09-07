@@ -86,5 +86,19 @@ Papéis `owner`, `admin` e `agent` continuam restritos à sua própria empresa.
 
 **Parcial:** o painel consulta o saldo monetário oficial do DeepSeek quando há
 credencial cadastrada. Não existe uma equivalência confiável de saldo para
-“tokens restantes”; o rastreamento de tokens efetivamente usados pelo sistema
+"tokens restantes"; o rastreamento de tokens efetivamente usados pelo sistema
 ainda é planejado.
+
+## Politica de IA por usuario (Planejado)
+
+Apenas o superadmin cadastra chaves, provedores e modelos disponíveis. O
+superadmin define quais IAs cada usuario pode utilizar e qual será a IA/modelo
+padrao dele. O usuario comum NÃO visualiza nem altera chaves, provedor ou
+modelo livremente. O painel do usuario exibe apenas a configuração efetiva
+definida pelo administrador e, quando permitido, opções previamente autorizadas.
+
+Regra de prioridade (backend): **politica especifica do usuario** → **politica
+da empresa** → **padrao global da plataforma**. Workflows e nodes usam a
+politica efetiva do usuario no backend; não confiam em valores enviados pelo
+frontend. Todas as chaves permanecem centralizadas e criptografadas no painel
+superadmin.

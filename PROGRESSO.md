@@ -245,7 +245,47 @@
       problemas na configuração, colocando as configurações da ia aleatoria, sem puxar a configuração 
       inicial padrão do projeto que era puxar a configuração da mesma via .env. 
 
-### 9.1 — Limitador de IA por empresa
+### 9.1 — Politica de IA por Usuario (Superadmin) ⏳
+> **Objetivo:** apenas o superadmin cadastra chaves, provedores e modelos. O superadmin
+> define quais IAs cada usuario pode utilizar e qual sera a IA/modelo padrao dele.
+> O usuario comum NAO visualiza nem altera chaves, provedor ou modelo livremente.
+
+#### Regra de prioridade (backend)
+Prioridade sera: **politica especifica do usuario** → **politica da empresa** → **padrao global da plataforma**.
+Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em valores enviados pelo frontend.
+
+#### Backend
+- [ ] Model `UserAIConfig` (user_id, allowed_providers JSON, default_provider, default_model, criado_por, timestamps)
+- [ ] Estender `PlatformAIProvider` com campo `visible` (quais provedores estao disponiveis para atribuicao)
+- [ ] `resolve_ai_config` atualizado: prioridade usuario → empresa → plataforma → .env
+- [ ] Endpoint `GET /platform-admin/user-ai-config/{user_id}` — ver politica de um usuario
+- [ ] Endpoint `PUT /platform-admin/user-ai-config/{user_id}` — definir politica (superadmin)
+- [ ] Endpoint `GET /platform-admin/user-ai-config` — listar politicas de todos os usuarios
+- [ ] Endpoint `GET /config/ai/effective` — usuario ve apenas sua config efetiva (read-only)
+- [ ] Validar no backend: se usuario nao tem permissao para o provedor/modelo, rejeitar (nao confiar no frontend)
+- [ ] Garantir que workflows/nodes sempre resolvem via `resolve_ai_config(db)` com o usuario dono do workflow
+- [ ] Migration Alembic para `user_ai_configs`
+
+#### Frontend — Superadmin (`/platform-admin`)
+- [ ] Painel de politicas por usuario: tabela com usuario, provedores permitidos, modelo padrao
+- [ ] Modal de edicao: toggle de provedores permitidos + selecao de modelo padrao
+- [ ] Indicador de "chave da plataforma ativa" por provedor
+- [ ] Bloquear edicao de chave/provedor/modelo por usuario comum (campos ocultos ou read-only)
+
+#### Frontend — Usuario comum (`/ai`)
+- [ ] Exibir apenas a config efetiva definida pelo administrador (provedor, modelo, status)
+- [ ] Se usuario tem multiplos provedores permitidos, mostrar seletor limitado as opcoes autorizadas
+- [ ] Se usuario tem apenas 1 provedor permitido, mostrar somente leitura (sem seletor)
+- [ ] Botao "Testar" continua funcional (usa a config efetiva)
+- [ ] NUNCA expor chaves de API ao frontend
+
+#### Seguranca
+- [ ] Nunca confiar em valores de `ai_provider`/`ai_model` vindos do frontend em nodes/workflows
+- [ ] `resolve_ai_config` sempre usa o `user_id` do workflow owner, nao do request
+- [ ] Logs de alteracoes de politica (audit trail)
+- [ ] Superadmin so altera politica de usuarios da propria plataforma (nao cross-tenant)
+
+### 9.2 — Limitador de IA por empresa
 - [ ] Model/coluna JSON para limites por empresa
 - [ ] Limite de mensagens (X msgs/dia ou por conversa)
 - [ ] Limite de tokens/custo (teto por sessao/dia)
@@ -254,7 +294,6 @@
 - [ ] Fallback quando limite atingido (mensagem padrao, encerrar, avisar humano)
 - [ ] Aplicar limites em `conversation_service` e nodes `ai`/`ai_rag`
 - [ ] UI de configuracao dos limites (pagina Admin)
-- [ ] Tornar completamente configuravel usuarios e niveis de acesso ao painel de conversas
 - [ ] Dashboard de uso/consumo
 
 
@@ -369,16 +408,17 @@
 
 ### Gaps Criticos (por prioridade)
 
-1. **Midia ignorada** — so texto processado, imagens/audio/docs descartados
-2. **Knowledge sem upload** — so aceita texto cru, nao arquivos
-3. **Sem handoff humano** — conversa travada se IA nao resolve
-4. **Sem paginacao** — todas as listas retornam `.all()`
-5. **Sem HTTPS** — necessario configurar Caddy/nginx/Tunnel
-6. **Sem business hours** — atendimento 24h sem configuracao
-7. **Sem audit log** — nao registra quem fez o que
-8. **pgvector ausente** — busca vetorial em memoria (O(N))
-9. **Sem WebSocket** — sem atualizacao em tempo real
-10. **Sem canais extras** — so WhatsApp disponivel
+1. **Politica de IA por usuario** — superadmin controla chaves/provedores/modelos por usuario; backend sempre valida (nao confiar no frontend)
+2. **Midia ignorada** — so texto processado, imagens/audio/docs descartados
+3. **Knowledge sem upload** — so aceita texto cru, nao arquivos
+4. **Sem handoff humano** — conversa travada se IA nao resolve
+5. **Sem paginacao** — todas as listas retornam `.all()`
+6. **Sem HTTPS** — necessario configurar Caddy/nginx/Tunnel
+7. **Sem business hours** — atendimento 24h sem configuracao
+8. **Sem audit log** — nao registra quem fez o que
+9. **pgvector ausente** — busca vetorial em memoria (O(N))
+10. **Sem WebSocket** — sem atualizacao em tempo real
+11. **Sem canais extras** — so WhatsApp disponivel
 ---
 
 ## Revisao de prioridade — 04/09/2026
@@ -390,8 +430,9 @@
 - [x] Configuracao padrao da IA foi revisada: defaults DEFAULT_AI_* do ambiente sao usados quando nao ha override valido da empresa.
 - [x] Webhook Evolution por empresa e fluxo de mensagem unico foram corrigidos e validados no atendimento real.
 
-### Proximo marco recomendado: Estabilizacao operacional
+### Proximo marco recomendado: Estabilizacao operacional + Politica de IA
 
+- [ ] **PRIORIDADE** — Politica de IA por usuario: superadmin controla provedores/chaves/modelos por usuario; backend valida; usuario so ve config efetiva
 - [ ] Criar smoke test automatizado: webhook autenticado -> workflow ativo -> execucao -> envio Evolution simulado.
 - [ ] Criar checklist de deploy verificavel na VPS: ambiente real do container, Supabase, Redis, Evolution e health checks.
 - [ ] Consolidar politica de schema: migrations Alembic obrigatorias para alteracoes estruturais; create_all apenas para bootstrap compativel.
