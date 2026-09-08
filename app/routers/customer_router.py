@@ -105,7 +105,6 @@ def _get_export_data(db: Session, company_id: int) -> list[dict]:
             "name": c.name or "",
             "phone": c.phone or "",
             "conversation_count": count_map.get(c.id, 0),
-            "created_at": str(c.created_at) if c.created_at else "",
         }
         for c in customers
     ]
@@ -156,7 +155,7 @@ def export_customers_xlsx(
         bottom=Side(style="thin"),
     )
 
-    headers = ["ID", "Nome", "Telefone", "Conversas", "Criado em"]
+    headers = ["ID", "Nome", "Telefone", "Conversas"]
     for col, h in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=h)
         cell.font = header_font
@@ -169,13 +168,11 @@ def export_customers_xlsx(
         ws.cell(row=row_idx, column=2, value=item["name"]).border = thin_border
         ws.cell(row=row_idx, column=3, value=item["phone"]).border = thin_border
         ws.cell(row=row_idx, column=4, value=item["conversation_count"]).border = thin_border
-        ws.cell(row=row_idx, column=5, value=item["created_at"]).border = thin_border
 
     ws.column_dimensions["A"].width = 8
     ws.column_dimensions["B"].width = 25
     ws.column_dimensions["C"].width = 20
     ws.column_dimensions["D"].width = 12
-    ws.column_dimensions["E"].width = 22
 
     buffer = io.BytesIO()
     wb.save(buffer)
