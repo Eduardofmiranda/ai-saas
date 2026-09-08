@@ -36,3 +36,24 @@ def test_lead_template_sends_to_current_customer():
     template = next(t for t in TEMPLATES if t["id"] == "captura_lead")
     send_node = next(node for node in template["data"]["nodes"] if node["id"] == "send-1")
     assert send_node["data"]["phone"] == "{{ data.phone }}"
+
+
+def test_lead_template_collects_data_with_capture_lead_node():
+    template = next(t for t in TEMPLATES if t["id"] == "captura_lead")
+    node_types = {node["id"]: node["type"] for node in template["data"]["nodes"]}
+
+    # Fluxo completo: pede dados -> aguarda -> captura e salva -> confirma
+    assert node_types["ai-1"] == "ai"
+    assert node_types["wait-1"] == "wait_until_message"
+    assert node_types["capture-1"] == "capture_lead"
+    assert node_types["ai-2"] == "ai"
+
+    # Solicitar dados primeiro e capturar depois da pausa
+    edges = template["data"]["edges"]
+    order = [(e["source"], e["target"]) for e in edges]
+    assert ("ai-1", "send-1") in order
+    assert ("wait-1", "capture-1") in order
+    assert ("capture-1", "ai-2") in order
+
+    capture_node = next(n for n in template["data"]["nodes"] if n["id"] == "capture-1")
+    assert capture_node["data"]["overwrite"] == "on"

@@ -82,6 +82,21 @@ Se um node legado estiver com o campo Telefone vazio, o motor tambem usa o
 remetente como destino. Um telefone preenchido e respeitado, permitindo envios
 proativos quando isso for intencional.
 
+### Template "Coleta de Lead (IA)"
+
+O template `captura_lead` monta o fluxo completo de captura estruturada:
+
+1. **Solicitar Dados** (`ai`): a IA cumprimenta e pergunta nome, email, empresa e cidade.
+2. **Enviar Solicitação** (`whatsapp_send`): envia a pergunta ao remetente (`{{ data.phone }}`).
+3. **Aguardar Dados** (`wait_until_message`): pausa ate o cliente responder.
+4. **Capturar e Salvar** (`capture_lead`): extrai os dados da conversa e atualiza o contato.
+5. **Confirmar Dados** (`ai`): confirma com o cliente usando `{{ data.lead.name }}`,
+   `{{ data.lead.email }}`, `{{ data.lead.company }}` e `{{ data.lead.city }}`.
+6. **Enviar Confirmacao** (`whatsapp_send`) e **Continuar Atendimento** (`wait_until_message`).
+
+O node `capture_lead` pode ser inserido em qualquer fluxo de atendimento existente
+para capturar os dados no meio da conversa (ver 09-nodes.md).
+
 ## Validacao antes de ativar ou executar
 
 ### Implementado
