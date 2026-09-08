@@ -3,6 +3,12 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 
+const FEATURES = [
+  ["⚡", "Responda no WhatsApp 24h", "Fluxos visuais conectam a IA ao número, com encaminhamento para humanos."],
+  ["🧠", "Base de conhecimento própria", "A IA responde usando seus documentos, com contexto real do seu negócio."],
+  ["📊", "Painel completo", "Conversas, leads, setores e histórico de execuções em um só lugar."],
+];
+
 export default function Login() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
@@ -15,20 +21,26 @@ export default function Login() {
   const fields =
     mode === "register"
       ? [
-          ["company_name", "Nome da empresa"],
-          ["name", "Seu nome"],
-          ["email", "Email"],
-          ["password", "Senha"],
+          ["company_name", "Nome da empresa", "text", "organization"],
+          ["name", "Seu nome", "text", "name"],
+          ["email", "Email", "email", "email"],
+          ["password", "Senha", "password", "new-password"],
         ]
       : mode === "forgot"
-        ? [["email", "Email"]]
+        ? [["email", "Email", "email", "email"]]
         : [
-            ["username", "Email"],
-            ["password", "Senha"],
+            ["username", "Email", "email", "username"],
+            ["password", "Senha", "password", "current-password"],
           ];
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function switchMode(next) {
+    setMode(next);
+    setError("");
+    setInfo("");
   }
 
   async function onSubmit(e) {
@@ -45,7 +57,7 @@ export default function Login() {
         navigate("/");
       } else {
         await api.forgotPassword(form.email);
-        setInfo("Se o email estiver cadastrado, voce recebera um link de recuperacao.");
+        setInfo("Se o email estiver cadastrado, você receberá um link de recuperação.");
         setForm({});
       }
     } catch (err) {
@@ -57,31 +69,81 @@ export default function Login() {
 
   return (
     <div className="auth-wrap">
+      <div className="auth-hero">
+        <div className="auth-brand">
+          <div className="auth-logo-badge">🤖</div>
+          <div className="logo">Flow<span>AI</span></div>
+        </div>
+        <h2>Automação de atendimento com IA</h2>
+        <p className="muted">
+          Conecte seu WhatsApp e deixe a IA atender seus clientes com fluxos
+          visuais, base de conhecimento e encaminhamento para humanos.
+        </p>
+        <ul className="auth-features">
+          {FEATURES.map(([icon, title, text]) => (
+            <li key={title}>
+              <span aria-hidden="true">{icon}</span>
+              <div>
+                <b>{title}</b>
+                <br />
+                {text}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
       <div className="auth-card">
-        <h1 className="logo">Flow<span>AI</span></h1>
-        <p className="subtitle">Automação de atendimento com IA</p>
+        <div className="auth-brand">
+          <div className="logo">Flow<span>AI</span></div>
+          <p className="subtitle">
+            {mode === "login"
+              ? "Entre com sua conta"
+              : mode === "register"
+                ? "Crie a conta da sua empresa"
+                : "Recupere seu acesso"}
+          </p>
+        </div>
 
         <div className="tabs">
-          <button className={mode === "login" ? "tab active" : "tab"}
-                  onClick={() => { setMode("login"); setError(""); setInfo(""); }}>Entrar</button>
-          <button className={mode === "register" ? "tab active" : "tab"}
-                  onClick={() => { setMode("register"); setError(""); setInfo(""); }}>Criar conta</button>
+          <button className={mode === "login" ? "tab active" : "tab"} onClick={() => switchMode("login")}>
+            Entrar
+          </button>
+          <button className={mode === "register" ? "tab active" : "tab"} onClick={() => switchMode("register")}>
+            Criar conta
+          </button>
         </div>
 
         <form onSubmit={onSubmit}>
-          {fields.map(([key, label]) => (
+          {fields.map(([key, label, type, autocomplete]) => (
             <label key={key} className="field">
               <span>{label}</span>
               <input
-                type={key === "password" ? "password" : "text"}
+                type={type || "text"}
                 value={form[key] || ""}
                 onChange={(e) => set(key, e.target.value)}
+                autoComplete={autocomplete}
+                minLength={key === "password" ? 6 : undefined}
                 required
+                autoFocus={key === fields[0][0]}
               />
             </label>
           ))}
-          {info && <div className="notice" style={{ marginBottom: 12 }}>{info}</div>}
-          {error && <div className="error">{error}</div>}
+
+          {mode === "register" && (
+            <p className="field-help">
+              A senha deve ter pelo menos 6 caracteres. Depois de criar a conta,
+              conecte o WhatsApp na tela seguinte.
+            </p>
+          )}
+
+          {info && (
+            <div className="alert alert-success" role="status">
+              {info}
+            </div>
+          )}
+          {error && <div className="alert alert-error">{error}</div>}
+
           <button className="btn primary block" disabled={loading}>
             {loading
               ? "Aguarde..."
@@ -91,21 +153,22 @@ export default function Login() {
                   ? "Enviar link"
                   : "Criar conta"}
           </button>
+
           {mode === "login" && (
-            <p className="muted" style={{ textAlign: "center", marginTop: 12, fontSize: 13 }}>
+            <p className="muted auth-link">
               <a
                 href="#"
-                onClick={(e) => { e.preventDefault(); setMode("forgot"); setError(""); setInfo(""); }}
+                onClick={(e) => { e.preventDefault(); switchMode("forgot"); }}
               >
                 Esqueci minha senha
               </a>
             </p>
           )}
           {mode === "forgot" && (
-            <p className="muted" style={{ textAlign: "center", marginTop: 12, fontSize: 13 }}>
+            <p className="muted auth-link">
               <a
                 href="#"
-                onClick={(e) => { e.preventDefault(); setMode("login"); setError(""); setInfo(""); }}
+                onClick={(e) => { e.preventDefault(); switchMode("login"); }}
               >
                 Voltar para o login
               </a>

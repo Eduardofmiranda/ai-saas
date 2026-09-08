@@ -37,8 +37,10 @@ export default function ResetPassword() {
   return (
     <div className="auth-wrap">
       <div className="auth-card">
-        <h1 className="logo">Flow<span>AI</span></h1>
-        <p className="subtitle">Redefinir senha</p>
+        <div className="auth-brand">
+          <div className="logo">Flow<span>AI</span></div>
+          <p className="subtitle">Redefinir senha</p>
+        </div>
 
         {!token ? (
           <p className="muted">Link de recuperacao invalido ou ausente.</p>

@@ -12,10 +12,12 @@
 ## Paginas
 
 ### `/login`
-- Formulario de login (email + senha)
-- Link para cadastro
-- Link "Esqueci minha senha" -> submete `POST /auth/forgot-password` (mostra mensagem generica)
-- Redireciona para `/` apos login
+- Layout em 2 colunas: painel de marca/hero (funcionalidades) + card de autenticacao.
+- Abas "Entrar" / "Criar conta" (segmented control) e recuperacao de senha
+  (`POST /auth/forgot-password`, mensagem genérica).
+- Validacao minima de senha (6 caracteres) no cadastro; `autocomplete`/`autoFocus` por campo.
+- Redireciona para `/` apos login.
+- Erros/avisos via `.alert alert-error` / `.alert alert-success`.
 
 ### `/reset-password`
 - Rota **publica** (sem necessidade de sessao)
@@ -75,7 +77,8 @@ Pagina: `frontend/src/pages/Departments.jsx`. Rota `/setores` em `App.jsx`.
   e badge "Plataforma" para operadores.
 - **Redefinir senha**: botão por usuário abre modal que gera uma **senha provisória**
   (`POST /platform-admin/users/{id}/reset-password`), exibida uma única vez com botão
-  "Copiar" — sem `prompt`/`confirm` nativos.
+  "Copiar" — sem `prompt`/`confirm` nativos. O copiar usa `navigator.clipboard` e,
+  em contexto não seguro (HTTP), **fallback** com `textarea` + `document.execCommand("copy")`.
 - **Painel de Erros**: tabela paginada com empresa, workflow, erro e data; limpar todos com
   **modal de confirmação** (sem `confirm()` nativo).
 - Auto-load da aba "Erros" ao entrar nela.

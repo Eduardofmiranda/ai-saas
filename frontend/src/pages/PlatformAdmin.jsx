@@ -215,12 +215,15 @@ export default function PlatformAdmin() {
 
   async function copyTemporaryPassword() {
     if (!resetResult?.temporary_password) return;
+    const text = resetResult.temporary_password;
+    setError("");
     try {
-      await navigator.clipboard.writeText(resetResult.temporary_password);
+      const copied = copyToClipboard(text);
+      if (!copied) throw new Error("copy unavailable");
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      setError("Não foi possível copiar. Selecione a senha manualmente.");
+      setError("Não foi possível copiar automaticamente. Selecione a senha e copie manualmente.");
     }
   }
 
@@ -284,7 +287,7 @@ export default function PlatformAdmin() {
           <button className="btn ghost" onClick={load}>Atualizar dados</button>
         </div>
 
-        <div className="tabs">
+        <div className="seg-tabs">
           <button className={tab === "overview" ? "active" : ""} onClick={() => setTab("overview")}>Visão geral</button>
           <button className={tab === "errors" ? "active" : ""} onClick={() => setTab("errors")}>Painel de Erros</button>
         </div>
@@ -607,4 +610,32 @@ function StatCard({ icon, value, label: title, tone = "" }) {
       </div>
     </div>
   );
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).catch(() => {});
+    return true;
+  }
+  try {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.setAttribute("readonly", "");
+    el.style.position = "fixed";
+    el.style.top = "-9999px";
+    el.style.opacity = "0";
+    document.body.appendChild(el);
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    const ok = document.execCommand("copy");
+    document.body.removeChild(el);
+    return ok;
+  } catch (err) {
+    return false;
+  }
 }
