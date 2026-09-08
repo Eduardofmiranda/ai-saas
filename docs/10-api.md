@@ -202,6 +202,27 @@ clientes autenticados e permite os efeitos normais do workflow.
 - **Criacao/alteração via rota** ignora `min_advance` (operador). A IA (tools da
   Fase 8.6) chama o servico com `skip_min_advance=False`.
 
+### IA — function calling da Agenda (pipeline de atendimento)
+
+Quando a empresa tem `agenda_config.enabled` ativo, o pipeline de atendimento
+(`conversation_service`) envia as tools abaixo ao provedor de IA
+(`llm.generate_reply_with_tools`, OpenAI-compativel). O executor é
+`app/services/agenda_tools.py`.
+
+| Tool | Quando usar |
+|------|-------------|
+| `verificar_disponibilidade` | Listar horários livres de uma data (validar antes de criar) |
+| `consultar_agenda` | Listar compromissos (filtro por período/status) |
+| `criar_agendamento` | Criar um compromisso (`origin=whatsapp`, `actor_type=system`) |
+| `alterar_agendamento` | Remarcar/alterar um compromisso existente |
+| `cancelar_agendamento` | Cancelar um compromisso |
+
+- A IA **nunca confirma** um horário sem ele estar em `build_slots` no momento
+  da criacao (fim-a-fim: disponibilidade -> criacao).
+- Se o provedor rejeitar `tools` (400/404/422), cai em `generate_reply` normal
+  (sem tools), preservando o atendimento.
+- Sem agenda ativa, nenhuma tool e enviada (comportamento identico ao anterior).
+
 ### Health (operacional, sem JWT)
 
 | Metodo | URL | Descricao |

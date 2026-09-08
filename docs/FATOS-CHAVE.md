@@ -103,8 +103,11 @@
 - Fase 8: funcionalidades core. Concluidas: midia (resposta automatica — nao
   implementar download, decisao 07/09/2026), upload KB, handoff, horario de
   atendimento, paginacao, senha/sessao. Pendentes: 8.5 Template Messages e 8.6
-  Agenda (backend da 8.6 concluido em 08/09/2026 — migration `0013` + rotas
-  `/agenda/*`; faltam tools de IA, frontend e template).
+  Agenda (backend + tools de IA da 8.6 concluidos em 08/09/2026 — migration
+  `0013`, rotas `/agenda/*`, function calling em `llm.generate_reply_with_tools`
+  com executor `agenda_tools`, ativado no pipeline quando a agenda da empresa
+  esta habilitada; faltam frontend `/agenda`, template e integracao com o
+  Workflow Engine).
 - Fase 9: intelligence & analytics.
 - Fase 10: escala & multi-canal.
 - Detalhes em `PROGRESSO.md`.

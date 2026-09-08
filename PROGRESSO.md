@@ -175,14 +175,16 @@
 ### 8.6 — Agenda da Secretaria IA
 
 > Fatia 1 (backend) concluída: models + migration `0013`, serviço `app/services/agenda.py`,
-> rotas `/agenda/*`, testes verdes. Fatia 2 = tools de IA; Fatia 3 = frontend `/agenda`;
+> rotas `/agenda/*`, testes verdes. **Fatia 2 (tools de IA) concluída**: function calling
+> em `llm.generate_reply_with_tools` + executor `app/services/agenda_tools.py` ligado ao
+> pipeline (`conversation_service`) quando a agenda está ativa. Fatia 3 = frontend `/agenda`;
 > Fatia 4 = template + docs/deploy.
 
 - [x] Criar módulo de Agenda por empresa para gerenciamento de compromissos e agendamentos
-- [x] Permitir que a Secretaria IA consulte a agenda da empresa e verifique disponibilidade de datas e horários (rotas `/agenda/availability` + `build_slots`)
-- [x] Verificar automaticamente conflitos antes de confirmar um agendamento (`has_conflict`; rotas retornam 409)
+- [x] Permitir que a Secretaria IA consulte a agenda da empresa e verifique disponibilidade de datas e horários (tool `consultar_agenda`/`verificar_disponibilidade` + rotas `/agenda/*`)
+- [x] Verificar automaticamente conflitos antes de confirmar um agendamento (`has_conflict`; rotas retornam 409; executor da IA nunca confirma slot ocupado)
 - [x] Registrar no agendamento: cliente, telefone, data, horário, tipo do compromisso, observações e origem da solicitação (campos `customer_name`/`phone`/`date`/`start_time`/`end_time`/`service`/`notes`/`origin`)
-- [x] Identificar que o agendamento foi originado pelo atendimento via WhatsApp (`origin=whatsapp` nos services da Fatia 1)
+- [x] Identificar que o agendamento foi originado pelo atendimento via WhatsApp (`origin=whatsapp`)
 - [x] Permitir configurar mensagem de confirmação de agendamento (`confirmation_message`)
 - [x] Permitir configurar horários disponíveis para agendamento (`schedule` por dia)
 - [x] Permitir configurar duração padrão dos compromissos (`slot_duration`)
@@ -191,24 +193,24 @@
 - [x] Permitir filtros por data, período e status (`GET /agenda/appointments?date_from&date_to&status`)
 - [x] Registrar histórico de criação, alteração e cancelamento dos agendamentos (model `appointment_events`)
 
-**Pendente (Fatia 2 — tools de IA + integração conversation_service):**
-- [ ] Permitir criação de agendamentos pela IA a partir de solicitações recebidas via WhatsApp
-- [ ] Permitir alteração e cancelamento de agendamentos através da IA
-- [ ] Quando o horário solicitado estiver ocupado, consultar horários alternativos disponíveis e apresentar opções ao cliente
-- [ ] Garantir que a IA nunca confirme um horário sem validar previamente a disponibilidade (via `verificar_disponibilidade` antes de `criar_agendamento`)
-- [ ] Criar ferramenta `consultar_agenda` para uso pelos agentes de IA
-- [ ] Criar ferramenta `verificar_disponibilidade` para uso pelos agentes de IA
-- [ ] Criar ferramenta `criar_agendamento` para uso pelos agentes de IA
-- [ ] Criar ferramenta `alterar_agendamento` para uso pelos agentes de IA
-- [ ] Criar ferramenta `cancelar_agendamento` para uso pelos agentes de IA
+**Concluído (Fatia 2 — tools de IA + integração conversation_service):**
+- [x] Permitir criação de agendamentos pela IA a partir de solicitações recebidas via WhatsApp
+- [x] Permitir alteração e cancelamento de agendamentos através da IA
+- [x] Quando o horário solicitado estiver ocupado, consultar horários alternativos disponíveis e apresentar opções ao cliente (o executor orienta o modelo a verificar dias seguintes e oferecer alternativas)
+- [x] Garantir que a IA nunca confirme um horário sem validar previamente a disponibilidade (slot precisa estar em `build_slots` no momento da criação)
+- [x] Criar ferramenta `consultar_agenda` para uso pelos agentes de IA
+- [x] Criar ferramenta `verificar_disponibilidade` para uso pelos agentes de IA
+- [x] Criar ferramenta `criar_agendamento` para uso pelos agentes de IA
+- [x] Criar ferramenta `alterar_agendamento` para uso pelos agentes de IA
+- [x] Criar ferramenta `cancelar_agendamento` para uso pelos agentes de IA
+- [x] Definir fluxo: WhatsApp -> IA -> identificar solicitação -> consultar agenda -> verificar disponibilidade -> criar agendamento -> confirmar via WhatsApp (confirmação na resposta da IA/pipeline)
 
 **Pendente (Fatia 3 — frontend `/agenda`):**
 - [ ] Permitir visualização dos agendamentos no painel administrativo
 - [ ] Permitir filtros por cliente no painel (filtro por status/data já existe na API)
 
 **Pendente (integração/roadmap):**
-- [ ] Definir fluxo: WhatsApp -> IA -> identificar solicitação -> consultar agenda -> verificar disponibilidade -> criar agendamento -> confirmar via WhatsApp
-- [ ] Permitir que a Agenda seja utilizada por diferentes agentes e workflows
+- [ ] Permitir que a Agenda seja utilizada por diferentes agentes e workflows (hoje apenas o pipeline de atendimento usa as tools)
 - [ ] Integrar a Agenda ao Workflow Engine como uma ferramenta/nó disponível para automações
 - [ ] Criar configuração no painel para vincular o número de WhatsApp utilizado pela Secretaria IA
 - [ ] Enviar automaticamente mensagem de confirmação pelo WhatsApp após criação do agendamento (`confirmation_message` já persistido)

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 
 import httpx
 
@@ -136,6 +137,163 @@ async def generate_reply(
 
 class _JSONModeUnsupported(Exception):
     """Levantado quando o provedor rejeita response_format json_object."""
+
+
+class _ToolsUnsupported(Exception):
+    """Levantado quando o provedor rejeita o parametro `tools`."""
+
+
+def _parse_tool_arguments(raw: str) -> dict:
+    """Converte o JSON de argumentos de uma tool_call em dict (tolerante)."""
+    raw = (raw or "").strip()
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        try:
+            parsed = json.loads(raw.replace("'", '"'))
+        except (json.JSONDecodeError, ValueError):
+            return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+async def _chat_with_tools(
+    url: str,
+    headers: dict,
+    model: str,
+    messages: list[dict],
+    tools: list[dict],
+    *,
+    temperature: float,
+    timeout: float,
+) -> tuple[str, list[dict]]:
+    """Chama chat/completions com `tools`. Retorna (content, tool_calls)."""
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "tools": tools,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(url, json=payload, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code in (400, 404, 422):
+            raise _ToolsUnsupported() from exc
+        raise LLMError(provider_status_error_message(exc.response.status_code)) from exc
+    except httpx.HTTPError as exc:
+        raise LLMError("Falha de rede ao chamar o provedor de IA") from exc
+
+    try:
+        message = data["choices"][0]["message"]
+    except (KeyError, IndexError, TypeError):
+        raise LLMError("Resposta do provedor de IA em formato inesperado")
+
+    content = message.get("content")
+    tool_calls = message.get("tool_calls") or []
+    return (content or "").strip(), tool_calls
+
+
+async def generate_reply_with_tools(
+    system_prompt: str,
+    history: list[dict],
+    *,
+    tools: list[dict],
+    execute_tool: Callable[[str, dict], object],
+    provider: str | None = None,
+    model: str | None = None,
+    api_key: str | None = None,
+    base_url: str | None = None,
+    temperature: float = 0.4,
+    timeout: float = 40.0,
+    max_tool_rounds: int = 4,
+) -> str:
+    """Gera resposta com suporte a function calling (tools OpenAI-compativeis).
+
+    Enquanto o provedor solicitar tool_calls, executa cada tool via
+    `execute_tool(name, args)` e devolve o resultado como mensagem `tool`.
+    Termina quando o provedor responder texto final sem tool_calls.
+
+    Se o provedor rejeitar `tools` (400/404/422), cai em `generate_reply`
+    (sem tools), preservando o atendimento normal da empresa.
+    Falhas na execucao de uma tool sao convertidas em mensagem de erro para o
+    proprio modelo, que pode se recuperar (ex.: oferecer horarios alternativos).
+    """
+    cfg = _resolve(provider, model, api_key, base_url)
+
+    if cfg["provider"] == "mock":
+        last_user = ""
+        for m in reversed(history):
+            if m.get("role") == "user":
+                last_user = m.get("content", "")
+                break
+        return (
+            f"Ola! Recebi sua mensagem e ja estou analisando. "
+            f"(modo demonstracao - sem IA real). Voce perguntou: '{last_user[:60]}'"
+        )
+
+    if cfg["provider"] not in {"ollama", "mock"} and not cfg["api_key"]:
+        raise LLMError(
+            f"Nenhuma chave de API foi configurada para o provedor {cfg['provider']}. "
+            "Peça ao administrador da plataforma para cadastrar uma chave deste provedor."
+        )
+
+    if not cfg["base_url"]:
+        raise LLMError("Base URL do provedor de IA nao configurada")
+
+    url = f"{cfg['base_url']}/chat/completions"
+    headers = {"Content-Type": "application/json"}
+    if cfg["api_key"]:
+        headers["Authorization"] = f"Bearer {cfg['api_key']}"
+
+    messages = [{"role": "system", "content": system_prompt}] + history
+
+    try:
+        for _ in range(max_tool_rounds + 1):
+            content, tool_calls = await _chat_with_tools(
+                url,
+                headers,
+                cfg["model"],
+                messages,
+                tools,
+                temperature=temperature,
+                timeout=timeout,
+            )
+            if not tool_calls:
+                return content
+
+            assistant_msg = {"role": "assistant", "content": content or None, "tool_calls": tool_calls}
+            messages.append(assistant_msg)
+            for call in tool_calls:
+                fn = call.get("function") or {}
+                name = (fn.get("name") or "").strip()
+                args = _parse_tool_arguments(fn.get("arguments"))
+                call_id = (call.get("id") or "")
+                try:
+                    result = execute_tool(name, args)
+                except Exception as exc:  # noqa: BLE001 - erro vira msg p/ o modelo
+                    result = {"error": str(exc)[:500]}
+                if isinstance(result, str):
+                    tool_content = result
+                else:
+                    tool_content = json.dumps(result, ensure_ascii=False, default=str)
+                messages.append({"role": "tool", "tool_call_id": call_id, "content": tool_content})
+    except _ToolsUnsupported:
+        return await generate_reply(
+            system_prompt=system_prompt,
+            history=history,
+            provider=cfg["provider"],
+            model=cfg["model"],
+            api_key=cfg["api_key"],
+            base_url=cfg["base_url"],
+            temperature=temperature,
+            timeout=timeout,
+        )
+
+    raise LLMError("IA nao concluiu a resposta apos varias chamadas de ferramenta")
 
 
 def extract_json(text: str) -> dict:

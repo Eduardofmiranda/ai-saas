@@ -179,14 +179,37 @@ async def handle_incoming_message(
         )
         history = evolution.build_history(history_messages)
         try:
-            reply_text = await llm.generate_reply(
-                system_prompt=config.system_prompt,
-                history=history,
-                provider=ai_provider,
-                model=ai_model,
-                api_key=ai_api_key,
-                base_url=ai_base_url,
+            # Agenda habilitada: ativa as tools da Secretaria IA (function calling).
+            # Sem agenda ou desativada: atende normalmente, sem tools (sem mudanca
+            # no comportamento, mesmo para provedores sem suporte a tool_calls).
+            from app.services.agenda import get_for_company as get_agenda_for_company
+            from app.services.agenda_tools import (
+                AGENDA_TOOLS,
+                AGENDA_TOOLS_INSTRUCTION,
+                execute_agenda_tool,
             )
+
+            agenda_cfg = get_agenda_for_company(db, company_id)
+            if agenda_cfg and agenda_cfg.enabled:
+                reply_text = await llm.generate_reply_with_tools(
+                    system_prompt=(config.system_prompt or "") + AGENDA_TOOLS_INSTRUCTION,
+                    history=history,
+                    provider=ai_provider,
+                    model=ai_model,
+                    api_key=ai_api_key,
+                    base_url=ai_base_url,
+                    tools=AGENDA_TOOLS,
+                    execute_tool=lambda name, args, /: execute_agenda_tool(db, company_id, name, args),
+                )
+            else:
+                reply_text = await llm.generate_reply(
+                    system_prompt=config.system_prompt,
+                    history=history,
+                    provider=ai_provider,
+                    model=ai_model,
+                    api_key=ai_api_key,
+                    base_url=ai_base_url,
+                )
         except llm.LLMError:
             # IA indisponivel: nao quebra o fluxo. O diagnostico preserva
             # apenas metadados operacionais, nunca prompt, chave ou resposta.
