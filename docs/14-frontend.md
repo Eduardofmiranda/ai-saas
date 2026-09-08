@@ -64,6 +64,21 @@ Pagina: `frontend/src/pages/Departments.jsx`. Rota `/setores` em `App.jsx`.
   que o status muda sozinho para "Conectado" apos o escaneamento, sem F5.
   Ao detectar `state: "open"`, o QR e limpo automaticamente.
 
+### `/plataforma`
+- Rota protegida por `is_platform_admin`.
+- **Visão geral** (KPIs: empresas, usuários, workflows, execuções com erro; nota sobre uso/sessões).
+- **Credenciais globais de IA**: grid de provedores (Groq, OpenAI, DeepSeek, Mistral, Ollama, Demonstração)
+  com modelo, URL base, chave (write-only), toggle de disponibilidade e consulta de saldo DeepSeek.
+- **Política de IA por usuário**: chips de provedores liberados, selects de provedor/modelo padrão;
+  usuários listados com avatar, email, política e empresa.
+- **Usuários de todas as empresas**: lista com nome, email, empresa, papel (Dono/Admin/Atendente)
+  e badge "Plataforma" para operadores.
+- **Painel de Erros**: tabela paginada com empresa, workflow, erro e data; limpar todos com
+  **modal de confirmação** (sem `confirm()` nativo).
+- Auto-load da aba "Erros" ao entrar nela.
+
+Pagina: `frontend/src/pages/PlatformAdmin.jsx`. Rota `/plataforma` em `App.jsx`.
+
 ### `/conversas` (Inbox — 3 paineis)
 - **Implementado** (Fase 9.0, primeira parte).
 - Layout em 3 paineis (padrao do mercado: lista | thread | contexto do cliente).

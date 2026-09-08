@@ -20,6 +20,8 @@ const MODELS = {
   mock: ["mock-response"],
 };
 
+const ROLE_LABELS = { owner: "Dono", admin: "Admin", agent: "Atendente" };
+
 const label = (value) => ({ groq: "Groq", openai: "OpenAI", deepseek: "DeepSeek", mistral: "Mistral", ollama: "Ollama", mock: "Demonstração" }[value] || value);
 
 export default function PlatformAdmin() {
@@ -39,7 +41,9 @@ export default function PlatformAdmin() {
   const [errors, setErrors] = useState([]);
   const [errorsTotal, setErrorsTotal] = useState(0);
   const [errorsLoading, setErrorsLoading] = useState(false);
+  const [errorsLoaded, setErrorsLoaded] = useState(false);
   const [errorsPage, setErrorsPage] = useState(0);
+  const [confirmClearErrors, setConfirmClearErrors] = useState(false);
   const ERRORS_PAGE = 20;
   const [tab, setTab] = useState("overview");
 
@@ -63,6 +67,22 @@ export default function PlatformAdmin() {
   }
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setEditingUser(null);
+        setConfirmClearErrors(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (tab === "errors" && !errorsLoaded && !errorsLoading) loadErrors(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   function set(provider, field, value) {
     setForms((current) => ({ ...current, [provider]: { ...current[provider], [field]: value, ...(field === "api_key" && value.trim() ? { enabled: true } : {}) } }));
@@ -132,6 +152,7 @@ export default function PlatformAdmin() {
       setErrors(res.items);
       setErrorsTotal(res.total);
       setErrorsPage(page);
+      setErrorsLoaded(true);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -140,13 +161,13 @@ export default function PlatformAdmin() {
   }
 
   async function clearErrors() {
-    if (!confirm("Tem certeza que deseja apagar TODOS os erros?")) return;
     setErrorsLoading(true);
     try {
       const res = await api.clearPlatformErrors();
       setMessage(`${res.deleted} erro(s) removido(s).`);
       setErrors([]);
       setErrorsTotal(0);
+      setConfirmClearErrors(false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -154,152 +175,330 @@ export default function PlatformAdmin() {
     }
   }
 
-  return <div className="layout">
-    <Header />
-    <main className="content platform-admin">
-      <div className="content-head">
-        <div><h2>Administração da Plataforma</h2><p className="muted">Visão global restrita ao operador. A administração comum continua isolada por empresa.</p></div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <select value={tab} onChange={(e) => setTab(e.target.value)} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}>
-            <option value="overview">Visão geral</option>
-            <option value="errors">Painel de Erros</option>
-          </select>
-          <button className="btn ghost" onClick={load}>Atualizar</button>
-        </div>
-      </div>
-      {error && <div className="error">{error}</div>}
-      {message && <div className="success-msg">{message}</div>}
-
-      {tab === "overview" && <>
-        {!overview ? <p className="muted">Carregando visão geral...</p> : <>
-          <div className="kpi-grid">
-            <Kpi label="Empresas" value={overview.companies} />
-            <Kpi label="Usuários cadastrados" value={overview.users} />
-            <Kpi label="Workflows" value={overview.workflows} />
-            <Kpi label="Execuções com erro" value={overview.executions_error} />
-          </div>
-          <div className="ai-config"><h3>Uso e sessões</h3>
-            <p className="muted">Tokens consumidos pela aplicação e sessões ativas ainda não são rastreados pelo sistema atual. O painel não exibirá estimativas inventadas: o saldo do DeepSeek é consultado na fonte oficial e os demais provedores dependem de APIs próprias.</p>
-          </div>
-        </>}
-        <section className="ai-config"><h3>Credenciais globais de IA</h3>
-          <p className="muted">Cadastre uma chave por provedor. Empresas que escolherem esse provedor usam essa chave, salvo se possuírem uma chave própria legada. A chave fica cifrada no banco e não pode ser lida pela tela.</p>
-          <div className="platform-provider-grid">{providers.map((provider) => {
-            const form = forms[provider.provider] || {};
-            const balance = balances[provider.provider];
-            return <div className="platform-provider" key={provider.provider}>
-              <div className="platform-provider-head"><strong>{label(provider.provider)}</strong><span className={provider.has_api_key ? "state-pill open" : "state-pill closed"}>{provider.has_api_key ? "Chave cadastrada" : "Sem chave"}</span></div>
-              <label className="field"><span>Modelo padrão</span><input value={form.model || ""} onChange={(e) => set(provider.provider, "model", e.target.value)} /></label>
-              <label className="field"><span>URL base (opcional)</span><input value={form.base_url || ""} onChange={(e) => set(provider.provider, "base_url", e.target.value)} placeholder="Use a URL oficial se vazio" /></label>
-              <label className="field"><span>Nova chave de API</span><input type="password" value={form.api_key || ""} onChange={(e) => set(provider.provider, "api_key", e.target.value)} placeholder={provider.has_api_key ? "Deixe vazio para manter a atual" : "Cole a chave aqui"} /></label>
-              <label className="toggle"><input type="checkbox" checked={Boolean(form.enabled)} onChange={(e) => set(provider.provider, "enabled", e.target.checked)} /><span>Disponível para empresas</span></label>
-              <div className="btn-group"><button className="btn primary" disabled={saving === provider.provider} onClick={() => saveProvider(provider.provider)}>{saving === provider.provider ? "Salvando..." : "Salvar"}</button>{provider.provider === "deepseek" && provider.has_api_key && <button className="btn ghost" onClick={() => checkBalance(provider.provider)}>Consultar saldo</button>}</div>
-              {balance && <p className="field-help">{balance.balances ? balance.balances.map((item) => `${item.total_balance} ${item.currency}`).join(" · ") : balance.detail}</p>}
-            </div>;
-          })}</div>
-        </section>
-        <section className="ai-config"><h3>Política de IA por usuário</h3>
-          <p className="muted">Defina quais provedores e modelos cada usuário pode utilizar. O usuário comum só visualiza as opções liberadas.</p>
-          {editingUser && <div className="platform-provider" style={{ marginBottom: 16 }}>
-            <div className="platform-provider-head"><strong>Editar: {editingUser.name}</strong><span>{editingUser.email}</span></div>
-            <label className="field"><span>Provedores liberados</span>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-                {PROVIDERS.map((p) => (
-                  <label key={p.value} className="toggle" style={{ fontSize: 13 }}>
-                    <input type="checkbox" checked={userForm.allowed_providers.includes(p.value)} onChange={() => toggleProvider(p.value)} />
-                    <span>{p.label}</span>
-                  </label>
-                ))}
-              </div>
-            </label>
-            {userForm.allowed_providers.length > 0 && <>
-              <label className="field"><span>Provedor padrão</span>
-                <select value={userForm.default_provider} onChange={(e) => {
-                  const dp = e.target.value;
-                  const models = MODELS[dp] || [];
-                  setUserForm((f) => ({ ...f, default_provider: dp, default_model: models[0] || "" }));
-                }}>
-                  {userForm.allowed_providers.map((p) => <option key={p} value={p}>{label(p)}</option>)}
-                </select>
-              </label>
-              <label className="field"><span>Modelo padrão</span>
-                <select value={userForm.default_model} onChange={(e) => setUserForm((f) => ({ ...f, default_model: e.target.value }))}>
-                  {(MODELS[userForm.default_provider] || []).map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </label>
-            </>}
-            <div className="btn-group">
-              <button className="btn primary" disabled={saving === "user-" + editingUser.id} onClick={saveUserConfig}>
-                {saving === "user-" + editingUser.id ? "Salvando..." : "Salvar política"}
-              </button>
-              <button className="btn ghost" onClick={() => setEditingUser(null)}>Cancelar</button>
+  const providerCards = providers.length
+    ? providers.map((provider) => {
+        const form = forms[provider.provider] || {};
+        const balance = balances[provider.provider];
+        return (
+          <div className="platform-provider" key={provider.provider}>
+            <div className="platform-provider-head">
+              <strong>{label(provider.provider)}</strong>
+              <span className={provider.has_api_key ? "state-pill open" : "state-pill closed"}>
+                {provider.has_api_key ? "Chave cadastrada" : "Sem chave"}
+              </span>
             </div>
-          </div>}
-          <div className="platform-user-list">{users.map((user) => {
-            const cfg = getUserConfig(user);
-            return <div key={user.id} className="platform-user-row">
-              <div><strong>{user.name}</strong><span>{user.email}</span></div>
-              <div>
-                {cfg && cfg.allowed_providers.length > 0
-                  ? <span>{cfg.allowed_providers.map(label).join(", ")} · padrão: {label(cfg.default_provider)}/{cfg.default_model}</span>
-                  : <span className="muted">Sem política (usa empresa/.env)</span>}
-                <button className="btn ghost" style={{ marginLeft: 8, fontSize: 12 }} onClick={() => openUserConfig(user)}>Editar</button>
-              </div>
-            </div>;
-          })}</div>
-        </section>
-        <section className="ai-config"><h3>Usuários de todas as empresas</h3><p className="muted">Esta lista mostra contas cadastradas; ela não indica sessão ativa, pois o sistema ainda não possui rastreamento confiável de sessões.</p>
-          <div className="platform-user-list">{users.map((user) => <div key={user.id} className="platform-user-row"><div><strong>{user.name}</strong><span>{user.email}</span></div><div><strong>{user.company_name}</strong><span>{user.role}{user.is_platform_admin ? " · operador da plataforma" : ""}</span></div></div>)}</div>
-        </section>
-      </>}
 
-      {tab === "errors" && <section className="ai-config">
-        <h3>Painel de Erros</h3>
-        <p className="muted">Execuções que falharam. Mostra o erro, workflow, empresa e data/hora.</p>
-        <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
-          <button className="btn ghost" onClick={() => loadErrors(0)} disabled={errorsLoading}>
-            {errorsLoading ? "Carregando..." : errors.length > 0 ? "Atualizar" : "Carregar erros"}
-          </button>
-          {errorsTotal > 0 && <button className="btn ghost" style={{ color: "#dc2626" }} onClick={clearErrors} disabled={errorsLoading}>
-            Limpar todos os erros
-          </button>}
+            <label className="field">
+              <span>Modelo padrão</span>
+              <input className="input" value={form.model || ""} onChange={(e) => set(provider.provider, "model", e.target.value)} placeholder="ex.: gpt-4o-mini" />
+            </label>
+            <label className="field">
+              <span>URL base (opcional)</span>
+              <input className="input" value={form.base_url || ""} onChange={(e) => set(provider.provider, "base_url", e.target.value)} placeholder="Use a URL oficial se vazio" />
+            </label>
+            <label className="field">
+              <span>Nova chave de API</span>
+              <input className="input" type="password" value={form.api_key || ""} onChange={(e) => set(provider.provider, "api_key", e.target.value)} placeholder={provider.has_api_key ? "Deixe vazio para manter a atual" : "Cole a chave aqui"} />
+            </label>
+            <label className="toggle">
+              <input type="checkbox" checked={Boolean(form.enabled)} onChange={(e) => set(provider.provider, "enabled", e.target.checked)} />
+              <span>Disponível para empresas</span>
+            </label>
+
+            <div className="btn-group">
+              <button className="btn primary" disabled={saving === provider.provider} onClick={() => saveProvider(provider.provider)}>
+                {saving === provider.provider ? "Salvando..." : "Salvar"}
+              </button>
+              {provider.provider === "deepseek" && provider.has_api_key && (
+                <button className="btn ghost small" disabled={saving !== ""} onClick={() => checkBalance(provider.provider)}>Consultar saldo</button>
+              )}
+            </div>
+            {balance && (
+              <p className="field-help">
+                {balance.balances ? balance.balances.map((item) => `${item.total_balance} ${item.currency}`).join(" · ") : balance.detail}
+              </p>
+            )}
+          </div>
+        );
+      })
+    : null;
+
+  return (
+    <div className="layout">
+      <Header />
+      <main className="content">
+        <div className="page-header page-header-row">
+          <div className="page-header">
+            <h1>Administração da Plataforma</h1>
+            <p className="muted">Visão global restrita ao operador. A administração comum continua isolada por empresa.</p>
+          </div>
+          <button className="btn ghost" onClick={load}>Atualizar dados</button>
         </div>
-        {errors.length > 0 && <>
-          <p className="muted" style={{ marginBottom: 8 }}>{errorsTotal} erro{errorsTotal !== 1 ? "s" : ""} no total</p>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: "2px solid #e5e7eb", textAlign: "left" }}>
-                  <th style={{ padding: "8px 6px" }}>ID</th>
-                  <th style={{ padding: "8px 6px" }}>Empresa</th>
-                  <th style={{ padding: "8px 6px" }}>Workflow</th>
-                  <th style={{ padding: "8px 6px" }}>Erro</th>
-                  <th style={{ padding: "8px 6px" }}>Quando</th>
-                </tr>
-              </thead>
-              <tbody>
-                {errors.map((e) => (
-                  <tr key={e.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
-                    <td style={{ padding: "6px", fontFamily: "monospace" }}>#{e.id}</td>
-                    <td style={{ padding: "6px" }}>{e.company_name}</td>
-                    <td style={{ padding: "6px" }}>{e.workflow_name}</td>
-                    <td style={{ padding: "6px", maxWidth: 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={e.error}>{e.error}</td>
-                    <td style={{ padding: "6px", whiteSpace: "nowrap" }}>{e.created_at ? new Date(e.created_at).toLocaleString("pt-BR") : "-"}</td>
-                  </tr>
+
+        <div className="tabs">
+          <button className={tab === "overview" ? "active" : ""} onClick={() => setTab("overview")}>Visão geral</button>
+          <button className={tab === "errors" ? "active" : ""} onClick={() => setTab("errors")}>Painel de Erros</button>
+        </div>
+
+        {error && <div className="alert alert-error">{error}</div>}
+        {message && (
+          <div className="alert alert-success" role="status">
+            {message}
+            <button
+              aria-label="Fechar aviso"
+              style={{ marginLeft: "auto", background: "none", border: "none", color: "inherit", cursor: "pointer", fontSize: 14 }}
+              onClick={() => setMessage("")}
+            >✕</button>
+          </div>
+        )}
+
+        {tab === "overview" && (
+          <>
+            {!overview ? (
+              <div className="card"><p className="muted">Carregando visão geral...</p></div>
+            ) : (
+              <>
+                <div className="stat-grid">
+                  <StatCard icon="🏢" value={overview.companies} label="Empresas" />
+                  <StatCard icon="👥" value={overview.users} label="Usuários cadastrados" />
+                  <StatCard icon="⚙️" value={overview.workflows} label="Workflows" />
+                  <StatCard icon="❌" value={overview.executions_error} label="Execuções com erro" tone="red" />
+                </div>
+
+                <section className="ai-config">
+                  <h3>Uso e sessões</h3>
+                  <p className="muted">
+                    Tokens consumidos pela aplicação e sessões ativas ainda não são rastreados pelo sistema atual.
+                    O painel não exibirá estimativas inventadas: o saldo do DeepSeek é consultado na fonte oficial
+                    e os demais provedores dependem de APIs próprias.
+                  </p>
+                </section>
+              </>
+            )}
+
+            <section className="ai-config">
+              <h3>Credenciais globais de IA</h3>
+              <p className="muted">
+                Cadastre uma chave por provedor. Empresas que escolherem esse provedor usam essa chave, salvo se
+                possuírem uma chave própria legada. A chave fica cifrada no banco e não pode ser lida pela tela.
+              </p>
+              <div className="platform-provider-grid">
+                {providerCards || <p className="muted">Carregando provedores...</p>}
+              </div>
+            </section>
+
+            <section className="ai-config">
+              <h3>Política de IA por usuário</h3>
+              <p className="muted">Defina quais provedores e modelos cada usuário pode utilizar. O usuário comum só visualiza as opções liberadas.</p>
+
+              {editingUser && (
+                <div className="platform-form-card">
+                  <div className="platform-provider-head">
+                    <strong>Editar: {editingUser.name}</strong>
+                    <span className="muted">{editingUser.email}</span>
+                  </div>
+                  <label className="field">
+                    <span>Provedores liberados</span>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+                      {PROVIDERS.map((p) => (
+                        <span
+                          key={p.value}
+                          role="button"
+                          tabIndex={0}
+                          className={`provider-chip ${userForm.allowed_providers.includes(p.value) ? "on" : ""}`}
+                          onClick={() => toggleProvider(p.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleProvider(p.value); } }}
+                        >
+                          {p.label}
+                        </span>
+                      ))}
+                    </div>
+                  </label>
+                  {userForm.allowed_providers.length > 0 && (
+                    <>
+                      <label className="field">
+                        <span>Provedor padrão</span>
+                        <select value={userForm.default_provider} onChange={(e) => {
+                          const dp = e.target.value;
+                          const models = MODELS[dp] || [];
+                          setUserForm((f) => ({ ...f, default_provider: dp, default_model: models[0] || "" }));
+                        }}>
+                          {userForm.allowed_providers.map((p) => <option key={p} value={p}>{label(p)}</option>)}
+                        </select>
+                      </label>
+                      <label className="field">
+                        <span>Modelo padrão</span>
+                        <select value={userForm.default_model} onChange={(e) => setUserForm((f) => ({ ...f, default_model: e.target.value }))}>
+                          {(MODELS[userForm.default_provider] || []).map((m) => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                      </label>
+                    </>
+                  )}
+                  <div className="btn-group">
+                    <button className="btn primary" disabled={saving === "user-" + editingUser.id} onClick={saveUserConfig}>
+                      {saving === "user-" + editingUser.id ? "Salvando..." : "Salvar política"}
+                    </button>
+                    <button className="btn ghost" onClick={() => setEditingUser(null)}>Cancelar</button>
+                  </div>
+                </div>
+              )}
+
+              <div className="platform-user-list">
+                {users.length === 0 && <p className="muted">Carregando usuários...</p>}
+                {users.map((user) => {
+                  const cfg = getUserConfig(user);
+                  return (
+                    <div key={"policy-" + user.id} className="platform-user-row">
+                      <div className="user-main">
+                        <span className="avatar-sm" style={{ background: "#4f7cff" }}>{(user.name || "?").charAt(0).toUpperCase()}</span>
+                        <div>
+                          <strong>{user.name}</strong>
+                          <span>{user.email}</span>
+                        </div>
+                      </div>
+                      <div className="user-meta">
+                        {cfg && cfg.allowed_providers.length > 0
+                          ? <span>{cfg.allowed_providers.map(label).join(", ")} · padrão {label(cfg.default_provider)}/{cfg.default_model}</span>
+                          : <span>Sem política (usa empresa/.env)</span>}
+                        <button className="btn ghost small" onClick={() => openUserConfig(user)}>Editar</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="ai-config">
+              <h3>Usuários de todas as empresas</h3>
+              <p className="muted">
+                Esta lista mostra contas cadastradas; ela não indica sessão ativa, pois o sistema ainda não possui
+                rastreamento confiável de sessões.
+              </p>
+              <div className="platform-user-list">
+                {users.map((user) => (
+                  <div key={"all-" + user.id} className="platform-user-row">
+                    <div className="user-main">
+                      <span className="avatar-sm" style={{ background: "#6ea8ff" }}>{(user.name || "?").charAt(0).toUpperCase()}</span>
+                      <div>
+                        <strong>{user.name}</strong>
+                        <span>{user.email}</span>
+                      </div>
+                    </div>
+                    <div className="user-meta">
+                      <strong>{user.company_name}</strong>
+                      <span className={`role-chip role-${user.role}`}>{ROLE_LABELS[user.role] || user.role}</span>
+                      {user.is_platform_admin && <span className="role-chip role-platform">Plataforma</span>}
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </section>
+          </>
+        )}
+
+        {tab === "errors" && (
+          <section className="ai-config">
+            <div className="platform-provider-head">
+              <div>
+                <h3 style={{ margin: 0 }}>Painel de Erros</h3>
+                <p className="muted" style={{ margin: "4px 0 0" }}>Execuções que falharam: erro, workflow, empresa e data/hora.</p>
+              </div>
+              <div className="btn-group">
+                <button className="btn ghost" onClick={() => loadErrors(0)} disabled={errorsLoading}>
+                  {errorsLoading ? "Carregando..." : "Atualizar"}
+                </button>
+                {errorsTotal > 0 && (
+                  <button className="btn ghost danger" onClick={() => setConfirmClearErrors(true)} disabled={errorsLoading}>
+                    Limpar todos os erros
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {errorsLoading && <p className="muted" style={{ marginTop: 12 }}>Carregando erros...</p>}
+
+            {!errorsLoading && errors.length === 0 && (
+              <div className="empty-state" style={{ marginTop: 12 }}>
+                <div className="empty-icon">✅</div>
+                <h3>Nenhum erro registrado</h3>
+                <p>Quando uma execução falhar, ela aparecerá aqui com detalhes para diagnóstico.</p>
+              </div>
+            )}
+
+            {errors.length > 0 && (
+              <>
+                <div className="card" style={{ padding: 0, overflow: "hidden", marginTop: 14 }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: 70 }}>ID</th>
+                        <th>Empresa</th>
+                        <th>Workflow</th>
+                        <th>Erro</th>
+                        <th style={{ width: 150 }}>Quando</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {errors.map((e) => (
+                        <tr key={e.id}>
+                          <td style={{ fontFamily: "Consolas, monospace" }}>#{e.id}</td>
+                          <td>{e.company_name}</td>
+                          <td>{e.workflow_name}</td>
+                          <td style={{ maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={e.error}>{e.error}</td>
+                          <td>{e.created_at ? new Date(e.created_at).toLocaleString("pt-BR") : "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="pagination">
+                  <span className="pageno">{errorsTotal} erro{errorsTotal !== 1 ? "s" : ""} no total</span>
+                  <div className="btn-group">
+                    <button className="btn ghost small" disabled={errorsPage === 0 || errorsLoading} onClick={() => loadErrors(errorsPage - 1)}>Anterior</button>
+                    <span className="pageno">Página {errorsPage + 1} de {Math.ceil(errorsTotal / ERRORS_PAGE)}</span>
+                    <button className="btn ghost small" disabled={(errorsPage + 1) * ERRORS_PAGE >= errorsTotal || errorsLoading} onClick={() => loadErrors(errorsPage + 1)}>Próxima</button>
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+        )}
+      </main>
+
+      {confirmClearErrors && (
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setConfirmClearErrors(false); }}>
+          <div className="modal" role="dialog" aria-modal="true">
+            <div className="modal-header">
+              <div className="modal-title">Limpar erros</div>
+              <button className="modal-close" onClick={() => setConfirmClearErrors(false)} aria-label="Fechar">✕</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ margin: 0, lineHeight: 1.5 }}>
+                Tem certeza que deseja apagar <strong>TODOS os erros ({errorsTotal})</strong>?
+              </p>
+              <p className="muted" style={{ margin: "6px 0 0", fontSize: 13 }}>Esta ação não pode ser desfeita.</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn ghost" onClick={() => setConfirmClearErrors(false)} disabled={errorsLoading}>Cancelar</button>
+              <button className="btn solid-danger" onClick={clearErrors} disabled={errorsLoading}>
+                {errorsLoading ? "Removendo..." : "Apagar tudo"}
+              </button>
+            </div>
           </div>
-          <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
-            <button className="btn ghost" disabled={errorsPage === 0 || errorsLoading} onClick={() => loadErrors(errorsPage - 1)}>Anterior</button>
-            <span className="muted">Página {errorsPage + 1} de {Math.ceil(errorsTotal / ERRORS_PAGE)}</span>
-            <button className="btn ghost" disabled={(errorsPage + 1) * ERRORS_PAGE >= errorsTotal || errorsLoading} onClick={() => loadErrors(errorsPage + 1)}>Próxima</button>
-          </div>
-        </>}
-        {errors.length === 0 && !errorsLoading && <p className="muted">Nenhum erro registrado. Clique em "Carregar erros" para buscar.</p>}
-      </section>}
-    </main>
-  </div>;
+        </div>
+      )}
+    </div>
+  );
 }
 
-function Kpi({ label: title, value }) { return <div className="kpi-card"><div className="kpi-value">{value ?? 0}</div><div className="kpi-label">{title}</div></div>; }
+function StatCard({ icon, value, label: title, tone = "" }) {
+  return (
+    <div className={`stat-card ${tone}`}>
+      <span className="stat-icon">{icon}</span>
+      <div>
+        <div className="stat-value">{value ?? 0}</div>
+        <div className="stat-label">{title}</div>
+      </div>
+    </div>
+  );
+}
