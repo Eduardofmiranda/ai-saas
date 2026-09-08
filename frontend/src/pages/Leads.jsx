@@ -9,16 +9,6 @@ function formatPhone(p) {
   return d;
 }
 
-function relativeTime(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60) return "agora";
-  if (diff < 3600) return `${Math.round(diff / 60)}min`;
-  if (diff < 86400) return `${Math.round(diff / 3600)}h`;
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-}
-
 const AVATAR_COLORS = ["#4f7cff", "#8b5cf6", "#06b6d4", "#22c55e", "#f59e0b", "#ec4899"];
 function avatarColor(seed) {
   let h = 0;
@@ -37,7 +27,7 @@ export default function Leads() {
   const [showBulk, setShowBulk] = useState(false);
   const [bulkText, setBulkText] = useState("");
   const [sending, setSending] = useState(false);
-  const [showExport, setShowExport] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -92,9 +82,14 @@ export default function Leads() {
     } catch (e) { setError(e.message); }
   }
 
-  function exportLeads(format) {
-    api.exportCustomers(format);
-    setShowExport(false);
+  function exportJson() {
+    api.exportCustomersJson();
+    setShowExportMenu(false);
+  }
+
+  function exportXlsx() {
+    api.exportCustomersXlsx();
+    setShowExportMenu(false);
   }
 
   async function sendBulk() {
@@ -109,7 +104,7 @@ export default function Leads() {
         text,
         ...(ids ? { customer_ids: ids } : { all: true }),
       });
-      setSuccess(res.message || "Mensagem enviada");
+      setSuccess(res.message || "Mensagem enviada com sucesso!");
       setBulkText("");
       setShowBulk(false);
       setSelected(new Set());
@@ -127,30 +122,29 @@ export default function Leads() {
         <div className="content-head">
           <div>
             <h2>Leads</h2>
-            <p className="muted">Todas as pessoas que entraram em contato pelo WhatsApp.</p>
+            <p className="muted">{total} contatos no sistema</p>
           </div>
           <div className="leads-actions">
-            <span className="muted" style={{ fontSize: 13 }}>{total} contatos</span>
             <div className="dropdown-wrap">
-              <button className="btn ghost small" onClick={() => setShowExport(!showExport)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <button className="btn ghost" onClick={() => setShowExportMenu(!showExportMenu)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Exportar
               </button>
-              {showExport && (
+              {showExportMenu && (
                 <div className="dropdown-menu">
-                  <button onClick={() => exportLeads("json")}>JSON</button>
-                  <button onClick={() => exportLeads("xlsx")}>Excel (.xlsx)</button>
+                  <button onClick={exportJson}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    JSON
+                  </button>
+                  <button onClick={exportXlsx}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="12" width="8" height="6" rx="1"/></svg>
+                    Excel (.xlsx)
+                  </button>
                 </div>
               )}
             </div>
-            {selected.size > 0 && (
-              <button className="btn primary small" onClick={() => setShowBulk(true)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                Enviar para {selected.size}
-              </button>
-            )}
-            <button className="btn primary small" onClick={() => setShowBulk(true)}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            <button className="btn primary" onClick={() => setShowBulk(true)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
               Mensagem em massa
             </button>
           </div>
@@ -158,30 +152,6 @@ export default function Leads() {
 
         {error && <div className="error">{error}</div>}
         {success && <div className="success">{success}</div>}
-
-        {showBulk && (
-          <div className="card" style={{ maxWidth: 600, marginBottom: 16 }}>
-            <h3>Mensagem em Massa</h3>
-            <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
-              {selected.size > 0
-                ? `Enviando para ${selected.size} leads selecionados`
-                : "Enviando para TODOS os leads"}
-            </p>
-            <textarea
-              className="input"
-              rows="4"
-              placeholder="Digite a mensagem que deseja enviar..."
-              value={bulkText}
-              onChange={(e) => setBulkText(e.target.value)}
-            />
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <button className="btn primary" onClick={sendBulk} disabled={!bulkText.trim() || sending}>
-                {sending ? "Enviando..." : "Enviar"}
-              </button>
-              <button className="btn ghost" onClick={() => { setShowBulk(false); setBulkText(""); }}>Cancelar</button>
-            </div>
-          </div>
-        )}
 
         <div className="leads-search-row">
           <input
@@ -197,7 +167,7 @@ export default function Leads() {
                 checked={selected.size === filtered.length && filtered.length > 0}
                 onChange={selectAll}
               />
-              Selecionar todos ({filtered.length})
+              {selected.size > 0 ? `${selected.size} selecionados` : `Todos (${filtered.length})`}
             </label>
           )}
         </div>
@@ -250,6 +220,69 @@ export default function Leads() {
           </div>
         )}
       </main>
+
+      {showBulk && (
+        <div className="modal-overlay" onClick={() => { setShowBulk(false); setBulkText(""); }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                Mensagem em Massa
+              </div>
+              <button className="modal-close" onClick={() => { setShowBulk(false); setBulkText(""); }}>&times;</button>
+            </div>
+
+            <div className="modal-body">
+              <div className="bulk-target">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>
+                  {selected.size > 0
+                    ? `${selected.size} lead${selected.size > 1 ? "s" : ""} selecionado${selected.size > 1 ? "s" : ""}`
+                    : `Todos os ${leads.length} leads`}
+                </span>
+              </div>
+
+              <textarea
+                className="bulk-textarea"
+                rows="5"
+                placeholder="Digite a mensagem que deseja enviar para seus leads..."
+                value={bulkText}
+                onChange={(e) => setBulkText(e.target.value)}
+              />
+
+              <div className="bulk-preview">
+                <span className="bulk-preview-label">Pré-visualização</span>
+                <div className="bulk-preview-box">
+                  {bulkText || "Sua mensagem aparecerá aqui..."}
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn ghost" onClick={() => { setShowBulk(false); setBulkText(""); }}>
+                Cancelar
+              </button>
+              <button
+                className="btn primary"
+                onClick={sendBulk}
+                disabled={!bulkText.trim() || sending}
+              >
+                {sending ? (
+                  <>
+                    <div className="spinner-small" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                    Enviar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

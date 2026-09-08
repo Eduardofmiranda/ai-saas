@@ -150,21 +150,40 @@ export const api = {
     return request("GET", `/customers/?${qs.toString()}`);
   },
   deleteCustomer: (id) => request("DELETE", `/customers/${id}`),
-  exportCustomers: (format = "json") => {
+  exportCustomersJson: () => {
     const token = localStorage.getItem("token");
-    const url = `${API_BASE}/customers/export?format=${format}`;
-    const a = document.createElement("a");
-    a.href = url;
-    a.target = "_blank";
-    // Para download com auth, usamos fetch
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.blob())
+    fetch(`${API_BASE}/customers/export`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error("Erro ao exportar");
+        return r.blob();
+      })
       .then((blob) => {
-        const blobUrl = URL.createObjectURL(blob);
-        a.href = blobUrl;
-        a.download = `leads.${format === "xlsx" ? "xlsx" : "json"}`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "leads.json";
         a.click();
-        URL.revokeObjectURL(blobUrl);
+        URL.revokeObjectURL(url);
+      });
+  },
+  exportCustomersXlsx: () => {
+    const token = localStorage.getItem("token");
+    fetch(`${API_BASE}/customers/export/xlsx`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error("Erro ao exportar");
+        return r.blob();
+      })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "leads.xlsx";
+        a.click();
+        URL.revokeObjectURL(url);
       });
   },
   bulkMessageCustomers: (body) => request("POST", "/customers/bulk-message", body),

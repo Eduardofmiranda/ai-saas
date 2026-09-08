@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from fastapi import HTTPException, BackgroundTasks
 from fastapi import APIRouter, Depends
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -80,19 +80,15 @@ def get_customers(
     return {"total": total, "items": items}
 
 
-@router.get("/export")
-def export_customers(
-    format: str = "json",
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Exporta todos os leads da empresa como JSON ou Excel."""
+def _get_export_data(db: Session, company_id: int) -> list[dict]:
     customers = (
         db.query(Customer)
-        .filter(Customer.company_id == current_user.company_id)
+        .filter(Customer.company_id == company_id)
         .order_by(Customer.id)
         .all()
     )
+    if not customers:
+        return []
 
     customer_ids = [c.id for c in customers]
     conv_counts = (
@@ -103,46 +99,94 @@ def export_customers(
     )
     count_map = dict(conv_counts)
 
-    data = []
-    for c in customers:
-        data.append({
+    return [
+        {
             "id": c.id,
-            "name": c.name,
-            "phone": c.phone,
+            "name": c.name or "",
+            "phone": c.phone or "",
             "conversation_count": count_map.get(c.id, 0),
-            "created_at": c.created_at.isoformat() if c.created_at else None,
-        })
+            "created_at": str(c.created_at) if c.created_at else "",
+        }
+        for c in customers
+    ]
 
-    if format == "xlsx":
-        try:
-            from openpyxl import Workbook
-        except ImportError:
-            raise HTTPException(status_code=500, detail="Export Excel nao disponivel (openpyxl nao instalado)")
 
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Leads"
-        ws.append(["ID", "Nome", "Telefone", "Conversas", "Criado em"])
-        for row in data:
-            ws.append([row["id"], row["name"], row["phone"], row["conversation_count"], row["created_at"]])
-
-        buffer = io.BytesIO()
-        wb.save(buffer)
-        buffer.seek(0)
-
-        filename = f"leads_{current_user.company_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
-        return StreamingResponse(
-            buffer,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
-        )
-
-    # JSON por padrao
-    filename = f"leads_{current_user.company_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
-    return StreamingResponse(
-        io.BytesIO(json.dumps(data, ensure_ascii=False, indent=2).encode()),
+@router.get("/export")
+def export_customers_json(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Exporta leads como JSON para download."""
+    data = _get_export_data(db, current_user.company_id)
+    content = json.dumps(data, ensure_ascii=False, indent=2)
+    return Response(
+        content=content,
         media_type="application/json",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={
+            "Content-Disposition": f'attachment; filename="leads_{current_user.company_id}.json"'
+        },
+    )
+
+
+@router.get("/export/xlsx")
+def export_customers_xlsx(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Exporta leads como Excel (.xlsx) para download."""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Export Excel nao disponivel")
+
+    data = _get_export_data(db, current_user.company_id)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Leads"
+
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    header_fill = PatternFill(start_color="4F7CFF", end_color="4F7CFF", fill_type="solid")
+    header_align = Alignment(horizontal="center", vertical="center")
+    thin_border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+
+    headers = ["ID", "Nome", "Telefone", "Conversas", "Criado em"]
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_align
+        cell.border = thin_border
+
+    for row_idx, item in enumerate(data, 2):
+        ws.cell(row=row_idx, column=1, value=item["id"]).border = thin_border
+        ws.cell(row=row_idx, column=2, value=item["name"]).border = thin_border
+        ws.cell(row=row_idx, column=3, value=item["phone"]).border = thin_border
+        ws.cell(row=row_idx, column=4, value=item["conversation_count"]).border = thin_border
+        ws.cell(row=row_idx, column=5, value=item["created_at"]).border = thin_border
+
+    ws.column_dimensions["A"].width = 8
+    ws.column_dimensions["B"].width = 25
+    ws.column_dimensions["C"].width = 20
+    ws.column_dimensions["D"].width = 12
+    ws.column_dimensions["E"].width = 22
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="leads_{current_user.company_id}.xlsx"'
+        },
     )
 
 
@@ -154,7 +198,6 @@ def _send_bulk_background(company_id: int, phones: list[str], text: str) -> None
         base_url, api_key, instance = _evo_config(config)
         if not base_url or not api_key or not instance:
             return
-
         for phone in phones:
             try:
                 asyncio.run(evolution.send_text(
@@ -177,10 +220,7 @@ def bulk_message(
     db: Session = Depends(get_db),
     background_tasks: BackgroundTasks = None,
 ):
-    """Envia mensagem em massa para leads.
-
-    body: {"text": "...", "customer_ids": [1,2,3]} ou {"text": "...", "all": true}
-    """
+    """Envia mensagem em massa para leads."""
     text = (data.get("text") or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="Mensagem obrigatoria")
