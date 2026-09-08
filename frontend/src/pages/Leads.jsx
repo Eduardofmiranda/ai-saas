@@ -83,13 +83,15 @@ export default function Leads() {
   }
 
   function exportJson() {
-    api.exportCustomersJson();
     setShowExportMenu(false);
+    setError("");
+    api.exportCustomersJson().catch((e) => setError(e.message || "Erro ao exportar JSON"));
   }
 
   function exportXlsx() {
-    api.exportCustomersXlsx();
     setShowExportMenu(false);
+    setError("");
+    api.exportCustomersXlsx().catch((e) => setError(e.message || "Erro ao exportar Excel"));
   }
 
   async function sendBulk() {

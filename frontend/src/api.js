@@ -152,39 +152,25 @@ export const api = {
   deleteCustomer: (id) => request("DELETE", `/customers/${id}`),
   exportCustomersJson: () => {
     const token = localStorage.getItem("token");
-    fetch(`${API_BASE}/customers/export`, {
+    return fetch(`${API_BASE}/customers/export`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => {
-        if (!r.ok) throw new Error("Erro ao exportar");
+        if (!r.ok) throw new Error(`Erro ao exportar (${r.status})`);
         return r.blob();
       })
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "leads.json";
-        a.click();
-        URL.revokeObjectURL(url);
-      });
+      .then((blob) => downloadBlob(blob, "leads.json"));
   },
   exportCustomersXlsx: () => {
     const token = localStorage.getItem("token");
-    fetch(`${API_BASE}/customers/export/xlsx`, {
+    return fetch(`${API_BASE}/customers/export/xlsx`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => {
-        if (!r.ok) throw new Error("Erro ao exportar");
+        if (!r.ok) throw new Error(`Erro ao exportar (${r.status})`);
         return r.blob();
       })
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "leads.xlsx";
-        a.click();
-        URL.revokeObjectURL(url);
-      });
+      .then((blob) => downloadBlob(blob, "leads.xlsx"));
   },
   bulkMessageCustomers: (body) => request("POST", "/customers/bulk-message", body),
   // Setores
@@ -193,3 +179,15 @@ export const api = {
   updateDepartment: (id, body) => request("PATCH", `/departments/${id}`, body),
   deleteDepartment: (id) => request("DELETE", `/departments/${id}`),
 };
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
