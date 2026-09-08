@@ -265,17 +265,20 @@ Quando a empresa tem `agenda_config.enabled` ativo, o pipeline de atendimento
 `app/services/agenda_tools.py`.
 
 Com `confirmation_required` ativo (default), `criar_agendamento` cria com status
-`awaiting_confirmation`; o sistema envia um pedido de confirmação e intercepta a
-resposta do cliente (`CONFIRMAR`/`CANCELAR`) no webhook antes da IA
-(`app/services/agenda_confirmation.py`).
+`awaiting_confirmation`; `alterar_agendamento` (mudanca de data/horario) e
+`cancelar_agendamento` criam pendencia em `pending_appointment_actions`. Em todos
+os casos o sistema envia um pedido de confirmacao ao cliente e intercepta a
+resposta (`CONFIRMAR`/`CANCELAR`) no webhook antes da IA
+(`app/services/agenda_confirmation.py`): a acao so e efetivada com o consentimento
+real do cliente; mudancas apenas de `service`/`notes` sao aplicadas direto.
 
 | Tool | Quando usar |
 |------|-------------|
-| `verificar_disponibilidade` | Listar horários livres de uma data (validar antes de criar) |
+| `verificar_disponibilidade` | Listar horários livres de uma data (validar antes de criar/remarcar) |
 | `consultar_agenda` | Listar compromissos (filtro por período/status) |
-| `criar_agendamento` | Criar um compromisso (`origin=whatsapp`, `actor_type=system`) |
-| `alterar_agendamento` | Remarcar/alterar um compromisso existente |
-| `cancelar_agendamento` | Cancelar um compromisso |
+| `criar_agendamento` | Criar um compromisso (`origin=whatsapp`, `actor_type=system`; provisorio ate confirmar) |
+| `alterar_agendamento` | Remarcar data/horario (pendente de confirmacao) ou ajustar servico/notas |
+| `cancelar_agendamento` | Cancelar um compromisso (pendente de confirmacao) |
 
 - A IA **nunca confirma** um horário sem ele estar em `build_slots` no momento
   da criacao (fim-a-fim: disponibilidade -> criacao).

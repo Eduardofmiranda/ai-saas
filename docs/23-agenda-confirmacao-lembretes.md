@@ -40,6 +40,35 @@
   cancela provisórios sem resposta dentro de `confirmation_expiry_hours` (evento
   `confirmation_expired`).
 
+### Confirmação de remarcar/cancelar (Implementado — consentimento server-side)
+
+Com `confirmation_required` ativo, as actions mutadoras da IA também exigem o
+consentimento real do cliente (não apenas instrução no prompt):
+
+- **Remarcar**: `alterar_agendamento` com data/horário novo valida o slot
+  (`build_slots`) e grava a mudança em `pending_appointment_actions`
+  (migration `0016`, `action="reschedule"`, payload = campos novos). O
+  compromisso original permanece inalterado.
+- **Cancelar**: `cancelar_agendamento` grava pendência (`action="cancel"`,
+  payload = motivo). O compromisso permanece ativo.
+- **Pedido ao cliente**: `send_pending_action_requests_for_phone` envia o texto
+  ("...Responda CONFIRMAR para aceitar ou CANCELAR para manter...") — uma única
+  vez por pendência (flag `notified`).
+- **Resposta**: `process_confirmation_reply` verifica primeiro pendências de
+  remarcar/cancelar (mais recente, escopada ao telefone do dono), depois a
+  confirmação de criação. CONFIRMAR efetiva (remarcado → mensagem de confirmação;
+  cancelado → compromisso cancelado); CANCELAR descarta a pendência e mantém o
+  compromisso original. Determinístico, interceptado antes da IA.
+- **Corrida de slot**: se o novo horário for tomado entre o pedido e a resposta,
+  a efetivação falha com evento `reschedule_failed` e o cliente é orientado a
+  escolher outro horário.
+- **Expiração**: pendências antigas (> `confirmation_expiry_hours`) ou de
+  compromissos inativos são descartadas pela task de expiração (evento
+  `pending_action_expired`); o compromisso original nunca é alterado por expiração.
+- **Exceção**: mudanças apenas de `service`/`notes` são aplicadas direto (não
+  alteram slot); com `confirmation_required` desligado, remarcar/cancelar voltam
+  a ser aplicados de imediato (comportamento pré-8.6b).
+
 ### Lembretes (Implementado — fase 8.6b)
 
 - Task Celery `send_agenda_reminders` (a cada 15 min) consulta compromissos
@@ -108,4 +137,7 @@ Maior esforço; depende de decisões de produto antes de código.
 - `tests/test_agenda_pipeline.py` (2 testes de wiring do pipeline).
 - `tests/test_agenda_confirmation.py` (32 testes da 8.6b: parsing de resposta,
   envio/deduplicação do pedido, interceptação nos pipelines, expiração e lembretes).
-- Suite: 298 passed (08/09/2026, apos upgrade de dependencias).
+- `tests/test_agenda_pending_actions.py` (17 testes do consentimento de
+  remarcar/cancelar: pendência sem aplicar, confirmar/rejeitar, escopo por
+  telefone, slot tomado entre pedido e confirmação, expiração e pipeline sem LLM).
+- Suite: 317 passed + 1 skipped (08/09/2026, concorrencia roda no CI).

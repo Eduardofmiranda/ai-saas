@@ -67,6 +67,7 @@ ai-saas/
 │   │   ├── knowledge_chunk.py
 │   │   ├── message.py
 │   │   ├── password_reset_token.py
+│   │   ├── pending_appointment_action.py
 │   │   ├── pending_flow.py
 │   │   ├── platform_ai_provider.py
 │   │   ├── user.py
@@ -138,6 +139,7 @@ ai-saas/
 │   ├── test_agenda.py
 │   ├── test_agenda_confirmation.py
 │   ├── test_agenda_concurrency.py
+│   ├── test_agenda_pending_actions.py
 │   ├── test_agenda_security.py
 │   ├── test_agenda_tools.py
 │   ├── test_auth.py
@@ -201,7 +203,8 @@ ai-saas/
 │       ├── 0012_business_hours.py
 │       ├── 0013_agenda.py
 │       ├── 0014_agenda_confirmation.py
-│       └── 0015_agenda_slot_index.py
+│       ├── 0015_agenda_slot_index.py
+│       └── 0016_pending_appointment_actions.py
 ├── docker-compose.yml
 ├── docker-compose.dev.yml
 ├── docker-compose.evolution.yml

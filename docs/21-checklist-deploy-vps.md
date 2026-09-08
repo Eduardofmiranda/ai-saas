@@ -67,8 +67,8 @@ Apos o deploy, confirme que todas as migrations foram aplicadas:
 
     docker compose exec backend alembic current
 
-O resultado deve estar em `0015_agenda_slot_index` (head). Se estiver atrasado,
-o backend aplicou automaticamente no startup; verifique os logs.
+O resultado deve estar em `0016_pending_appointment_actions` (head). Se estiver
+atrasado, o backend aplicou automaticamente no startup; verifique os logs.
 
 ## Resultado esperado
 

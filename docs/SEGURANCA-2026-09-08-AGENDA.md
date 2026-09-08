@@ -140,6 +140,15 @@ Producao continua usando Supabase para o banco do app; nao foi acessada.
 3. **Prioridade alta:** confirmacao server-side de remarcar/cancelar; instrucao no
    prompt nao comprova consentimento. Criacao provisoria/confirmacao da 8.6b ja esta
    no trabalho local, mas nao nos tres commits analisados, e nao resolve todas acoes.
+   **CONCLUIDO 08/09/2026** (remarcar/cancelar): com `confirmation_required` ativo,
+   `alterar_agendamento` (data/horario) e `cancelar_agendamento` via tools da IA
+   criam registro em `pending_appointment_actions` (migration `0016`) e enviam pedido
+   de confirmacao ao cliente; a acao so e efetivada quando ele responde
+   CONFIRMAR (deterministico, interceptado no webhook antes da IA). CANCELAR mantem
+   o compromisso original; pendencias expiram em `confirmation_expiry_hours`.
+   Pendencia e escopada ao telefone do dono do compromisso; mudanca de status via
+   LLM continua rejeitada. Validacao: `tests/test_agenda_pending_actions.py`
+   (17 testes, incluindo pipeline sem LLM e slot tomado entre pedido e confirmacao).
 4. Definir permissoes granulares dos operadores. CRUD autenticado da empresa e
    comportamento documentado; nao foi mudado unilateralmente para manager-only.
 5. Limites de tamanho/frequencia e orcamento por cliente/empresa. Limite 16 tools

@@ -27,13 +27,14 @@ def db_session():
         engine.dispose()
 
 
-def _enable_agenda(db, company_id):
+def _enable_agenda(db, company_id, *, confirmation_required=False):
     cfg = ag.get_or_create(db, company_id)
     cfg.enabled = 1
     cfg.schedule = ag.json_schedule({"mon": ["09:00", "18:00"], "tue": ["09:00", "18:00"]})
     cfg.slot_duration = 30
     cfg.min_advance = 0
     cfg.blocked = "[]"
+    cfg.confirmation_required = 1 if confirmation_required else 0
     db.commit()
     db.refresh(cfg)
     return cfg
@@ -150,7 +151,7 @@ class TestCriar:
 
 class TestAlterar:
     def test_updates_appointment(self, db_session, company):
-        _enable_agenda(db_session, company.id)
+        _enable_agenda(db_session, company.id, confirmation_required=False)
         appt = _create_manual(db_session, company.id, date="2026-09-21", start="10:00", end="10:30")
         result = execute_agenda_tool(
             db_session, company.id, "alterar_agendamento",
@@ -179,7 +180,7 @@ class TestAlterar:
 
 class TestCancelar:
     def test_cancels_appointment(self, db_session, company):
-        _enable_agenda(db_session, company.id)
+        _enable_agenda(db_session, company.id, confirmation_required=False)
         appt = _create_manual(db_session, company.id)
         result = execute_agenda_tool(db_session, company.id, "cancelar_agendamento", {"appointment_id": appt.id})
         assert result["ok"] is True

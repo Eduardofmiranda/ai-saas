@@ -83,7 +83,7 @@ async def _process_confirmation_reply(
     from app.services.agenda_confirmation import process_confirmation_reply
 
     result = await process_confirmation_reply(db, company_id=company_id, phone=phone, text=text)
-    if result["status"] in ("confirmed", "canceled"):
+    if result["status"] in ("confirmed", "canceled", "rejected"):
         if result.get("reply_text"):
             bot_msg = Message(
                 conversation_id=conversation.id,
@@ -101,14 +101,19 @@ async def _process_confirmation_reply(
 
 
 async def _send_pending_confirmation_requests(db: Session, *, company_id: int, phone: str) -> None:
-    """Envia pedidos de confirmacao de agendamentos provisorios pendentes.
+    """Envia pedidos pendentes da agenda para o telefone.
 
-    Idempotente (deduplicado por evento): pode ser chamado apos cada mensagem
-    sem risco de duplicar mensagens ao cliente.
+    Cobre: confirmacao de criacao provisoria e consentimento de
+    remarcar/cancelar. Idempotente (deduplicado por evento/flag): pode ser
+    chamado apos cada mensagem sem risco de duplicar mensagens ao cliente.
     """
-    from app.services.agenda_confirmation import send_confirmation_requests_for_phone
+    from app.services.agenda_confirmation import (
+        send_confirmation_requests_for_phone,
+        send_pending_action_requests_for_phone,
+    )
 
     await send_confirmation_requests_for_phone(db, company_id, phone)
+    await send_pending_action_requests_for_phone(db, company_id, phone)
 
 
 async def handle_incoming_message(

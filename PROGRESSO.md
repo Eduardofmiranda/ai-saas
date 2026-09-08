@@ -26,7 +26,12 @@
       `pg_advisory_xact_lock` por company_id+data), migration `0015` (indice
       composto company_id+date) e `tests/test_agenda_concurrency.py` (roda contra
       Postgres descartavel via `TEST_POSTGRES_URL`; no SQLite e no-op).
-- [ ] Confirmacao server-side para remarcar/cancelar; limites de abuso e permissoes granulares.
+- [x] Confirmacao server-side para remarcar/cancelar via WhatsApp (08/09/2026):
+      pendencias em `pending_appointment_actions` (migration `0016`), pedido enviado
+      ao cliente, resposta CONFIRMAR/CANCELAR processada de forma deterministica
+      antes da IA; escopo por telefone, expiracao e teste de slot tomado.
+      `tests/test_agenda_pending_actions.py` (17 testes). Suite: 317 passed.
+- [ ] Limites de abuso (orcamento por cliente/empresa) e permissoes granulares dos operadores.
 - [ ] Concluir auditoria ampliada de sessoes, uploads, historico/segredos e infraestrutura.
 
 Detalhes e resultados: [revisao de seguranca](docs/SEGURANCA-2026-09-08-AGENDA.md).

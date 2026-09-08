@@ -68,6 +68,9 @@
 - CORS via `ALLOWED_ORIGINS` (env).
 - **Agenda:** garantia transacional contra dupla reserva via `pg_advisory_xact_lock`
   (commit `e08ff8d`; veja `docs/SEGURANCA-2026-09-08-AGENDA.md` item #2).
+- **Agenda:** criar/remarcar/cancelar via WhatsApp com `confirmation_required`
+  exigem consentimento do cliente (`pending_appointment_actions`, migration
+  `0016`; resposta CONFIRMAR/CANCELAR processada antes da IA).
 
 ## 5.1 Politica de IA por usuario (Fase 9.1 — Planejado)
 

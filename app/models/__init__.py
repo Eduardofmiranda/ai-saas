@@ -17,3 +17,4 @@ from app.models.business_hours import BusinessHours
 from app.models.agenda_config import AgendaConfig
 from app.models.appointment import Appointment
 from app.models.appointment_event import AppointmentEvent
+from app.models.pending_appointment_action import PendingAppointmentAction

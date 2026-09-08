@@ -8,17 +8,24 @@ Regras de seguranca:
 - Nunca confirma um horario sem validar antes a disponibilidade: o executor de
   `criar_agendamento` exige que o slot esteja em `build_slots` no momento da
   criacao e que a agenda esteja ativa.
+- Com `confirmation_required` ativo, criar fica PROVISORIO
+  (`awaiting_confirmation`) e remarcar/cancelar ficam PENDENTES em
+  `pending_appointment_actions`: o cliente responde CONFIRMAR/CANCELAR no
+  WhatsApp e o pipeline efetiva de forma deterministica (sem LLM). O
+  compromisso original so muda apos o consentimento do cliente.
 - Argumentos vêm do modelo (nao confiaveis): todos sao validados/tipados e
   traduzidos em mensagens de erro claras para o LLM se recuperar.
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session
 
 from app.models.agenda_config import AgendaConfig
+from app.models.pending_appointment_action import PendingAppointmentAction
 from app.services import agenda as agenda_service
 from app.services.business_hours import DEFAULT_TIMEZONE
 
@@ -36,6 +43,9 @@ AGENDA_TOOLS_INSTRUCTION = (
     "confirmar: ao criar, o sistema envia automaticamente um pedido de "
     "confirmacao ao cliente, entao informe-o de que ele receberá a mensagem e "
     "deve responder para confirmar; "
+    "(5a) remarcar ou cancelar TAMBEM aguardam o cliente: o sistema envia um "
+    "pedido de confirmacao no WhatsApp e a alteracao so e efetivada quando ele "
+    "responde CONFIRMAR (ou CANCELAR para manter como esta); "
     "(6) preencha o campo phone com o telefone do cliente; "
     "(7) datas relativas (hoje, amanha, segunda-feira) devem ser convertidas para "
     "o formato YYYY-MM-DD usando a data atual; "
@@ -191,9 +201,11 @@ def _alterar(db: Session, company_id: int, args: dict) -> dict:
     if "end_time" in fields and not agenda_service._valid_time(fields["end_time"]):
         return {"ok": False, "error": "Horario final invalido. Use HH:MM."}
 
+    cfg = agenda_service.get_for_company(db, company_id)
+    rescheduling = bool({"date", "start_time", "end_time"} & fields.keys())
+
     # Se remarcar data/horario, exigir que o novo slot esteja livre agora.
-    if "date" in fields or "start_time" in fields:
-        cfg = agenda_service.get_for_company(db, company_id)
+    if rescheduling:
         if not cfg or not cfg.enabled:
             return {"ok": False, "error": "A agenda da empresa nao esta ativa."}
         target_date = fields.get("date")
@@ -208,6 +220,36 @@ def _alterar(db: Session, company_id: int, args: dict) -> dict:
                         "Chame verificar_disponibilidade e ofereça uma alternativa."
                     ),
                 }
+
+    # Confirmacao server-side: remarcacao fica pendente do consentimento do
+    # cliente. O compromisso original permanece inalterado ate CONFIRMAR.
+    if rescheduling and cfg and cfg.confirmation_required:
+        try:
+            target = agenda_service.get_appointment(db, company_id, appt_id)
+        except agenda_service.AgendaError as exc:
+            return {"ok": False, "error": exc.message}
+        if target.status not in agenda_service.ACTIVE_STATUSES:
+            return {"ok": False, "error": "Compromisso nao esta ativo."}
+        pending = PendingAppointmentAction(
+            company_id=company_id,
+            appointment_id=appt_id,
+            phone=target.phone,
+            action="reschedule",
+            payload=json.dumps(fields, ensure_ascii=False),
+        )
+        db.add(pending)
+        db.commit()
+        return {
+            "ok": True,
+            "appointment_id": appt_id,
+            "awaiting_confirmation": True,
+            "message": (
+                f"Pedido de remarcacao registrado para {target.date} {target.start_time} "
+                f"-> {fields.get('date', target.date)} {fields.get('start_time', target.start_time)}. "
+                "O cliente recebera um pedido de confirmacao no WhatsApp e deve responder "
+                "CONFIRMAR para aceitar ou CANCELAR para manter o horario atual. Informe o cliente."
+            ),
+        }
 
     try:
         appt = agenda_service.update_appointment(
@@ -243,6 +285,38 @@ def _cancelar(db: Session, company_id: int, args: dict) -> dict:
         return {"ok": False, "error": "Informe o appointment_id do compromisso a cancelar."}
 
     reason = str(args.get("reason") or "").strip()[:500]
+
+    # Confirmacao server-side: cancelamento fica pendente do consentimento do
+    # cliente. O compromisso permanece ativo ate CONFIRMAR.
+    cfg = agenda_service.get_for_company(db, company_id)
+    if cfg and cfg.confirmation_required:
+        try:
+            target = agenda_service.get_appointment(db, company_id, appt_id)
+        except agenda_service.AgendaError as exc:
+            return {"ok": False, "error": exc.message}
+        if target.status not in agenda_service.ACTIVE_STATUSES:
+            return {"ok": False, "error": "Compromisso nao esta ativo."}
+        pending = PendingAppointmentAction(
+            company_id=company_id,
+            appointment_id=appt_id,
+            phone=target.phone,
+            action="cancel",
+            payload=json.dumps({"reason": reason or "Cancelado pela Secretaria IA"}, ensure_ascii=False),
+        )
+        db.add(pending)
+        db.commit()
+        return {
+            "ok": True,
+            "appointment_id": appt_id,
+            "awaiting_confirmation": True,
+            "message": (
+                f"Pedido de cancelamento registrado para o compromisso de {target.date} "
+                f"as {target.start_time}. O cliente recebera um pedido de confirmacao no "
+                "WhatsApp e deve responder CONFIRMAR para cancelar ou CANCELAR para manter. "
+                "Informe o cliente."
+            ),
+        }
+
     try:
         appt = agenda_service.cancel_appointment(
             db,
@@ -423,8 +497,11 @@ AGENDA_TOOLS: list[dict] = [
     ),
     _tool_schema(
         "alterar_agendamento",
-        "Altera um agendamento existente (remarcar data/horario, mudar servico, "
-        "observacoes ou status). Informe appointment_id obtido em consultar_agenda.",
+        "Altera um agendamento existente (remarcar data/horario, mudar servico ou "
+        "observacoes). Informe appointment_id obtido em consultar_agenda. "
+        "Remarcacao de data/horario fica PENDENTE: o sistema envia um pedido de "
+        "confirmacao ao cliente no WhatsApp e a alteracao so e efetivada quando "
+        "ele responde CONFIRMAR.",
         {
             "appointment_id": {"type": "integer", "description": "ID do compromisso."},
             "date": {"type": "string", "description": "Nova data (YYYY-MM-DD)."},
@@ -432,14 +509,15 @@ AGENDA_TOOLS: list[dict] = [
             "end_time": {"type": "string", "description": "Novo horario de termino (HH:MM)."},
             "service": {"type": "string", "description": "Novo tipo/assunto do compromisso."},
             "notes": {"type": "string", "description": "Novas observacoes."},
-            "status": {"type": "string", "description": "Novo status (scheduled/confirmed/awaiting_confirmation/completed/canceled)."},
         },
         ["appointment_id"],
     ),
     _tool_schema(
         "cancelar_agendamento",
         "Cancela um agendamento existente. Informe appointment_id obtido em "
-        "consultar_agenda. Use somente apos confirmar o cancelamento com o cliente.",
+        "consultar_agenda. O cancelamento fica PENDENTE: o sistema envia um "
+        "pedido de confirmacao ao cliente no WhatsApp e so efetiva quando ele "
+        "responde CONFIRMAR (CANCELAR mantem o compromisso).",
         {
             "appointment_id": {"type": "integer", "description": "ID do compromisso."},
             "reason": {"type": "string", "description": "Motivo do cancelamento (opcional)."},

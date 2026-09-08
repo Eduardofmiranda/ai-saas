@@ -73,7 +73,7 @@ A Agenda 8.6b (confirmação 2 passos + lembretes) introduz a migration
 duas tarefas periodicas novas.
 
 ```bash
-# O alembic current deve estar em 0015_agenda_slot_index (head) apos o deploy
+# O alembic current deve estar em 0016_pending_appointment_actions (head) apos o deploy
 docker compose exec backend alembic current
 
 # Colunas novas existentes (confirma + lembrete)
@@ -95,6 +95,13 @@ Se o beat nao registrar as tarefas, recrie o container: `docker compose up -d
 A migration `0015_agenda_slot_index` adiciona o indice composto
 `ix_appointments_company_date` em `(company_id, date)` para performance da
 checagem de conflito. O `alembic upgrade head` do backend aplica automaticamente.
+
+### Migration 0016 — acoes pendentes de remarcar/cancelar
+
+A migration `0016_pending_appointment_actions` cria a tabela de consentimento
+server-side da Secretaria IA: remarcacoes/cancelamentos via WhatsApp ficam
+pendentes ate o cliente responder CONFIRMAR (ver `docs/16-seguranca.md` e
+`docs/23-agenda-confirmacao-lembretes.md`). Aplicada automaticamente no startup.
 
 ## Portas
 

@@ -85,10 +85,15 @@ Todos os routers que manipulam dados sao protegidos por `Depends(get_current_use
 - Veja `docs/SEGURANCA-2026-09-08-AGENDA.md` (item #2 concluido).
 
 ### Confirmacao Server-side (Agenda)
-- **Pendente:** a confirmacao de remarcar/cancelar via WhatsApp atualmente
-  depende de instrucao no prompt do LLM, nao de consentimento server-side.
-  A criacao provisoria (`awaiting_confirmation`) e processamento de
-  `CONFIRMAR`/`CANCELAR` ja sao deterministico (sem LLM).
+- **Implementado (criacao, 8.6b):** criacao provisoria (`awaiting_confirmation`)
+  + resposta `CONFIRMAR`/`CANCELAR` processada de forma deterministica no webhook
+  (sem LLM).
+- **Implementado (remarcar/cancelar):** com `confirmation_required` ativo,
+  `alterar_agendamento` (data/horario) e `cancelar_agendamento` via tools da IA
+  criam registro em `pending_appointment_actions` e enviam pedido de confirmacao;
+  a acao so e efetivada apos o cliente responder CONFIRMAR. CANCELAR mantem o
+  compromisso original. Pendencia e escopada ao telefone do dono e expira em
+  `confirmation_expiry_hours` (o compromisso original permanece inalterado).
 
 ### CORS via Ambiente
 - Origens permitidas configuradas pela env var `ALLOWED_ORIGINS`
@@ -122,6 +127,12 @@ Todos os routers que manipulam dados sao protegidos por `Depends(get_current_use
    feitas manualmente na VPS.
 3. **Injection** — SQLAlchemy usa queries parametrizadas (protegido contra SQL injection).
 4. **XSS** — React escapa por padrao. Nao usa dangerouslySetInnerHTML.
+
+> Confirmacao server-side da agenda (criar/remarcar/cancelar com consentimento
+> real do cliente) e garantia transacional contra dupla reserva estao
+> **implementadas** — veja as secoes acima e `docs/SEGURANCA-2026-09-08-AGENDA.md`.
+> Pendentes na agenda: limites de abuso por empresa/cliente e permissoes
+> granulares dos operadores.
 
 ## Checklist Antes de Producao
 

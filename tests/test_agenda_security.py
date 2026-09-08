@@ -70,7 +70,19 @@ def test_create_ignores_model_phone(db_session, company, bookings):
 
 
 def test_customer_can_cancel_own_booking(db_session, company, bookings):
-    assert call(db_session, company, "cancelar_agendamento", {"appointment_id": bookings[0].id})["ok"]
+    from app.services import agenda_confirmation as ac
+
+    # Cancelamento via WhatsApp fica pendente de consentimento do cliente.
+    result = call(db_session, company, "cancelar_agendamento", {"appointment_id": bookings[0].id})
+    assert result["ok"] and result.get("awaiting_confirmation")
+    db_session.refresh(bookings[0])
+    assert bookings[0].status == "scheduled"
+
+    reply = asyncio.run(ac.process_confirmation_reply(
+        db_session, company_id=company.id, phone=PHONE, text="CONFIRMAR",
+    ))
+    assert reply["status"] == "canceled"
+    db_session.refresh(bookings[0])
     assert bookings[0].status == "canceled"
 
 

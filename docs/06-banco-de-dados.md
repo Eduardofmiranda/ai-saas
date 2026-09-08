@@ -12,7 +12,7 @@
 ### Ciclo de schema
 
 **Implementado:** a migration `0001_initial_schema` descreve o schema base de
-forma idempotente; `0002` a `0015` evoluem as tabelas. Bancos existentes que
+forma idempotente; `0002` a `0016` evoluem as tabelas. Bancos existentes que
 ja estavam em `0005_password_reset_tokens` avancam normalmente para `0006` sem
 recriar nem apagar tabelas.
 
@@ -288,6 +288,24 @@ converte datas relativas para o fuso antes de chamar o servico).
 **Implementado (migration `0013_agenda`).** Historico de auditoria de cada
 compromisso; cada criacao/alteracao/cancelamento gera um registro.
 
+### pending_appointment_actions
+| Coluna | Tipo | Constraints |
+|--------|------|------------|
+| id | Integer | PK, index |
+| company_id | Integer | FK -> companies.id, NOT NULL, index |
+| appointment_id | Integer | FK -> appointments.id, NOT NULL, index |
+| phone | String | NOT NULL, index — telefone do dono do compromisso |
+| action | String | `reschedule` / `cancel` |
+| payload | Text | JSON — campos da remarcacao (`fields`) ou `{"reason": ...}` |
+| notified | Integer | default 0 — 1 depois que o pedido foi enviado via WhatsApp |
+| created_at | DateTime(timezone) | |
+
+**Implementado (migration `0016_pending_appointment_actions`).** Com
+`confirmation_required` ativo, remarcar/cancelar via tools da IA ficam pendentes
+do consentimento do cliente: o compromisso original permanece inalterado ate o
+cliente responder CONFIRMAR (efetiva) ou CANCELAR (descarta). Pendencias
+expiram em `confirmation_expiry_hours` (tarefa `expire_unconfirmed_appointments`).
+
 ### departments
 | Coluna | Tipo | Constraints |
 |--------|------|------------|
@@ -342,19 +360,21 @@ Company 1──N Conversation
 Company 1──N Execution
 Company 1──N PendingFlow
 Company 1──N Appointment
+Company 1──N PendingAppointmentAction
 
 Customer 1──N Conversation
 Conversation 1──N Message
 Workflow 1──N Execution
 Execution 1──N PendingFlow
 Appointment 1──N AppointmentEvent
+Appointment 1──N PendingAppointmentAction
 User 1──1 UserAIConfig
 ```
 
 ## Migrations
 
 **Implementado:** Alembic controla todo schema de producao. Em bancos novos,
-`0001_initial_schema` cria a base; `0002` a `0015` aplicam as evolucoes. As
+`0001_initial_schema` cria a base; `0002` a `0016` aplicam as evolucoes. As
 migrations sao idempotentes para permitir adocao de bancos legados que antes
 foram criados pelo ORM.
 
