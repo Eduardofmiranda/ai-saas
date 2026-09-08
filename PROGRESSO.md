@@ -212,12 +212,27 @@
 - [x] Permitir filtros por cliente no painel (busca por cliente/telefone/serviço client-side; filtro por status/data via API)
 - [x] Editar a configuração da agenda no painel (gestor): horários por dia, duração, antecedência, datas bloqueadas, mensagem de confirmação e fuso
 
+**Pendente (Fase 8.6b — Confirmação em 2 passos + lembretes):**
+- [ ] Criar estado provisório (`awaiting_confirmation`) no compromisso — a IA cria **pendente**, nunca confirma antes do cliente confirmar
+- [ ] Enviar pedido de confirmação ao número do cliente (ex.: "Responda CONFIRMAR ou CANCELAR") com `evolution.send_text`
+- [ ] Processar a resposta do cliente (webhook/pipeline) e alterar para `confirmed` ou `canceled`
+- [ ] Auto-cancelamento por expiração (sem resposta dentro de X tempo)
+- [ ] Vincular o número de WhatsApp utilizado pela Secretaria IA (config no painel)
+- [ ] Lembretes automáticos (Celery Beat) antes do horário (ex.: 24h e 1h) com `evolution.send_text` no número configurado
+- [ ] Configurar antecedências e mensagens de lembrete no painel
+- [ ] Enviar a `confirmation_message` real ao cliente após a confirmação do agendamento
+
+**Planejado (Fase 8.6c — Integração com calendários externos Google/Outlook):**
+- [ ] OAuth2 do Google (Google Calendar API) por empresa — tela "Conectar conta Google"
+- [ ] OAuth2 Microsoft (Microsoft Graph / Outlook) por empresa — tela "Conectar conta"
+- [ ] Persistir tokens de acesso/refresh por empresa (criptografados) e renovação automática
+- [ ] Sincronizar eventos (`external_event_id` + `sync_token`/delta) via polling e/ou webhooks
+- [ ] Decidir fonte de verdade (FlowAI → grava no externo, ou externo → importa) e se eventos externos bloqueiam slots da Secretaria IA
+- [ ] Verificação/aplicação de app no Google Cloud e Microsoft Entra (processo + custo de produção)
+
 **Pendente (integração/roadmap):**
 - [ ] Permitir que a Agenda seja utilizada por diferentes agentes e workflows (hoje apenas o pipeline de atendimento usa as tools)
 - [ ] Integrar a Agenda ao Workflow Engine como uma ferramenta/nó disponível para automações
-- [ ] Criar configuração no painel para vincular o número de WhatsApp utilizado pela Secretaria IA
-- [ ] Enviar automaticamente mensagem de confirmação pelo WhatsApp após criação do agendamento (`confirmation_message` já persistido)
-- [ ] Preparar arquitetura para futuras integrações com calendários externos (Google Calendar, Outlook etc.)
 
 ### 8.7 — Paginacao e Busca ✅
 - [x] Conversations: `skip`/`limit` com paginação server-side

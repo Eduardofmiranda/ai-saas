@@ -8,6 +8,8 @@
 >
 > 🛠️ **Operacao:** docs/21-checklist-deploy-vps.md — verificacao segura apos deploy na VPS.
 > 🔌 **Roadmap de nodes:** `docs/22-catalogo-nodes-roadmap.md` — catálogo planejado, prioridades e critérios de segurança.
+> 📅 **Agenda avancada:** `docs/23-agenda-confirmacao-lembretes.md` — confirmacao em 2 passos,
+> lembretes e integracao com calendarios externos (Google/Outlook).
 
 ## Resumo do Projeto
 

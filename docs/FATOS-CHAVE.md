@@ -107,7 +107,9 @@
   08/09/2026 — migration `0013`, rotas `/agenda/*`, function calling em
   `llm.generate_reply_with_tools` com executor `agenda_tools`, ativado no
   pipeline quando a agenda da empresa esta habilitada, e pagina `/agenda` no
-  painel; faltam template e integracao com o Workflow Engine).
+  painel; faltam template, Workflow Engine, confirmacao em 2 passos + lembretes
+  (fase 8.6b, planejada) e integracao Google/Outlook (8.6c, planejada — ver
+  docs/23-agenda-confirmacao-lembretes.md).
 - Fase 9: intelligence & analytics.
 - Fase 10: escala & multi-canal.
 - Detalhes em `PROGRESSO.md`.
