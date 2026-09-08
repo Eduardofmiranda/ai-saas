@@ -142,6 +142,8 @@ const nodeTypes = {
   log: NodeShell,
   execute_workflow: NodeShell,
   transfer_to_agent: NodeShell,
+  transfer_to_department: NodeShell,
+  capture_lead: NodeShell,
   wait_until_message: NodeShell,
   sticky_note: StickyNote,
 };

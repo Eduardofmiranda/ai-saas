@@ -199,3 +199,26 @@ def test_capture_lead_node_is_available_in_editor():
     assert node["editor_available"] is True
     keys = {f["key"] for f in node["fields"]}
     assert {"overwrite", "instruction"} <= keys
+
+
+@pytest.mark.asyncio
+async def test_capture_lead_continues_when_extraction_fails(db_session, config, customer, conversation, monkeypatch):
+    node = {"id": "n1", "type": "capture_lead", "data": {}}
+    ctx = NodeContext(
+        db=db_session,
+        company_id=customer.company_id,
+        execution_id=1,
+        workflow_id=1,
+        data={"conversation_id": conversation.id, "phone": customer.phone},
+        config=config,
+    )
+    async def provider_unavailable(*args, **kwargs):
+        raise RuntimeError("provedor fora do ar")
+
+    monkeypatch.setattr(ctx, "extract_structured", provider_unavailable)
+
+    result = await run_node(ctx, node)
+
+    assert result["outputs"]["saved"] is False
+    assert result["outputs"]["lead"]["email"] == ""
+    assert result["outputs"]["lead"]["phone"] == ""

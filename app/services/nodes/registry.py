@@ -439,7 +439,11 @@ async def _run_capture_lead(ctx, node):
         ctx.log("Teste: extracao de lead simulada; nenhum dado foi salvo no contato.")
         return {"outputs": {"lead": empty_fields, "saved": False, "simulated": True}}
 
-    extracted = await ctx.extract_structured(instruction=instruction, history=history)
+    try:
+        extracted = await ctx.extract_structured(instruction=instruction, history=history)
+    except Exception as exc:
+        ctx.log(f"Falha na extracao do lead ({exc}); o atendimento segue sem salvar dados.")
+        extracted = {}
     fields = {}
     for key in ("name", "email", "phone", "company", "city", "notes"):
         fields[key] = str(extracted.get(key) or "").strip()
