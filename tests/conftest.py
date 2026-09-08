@@ -2,6 +2,7 @@ import pytest
 import asyncio
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+import app.models  # registra todos os models no Base.metadata
 from app.database.database import Base
 from app.models.company import Company
 from app.models.company_config import CompanyConfig

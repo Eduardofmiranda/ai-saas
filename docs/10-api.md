@@ -51,6 +51,17 @@ segredos. Pelo nginx de producao, use o prefixo `/api`, por exemplo
 | GET | `/config/business-hours` | Horario de atendimento da empresa | JWT |
 | PUT | `/config/business-hours` | Cria/atualiza horario de atendimento | JWT (gestor+) |
 
+### Agenda da Secretaria IA
+
+| Metodo | URL | Descricao | Auth |
+|--------|-----|-----------|------|
+| GET | `/agenda/config` | Configuração de agenda da empresa | JWT |
+| PUT | `/agenda/config` | Cria/atualiza configuração | JWT gestor |
+| GET | `/agenda/availability?date=` | Slots livres para a data | JWT |
+| GET | `/agenda/appointments` | Lista compromissos | JWT |
+| POST | `/agenda/appointments` | Cria compromisso | JWT |
+| GET/PATCH/DELETE | `/agenda/appointments/{id}` | Detalhe/altera/cancela compromisso | JWT |
+
 ### WhatsApp (por empresa)
 
 | Metodo | URL | Descricao | Auth |
@@ -164,6 +175,32 @@ clientes autenticados e permite os efeitos normais do workflow.
 | PATCH | `/knowledge/{id}` | Atualiza documento | JWT |
 | DELETE | `/knowledge/{id}` | Deleta documento e chunks | JWT |
 | POST | `/knowledge/search` | Busca semantica | JWT |
+
+### Agenda da Secretaria IA
+
+| Metodo | URL | Descricao | Auth |
+|--------|-----|-----------|------|
+| GET | `/agenda/config` | Configuração de agenda da empresa (default se não criada) | JWT |
+| PUT | `/agenda/config` | Cria/atualiza configuração (gestor) | JWT gestor |
+| GET | `/agenda/availability?date=YYYY-MM-DD` | Slots livres para a data | JWT |
+| GET | `/agenda/appointments` | Lista compromissos (filtros `date_from`/`date_to`/`status`, `skip`/`limit`) | JWT |
+| POST | `/agenda/appointments` | Cria compromisso (operador; cria manual mesmo sem agenda ativa) | JWT |
+| GET | `/agenda/appointments/{id}` | Detalhe do compromisso | JWT |
+| PATCH | `/agenda/appointments/{id}` | Altera compromisso (data/horario/status/etc.) | JWT |
+| DELETE | `/agenda/appointments/{id}` | Cancela (soft delete) e registra historico | JWT |
+
+- **Config:** `enabled`, `timezone`, `schedule` (`{"mon":["08:00","12:00"]}`),
+  `slot_duration` (min), `min_advance` (min), `blocked`
+  (`[{"date":"YYYY-MM-DD","start":"HH:MM","end":"HH:MM"}]`),
+  `confirmation_message`. `PUT` valida fuso, janelas, duracao, antecedencia e
+  bloqueios antes de gravar.
+- **Disponibilidade:** respeita janela do dia, bloqueios, conflitos com
+  compromissos ativos (`scheduled`/`confirmed`) e `min_advance`.
+- **Status:** `scheduled` / `confirmed` / `completed` / `canceled`. `scheduled`
+  e `confirmed` sao considerados ativos para conflito. `origin`:
+  `manual` / `whatsapp` / `workflow` (identifica agendamento via WhatsApp).
+- **Criacao/alteração via rota** ignora `min_advance` (operador). A IA (tools da
+  Fase 8.6) chama o servico com `skip_min_advance=False`.
 
 ### Health (operacional, sem JWT)
 

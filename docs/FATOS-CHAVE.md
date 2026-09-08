@@ -102,7 +102,9 @@
   WhatsApp E2E, QR na tela, seguranca).
 - Fase 8: funcionalidades core. Concluidas: midia (resposta automatica — nao
   implementar download, decisao 07/09/2026), upload KB, handoff, horario de
-  atendimento, paginacao, senha/sessao. Pendentes: 8.5 Template Messages e 8.6 Agenda.
+  atendimento, paginacao, senha/sessao. Pendentes: 8.5 Template Messages e 8.6
+  Agenda (backend da 8.6 concluido em 08/09/2026 — migration `0013` + rotas
+  `/agenda/*`; faltam tools de IA, frontend e template).
 - Fase 9: intelligence & analytics.
 - Fase 10: escala & multi-canal.
 - Detalhes em `PROGRESSO.md`.

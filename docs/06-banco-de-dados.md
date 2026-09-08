@@ -220,6 +220,65 @@ Os campos `email`, `company`, `city` e `notes` sao preenchidos pelo node
 valida) → aberto. Janela que cruza a meia-noite (ex.: `["18:00","02:00"]`) e
 suportada (chave do dia = dia em que o turno comeca).
 
+### agenda_config
+| Coluna | Tipo | Constraints |
+|--------|------|------------|
+| id | Integer | PK, index |
+| company_id | Integer | FK -> companies.id, NOT NULL, unique, index |
+| enabled | Boolean | default False — liga janela de horarios da agenda |
+| timezone | String | default "America/Sao_Paulo" |
+| schedule | Text | JSON `{"mon": ["08:00","12:00"], ...}`; dia sem janela = fechado |
+| slot_duration | Integer | minutos (default 30) |
+| min_advance | Integer | minutos minimos antes do inicio (default 60) |
+| blocked | Text | JSON `[{"date":"YYYY-MM-DD","start":"09:00","end":"10:00"}]` — periodos bloqueados |
+| confirmation_message | Text | mensagem de confirmacao (exibicao futura no WhatsApp) |
+| created_at | DateTime(timezone) | |
+| updated_at | DateTime(timezone) | |
+
+**Implementado (migration `0013_agenda`).** Sem registro ou com `enabled`
+desligado → nao gera horarios. Conflito/bloqueio/fora-de-janela/minimo de
+antecedencia são validados no servico `agenda_service` (`app/services/agenda.py`)
+antes de gravar.
+
+### appointments
+| Coluna | Tipo | Constraints |
+|--------|------|------------|
+| id | Integer | PK, index |
+| company_id | Integer | FK -> companies.id, NOT NULL, index |
+| customer_id | Integer | FK -> customers.id, nullable, index |
+| customer_name | String | nome livre (ex.: via WhatsApp sem customer) |
+| phone | String | NOT NULL |
+| status | String | `scheduled` / `confirmed` / `completed` / `canceled` (default scheduled, index) |
+| date | String | `YYYY-MM-DD` (fuso da empresa), index |
+| start_time | String | `HH:MM`, NOT NULL |
+| end_time | String | `HH:MM`, NOT NULL |
+| service | String | tipo do compromisso |
+| notes | Text | observacoes |
+| origin | String | `manual` / `whatsapp` / `workflow` (default manual) |
+| created_by_user_id | Integer | FK -> users.id, nullable |
+| created_at | DateTime(timezone) | |
+| updated_at | DateTime(timezone) | |
+
+**Implementado (migration `0013_agenda`).** Valores de `date`/`start_time`/
+`end_time` são gravados como string no fuso da empresa (a IA da Fase 8.6
+converte datas relativas para o fuso antes de chamar o servico).
+
+### appointment_events
+| Coluna | Tipo | Constraints |
+|--------|------|------------|
+| id | Integer | PK, index |
+| appointment_id | Integer | FK -> appointments.id, NOT NULL, index |
+| company_id | Integer | FK -> companies.id, NOT NULL, index |
+| action | String | `created` / `updated` / `rescheduled` / `canceled` |
+| actor_type | String | `user` / `system` / `workflow` (default user) |
+| user_id | Integer | nullable |
+| user_name | String | nullable |
+| details | Text | JSON com resumo da mudanca |
+| created_at | DateTime(timezone) | |
+
+**Implementado (migration `0013_agenda`).** Historico de auditoria de cada
+compromisso; cada criacao/alteracao/cancelamento gera um registro.
+
 ## Relacionamentos
 
 ```
