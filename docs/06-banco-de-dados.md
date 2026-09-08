@@ -231,11 +231,19 @@ suportada (chave do dia = dia em que o turno comeca).
 | slot_duration | Integer | minutos (default 30) |
 | min_advance | Integer | minutos minimos antes do inicio (default 60) |
 | blocked | Text | JSON `[{"date":"YYYY-MM-DD","start":"09:00","end":"10:00"}]` — periodos bloqueados |
-| confirmation_message | Text | mensagem de confirmacao (exibicao futura no WhatsApp) |
+| confirmation_message | Text | mensagem enviada apos a confirmacao do cliente |
+| confirmation_required | Boolean | default True — criacao provisoria (2 passos) pela IA |
+| confirmation_expiry_hours | Integer | horas para expirar provisorio sem resposta (default 24; 0 = nunca) |
+| confirmation_request_message | Text | pedido de confirmacao (placeholders `{nome}`/`{servico}`/`{data}`/`{horario}`) |
+| reminders_enabled | Boolean | default False — envia lembretes automaticos |
+| reminder_hours | Text | JSON `[24, 1]` — horas de antecedencia dos lembretes |
+| reminder_message | Text | texto do lembrete (placeholders iguais) |
+| whatsapp_number | String | numero do WhatsApp vinculado a instancia da Secretaria IA |
 | created_at | DateTime(timezone) | |
 | updated_at | DateTime(timezone) | |
 
-**Implementado (migration `0013_agenda`).** Sem registro ou com `enabled`
+**Implementado (migration `0013_agenda`); campos de confirmação/lembretes na
+migration `0014_agenda_confirmation`.** Sem registro ou com `enabled`
 desligado → nao gera horarios. Conflito/bloqueio/fora-de-janela/minimo de
 antecedencia são validados no servico `agenda_service` (`app/services/agenda.py`)
 antes de gravar.
@@ -248,7 +256,7 @@ antes de gravar.
 | customer_id | Integer | FK -> customers.id, nullable, index |
 | customer_name | String | nome livre (ex.: via WhatsApp sem customer) |
 | phone | String | NOT NULL |
-| status | String | `scheduled` / `confirmed` / `completed` / `canceled` (default scheduled, index) |
+| status | String | `scheduled` / `awaiting_confirmation` / `confirmed` / `completed` / `canceled` (default scheduled, index) |
 | date | String | `YYYY-MM-DD` (fuso da empresa), index |
 | start_time | String | `HH:MM`, NOT NULL |
 | end_time | String | `HH:MM`, NOT NULL |

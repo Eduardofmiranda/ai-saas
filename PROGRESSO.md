@@ -189,9 +189,12 @@ Itens marcados acima sao locais: nao houve commit, push ou deploy nesta revisao.
 > Fatia 1 (backend) concluída: models + migration `0013`, serviço `app/services/agenda.py`,
 > rotas `/agenda/*`, testes verdes. **Fatia 2 (tools de IA) concluída**: function calling
 > em `llm.generate_reply_with_tools` + executor `app/services/agenda_tools.py` ligado ao
-> pipeline (`conversation_service`) quando a agenda está ativa. **Fatia 3 (frontend
-> `/agenda`) concluída**: página com resumo, lista com filtros, criação e cancelamento
-> via modal, e configuração (gestor) com horários/bloqueios/mensagem.
+> pipeline (`conversation_service`) e ao nó **ai** do Workflow Engine quando a agenda está
+> ativa. **Fatia 3 (frontend `/agenda`) concluída**: página com resumo, lista com filtros,
+> criação e cancelamento via modal, e configuração (gestor). **Fase 8.6b (confirmação em 2
+> passos + lembretes) concluída**: status `awaiting_confirmation`, pedido/processamento de
+> confirmação (interceptado no webhook), expiração e lembretes via Celery Beat, migration
+> `0014` e novos campos de config.
 > Fatia 4 = template + docs/deploy.
 
 - [x] Criar módulo de Agenda por empresa para gerenciamento de compromissos e agendamentos
@@ -224,15 +227,15 @@ Itens marcados acima sao locais: nao houve commit, push ou deploy nesta revisao.
 - [x] Permitir filtros por cliente no painel (busca por cliente/telefone/serviço client-side; filtro por status/data via API)
 - [x] Editar a configuração da agenda no painel (gestor): horários por dia, duração, antecedência, datas bloqueadas, mensagem de confirmação e fuso
 
-**Pendente (Fase 8.6b — Confirmação em 2 passos + lembretes):**
-- [ ] Criar estado provisório (`awaiting_confirmation`) no compromisso — a IA cria **pendente**, nunca confirma antes do cliente confirmar
-- [ ] Enviar pedido de confirmação ao número do cliente (ex.: "Responda CONFIRMAR ou CANCELAR") com `evolution.send_text`
-- [ ] Processar a resposta do cliente (webhook/pipeline) e alterar para `confirmed` ou `canceled`
-- [ ] Auto-cancelamento por expiração (sem resposta dentro de X tempo)
-- [ ] Vincular o número de WhatsApp utilizado pela Secretaria IA (config no painel)
-- [ ] Lembretes automáticos (Celery Beat) antes do horário (ex.: 24h e 1h) com `evolution.send_text` no número configurado
-- [ ] Configurar antecedências e mensagens de lembrete no painel
-- [ ] Enviar a `confirmation_message` real ao cliente após a confirmação do agendamento
+**Concluído (Fase 8.6b — Confirmação em 2 passos + lembretes):**
+- [x] Estado provisório `awaiting_confirmation` — a IA cria **pendente**, nunca confirma antes do cliente confirmar (ocupa o slot)
+- [x] Enviar pedido de confirmação ao número do cliente ("Responda CONFIRMAR ou CANCELAR") com `evolution.send_text` (deduplicado por evento `confirmation_requested`)
+- [x] Processar a resposta do cliente (interceptada no webhook/pipeline antes da IA) e alterar para `confirmed` ou `canceled`
+- [x] Auto-cancelamento por expiração (Celery Beat a cada 30 min, `confirmation_expiry_hours` configurável)
+- [x] Vincular o número de WhatsApp utilizado pela Secretaria IA (`whatsapp_number` na config do painel)
+- [x] Lembretes automáticos (Celery Beat a cada 15 min) antes do horário (`reminder_hours`, ex.: 24h e 1h) com `evolution.send_text` no número do cliente
+- [x] Configurar antecedências e mensagens de lembrete no painel (migration `0014`)
+- [x] Enviar a `confirmation_message` real ao cliente após a confirmação do agendamento
 
 **Planejado (Fase 8.6c — Integração com calendários externos Google/Outlook):**
 - [ ] OAuth2 do Google (Google Calendar API) por empresa — tela "Conectar conta Google"
@@ -242,9 +245,9 @@ Itens marcados acima sao locais: nao houve commit, push ou deploy nesta revisao.
 - [ ] Decidir fonte de verdade (FlowAI → grava no externo, ou externo → importa) e se eventos externos bloqueiam slots da Secretaria IA
 - [ ] Verificação/aplicação de app no Google Cloud e Microsoft Entra (processo + custo de produção)
 
-**Pendente (integração/roadmap):**
-- [ ] Permitir que a Agenda seja utilizada por diferentes agentes e workflows (hoje apenas o pipeline de atendimento usa as tools)
-- [ ] Integrar a Agenda ao Workflow Engine como uma ferramenta/nó disponível para automações
+**Concluído (integração/roadmap):**
+- [x] Permitir que a Agenda seja utilizada por diferentes agentes e workflows (o nó **ai** do Workflow Engine ativa as tools de agenda quando a agenda está ativa)
+- [x] Integrar a Agenda ao Workflow Engine (nó `ai` usa function calling de agenda da mesma forma que o pipeline de atendimento)
 
 ### 8.7 — Paginacao e Busca ✅
 - [x] Conversations: `skip`/`limit` com paginação server-side
@@ -441,7 +444,7 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 | 5 | ✅ Completa | WhatsApp E2E |
 | 6 | ✅ Completa | QR na tela |
 | 7 | ✅ Completa | Seguranca critica |
-| 8 | 🔄 Parcial | Funcionalidades core (8.5 Templates e 8.6 Agenda pendentes) |
+| 8 | 🔄 Parcial | Funcionalidades core (8.5 Templates pendente; 8.6 Agenda concluída até 8.6b — faltam 8.6c calendários externos) |
 | 9 | 🔄 Parcial | Politica IA (✅), Erros (✅), Dashboard (pendente) |
 | 10 | ⏳ Pendente | Escala & multi-canal |
 

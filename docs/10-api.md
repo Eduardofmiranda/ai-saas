@@ -200,22 +200,33 @@ clientes autenticados e permite os efeitos normais do workflow.
 - **Config:** `enabled`, `timezone`, `schedule` (`{"mon":["08:00","12:00"]}`),
   `slot_duration` (min), `min_advance` (min), `blocked`
   (`[{"date":"YYYY-MM-DD","start":"HH:MM","end":"HH:MM"}]`),
-  `confirmation_message`. `PUT` valida fuso, janelas, duracao, antecedencia e
-  bloqueios antes de gravar.
+  `confirmation_message`, e (8.6b) `confirmation_required` (bool),
+  `confirmation_expiry_hours` (int; 0 = nunca), `confirmation_request_message`
+  (com `{nome}`/`{servico}`/`{data}`/`{horario}`), `reminders_enabled` (bool),
+  `reminder_hours` (lista de horas), `reminder_message`, `whatsapp_number`.
+  `PUT` valida fuso, janelas, duracao, antecedencia e bloqueios antes de gravar.
 - **Disponibilidade:** respeita janela do dia, bloqueios, conflitos com
-  compromissos ativos (`scheduled`/`confirmed`) e `min_advance`.
-- **Status:** `scheduled` / `confirmed` / `completed` / `canceled`. `scheduled`
-  e `confirmed` sao considerados ativos para conflito. `origin`:
-  `manual` / `whatsapp` / `workflow` (identifica agendamento via WhatsApp).
+  compromissos ativos (`scheduled`/`confirmed`/`awaiting_confirmation`) e
+  `min_advance`.
+- **Status:** `scheduled` / `awaiting_confirmation` / `confirmed` / `completed` /
+  `canceled`. `scheduled`, `awaiting_confirmation` e `confirmed` sao considerados
+  ativos para conflito. `origin`: `manual` / `whatsapp` / `workflow`
+  (identifica agendamento via WhatsApp).
 - **Criacao/alteração via rota** ignora `min_advance` (operador). A IA (tools da
   Fase 8.6) chama o servico com `skip_min_advance=False`.
 
 ### IA — function calling da Agenda (pipeline de atendimento)
 
 Quando a empresa tem `agenda_config.enabled` ativo, o pipeline de atendimento
-(`conversation_service`) envia as tools abaixo ao provedor de IA
+(`conversation_service`) e o nó **ai** do Workflow Engine
+(`app/services/nodes/context.py:ask_ai`) enviam as tools abaixo ao provedor de IA
 (`llm.generate_reply_with_tools`, OpenAI-compativel). O executor é
 `app/services/agenda_tools.py`.
+
+Com `confirmation_required` ativo (default), `criar_agendamento` cria com status
+`awaiting_confirmation`; o sistema envia um pedido de confirmação e intercepta a
+resposta do cliente (`CONFIRMAR`/`CANCELAR`) no webhook antes da IA
+(`app/services/agenda_confirmation.py`).
 
 | Tool | Quando usar |
 |------|-------------|

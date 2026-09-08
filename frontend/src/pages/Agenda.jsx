@@ -25,6 +25,7 @@ const TIMEZONES = [
 
 const STATUS_META = {
   scheduled: { label: "Agendado", cls: "scheduled" },
+  awaiting_confirmation: { label: "Aguardando confirmação", cls: "awaiting" },
   confirmed: { label: "Confirmado", cls: "confirmed" },
   completed: { label: "Concluído", cls: "completed" },
   canceled: { label: "Cancelado", cls: "canceled" },
@@ -253,6 +254,8 @@ export default function Agenda() {
               </p>
               <p className="muted" style={{ margin: "6px 0 0" }}>
                 Mensagem de confirmação: “{cfg?.confirmation_message || ""}”
+                {cfg?.confirmation_required !== false && " · exigir confirmação do cliente"}
+                {cfg?.reminders_enabled ? " · lembretes automáticos ativos" : ""}
               </p>
             </div>
           )}
@@ -432,6 +435,13 @@ function ConfigModal({ cfg, onClose, onSaved }) {
       slot_duration: cfg.slot_duration,
       min_advance: cfg.min_advance,
       confirmation_message: cfg.confirmation_message || "",
+      confirmation_required: cfg.confirmation_required !== false,
+      confirmation_expiry_hours: cfg.confirmation_expiry_hours ?? 24,
+      confirmation_request_message: cfg.confirmation_request_message || "",
+      reminders_enabled: Boolean(cfg.reminders_enabled),
+      reminder_hours: (cfg.reminder_hours || [24]).join(", "),
+      reminder_message: cfg.reminder_message || "",
+      whatsapp_number: cfg.whatsapp_number || "",
       blocked: (cfg.blocked || []).map((b) => ({ ...b })),
     };
   });
@@ -478,6 +488,16 @@ function ConfigModal({ cfg, onClose, onSaved }) {
         slot_duration: Number(data.slot_duration),
         min_advance: Number(data.min_advance),
         confirmation_message: data.confirmation_message,
+        confirmation_required: data.confirmation_required,
+        confirmation_expiry_hours: Number(data.confirmation_expiry_hours),
+        confirmation_request_message: data.confirmation_request_message,
+        reminders_enabled: data.reminders_enabled,
+        reminder_hours: data.reminder_hours
+          .split(",")
+          .map((s) => Number(s.trim()))
+          .filter((n) => Number.isFinite(n) && n > 0),
+        reminder_message: data.reminder_message,
+        whatsapp_number: data.whatsapp_number,
         blocked: data.blocked.filter((b) => b.date && b.start && b.end),
       });
       onSaved(saved);
@@ -592,6 +612,87 @@ function ConfigModal({ cfg, onClose, onSaved }) {
                   placeholder="Ex.: Agendamento confirmado! 🎉 Obrigado por escolher a gente."
                   value={data.confirmation_message}
                   onChange={(e) => setData((d) => ({ ...d, confirmation_message: e.target.value }))}
+                />
+              </div>
+
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={data.confirmation_required}
+                  onChange={(e) => setData((d) => ({ ...d, confirmation_required: e.target.checked }))}
+                />
+                <span>Exigir confirmação do cliente (2 passos)</span>
+              </label>
+              {data.confirmation_required && (
+                <div className="stack" style={{ gap: 12 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <label className="field">
+                      <span>Prazo p/ confirmar (horas)</span>
+                      <input
+                        className="input"
+                        type="number"
+                        min="0"
+                        value={data.confirmation_expiry_hours}
+                        onChange={(e) => setData((d) => ({ ...d, confirmation_expiry_hours: e.target.value }))}
+                      />
+                    </label>
+                  </div>
+                  <div className="field">
+                    <span>Pedido de confirmação enviado ao cliente</span>
+                    <textarea
+                      className="input"
+                      rows="3"
+                      maxLength={500}
+                      value={data.confirmation_request_message}
+                      onChange={(e) => setData((d) => ({ ...d, confirmation_request_message: e.target.value }))}
+                    />
+                    <p className="muted" style={{ margin: "6px 0 0", fontSize: 12 }}>
+                      Use {`{nome}`}, {`{servico}`}, {`{data}`} e {`{horario}`}.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={data.reminders_enabled}
+                  onChange={(e) => setData((d) => ({ ...d, reminders_enabled: e.target.checked }))}
+                />
+                <span>Enviar lembretes automáticos</span>
+              </label>
+              {data.reminders_enabled && (
+                <div className="stack" style={{ gap: 12 }}>
+                  <div className="field">
+                    <span>Antecedência dos lembretes (horas, separadas por vírgula)</span>
+                    <input
+                      className="input"
+                      value={data.reminder_hours}
+                      placeholder="Ex.: 24, 1"
+                      onChange={(e) => setData((d) => ({ ...d, reminder_hours: e.target.value }))}
+                    />
+                  </div>
+                  <div className="field">
+                    <span>Mensagem do lembrete</span>
+                    <textarea
+                      className="input"
+                      rows="2"
+                      maxLength={500}
+                      value={data.reminder_message}
+                      onChange={(e) => setData((d) => ({ ...d, reminder_message: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="field">
+                <span>Número do WhatsApp da Secretaria IA (instância)</span>
+                <input
+                  className="input"
+                  maxLength={30}
+                  placeholder="Ex.: 5511999999999"
+                  value={data.whatsapp_number}
+                  onChange={(e) => setData((d) => ({ ...d, whatsapp_number: e.target.value }))}
                 />
               </div>
 

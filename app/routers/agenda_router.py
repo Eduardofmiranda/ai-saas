@@ -35,6 +35,13 @@ class AgendaConfigUpdate(BaseModel):
     min_advance: int | None = None
     blocked: list[dict] | None = None
     confirmation_message: str | None = None
+    confirmation_required: bool | None = None
+    confirmation_expiry_hours: int | None = None
+    confirmation_request_message: str | None = None
+    reminders_enabled: bool | None = None
+    reminder_hours: list[int] | None = None
+    reminder_message: str | None = None
+    whatsapp_number: str | None = None
 
 
 def _validate_config(data: AgendaConfigUpdate) -> None:
@@ -77,6 +84,26 @@ def _validate_config(data: AgendaConfigUpdate) -> None:
     if data.confirmation_message is not None and len(data.confirmation_message.strip()) > 500:
         raise HTTPException(status_code=400, detail="Mensagem de confirmacao muito longa (max 500)")
 
+    if data.confirmation_expiry_hours is not None and int(data.confirmation_expiry_hours) < 0:
+        raise HTTPException(status_code=400, detail="Prazo de confirmacao nao pode ser negativo")
+
+    if data.confirmation_request_message is not None and len(data.confirmation_request_message.strip()) > 500:
+        raise HTTPException(status_code=400, detail="Pedido de confirmacao muito longo (max 500)")
+
+    if data.reminder_hours is not None:
+        parsed = agenda_service.parse_reminder_hours(data.reminder_hours)
+        if not parsed or len(parsed) != len({int(h) for h in data.reminder_hours if int(h) > 0}):
+            raise HTTPException(
+                status_code=400,
+                detail="Lembretes invalidos: use horas positivas unicas (ex.: [24, 1])",
+            )
+
+    if data.reminder_message is not None and len(data.reminder_message.strip()) > 500:
+        raise HTTPException(status_code=400, detail="Mensagem de lembrete muito longa (max 500)")
+
+    if data.whatsapp_number is not None and len(data.whatsapp_number.strip()) > 30:
+        raise HTTPException(status_code=400, detail="Numero do WhatsApp invalido (max 30)")
+
 
 @router.get("/config")
 def get_agenda_config(
@@ -118,6 +145,22 @@ def update_agenda_config(
         cfg.blocked = agenda_service.json.dumps(agenda_service.parse_blocked(updates["blocked"]), ensure_ascii=False)
     if "confirmation_message" in updates:
         cfg.confirmation_message = (updates["confirmation_message"] or "").strip()
+    if "confirmation_required" in updates:
+        cfg.confirmation_required = 1 if updates["confirmation_required"] else 0
+    if "confirmation_expiry_hours" in updates:
+        cfg.confirmation_expiry_hours = int(updates["confirmation_expiry_hours"])
+    if "confirmation_request_message" in updates:
+        cfg.confirmation_request_message = (updates["confirmation_request_message"] or "").strip()
+    if "reminders_enabled" in updates:
+        cfg.reminders_enabled = 1 if updates["reminders_enabled"] else 0
+    if "reminder_hours" in updates:
+        cfg.reminder_hours = agenda_service.json.dumps(
+            agenda_service.parse_reminder_hours(updates["reminder_hours"]), ensure_ascii=False
+        )
+    if "reminder_message" in updates:
+        cfg.reminder_message = (updates["reminder_message"] or "").strip()
+    if "whatsapp_number" in updates:
+        cfg.whatsapp_number = (updates["whatsapp_number"] or "").strip()
 
     db.commit()
     db.refresh(cfg)

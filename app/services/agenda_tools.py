@@ -32,10 +32,14 @@ AGENDA_TOOLS_INSTRUCTION = (
     "(2) valide a disponibilidade com verificar_disponibilidade; "
     '(3) ofereça opções de horários livres e confirme com o cliente antes de criar; '
     "(4) use criar_agendamento SOMENTE apos validar a disponibilidade; "
-    "(5) preencha o campo phone com o telefone do cliente; "
-    "(6) datas relativas (hoje, amanha, segunda-feira) devem ser convertidas para "
+    "(5) o agendamento criado pelo WhatsApp fica PROVISORIO ate o cliente "
+    "confirmar: ao criar, o sistema envia automaticamente um pedido de "
+    "confirmacao ao cliente, entao informe-o de que ele receberá a mensagem e "
+    "deve responder para confirmar; "
+    "(6) preencha o campo phone com o telefone do cliente; "
+    "(7) datas relativas (hoje, amanha, segunda-feira) devem ser convertidas para "
     "o formato YYYY-MM-DD usando a data atual; "
-    "(7) se o horario desejado estiver ocupado, verifique os proximos dias e "
+    "(8) se o horario desejado estiver ocupado, verifique os proximos dias e "
     'ofereça alternativas; se a agenda não tiver horarios, informe educadamente.'
 )
 
@@ -111,6 +115,7 @@ def _criar(
         }
 
     try:
+        provisional = bool(cfg.confirmation_required)
         appt = agenda_service.add_appointment(
             db,
             company_id,
@@ -125,9 +130,26 @@ def _criar(
             actor_type=ACTOR_TYPE,
             user_name=ACTOR_NAME,
             skip_min_advance=False,
+            status=agenda_service.AWAITING_CONFIRMATION if provisional else "scheduled",
         )
     except agenda_service.AgendaError as exc:
         return {"ok": False, "error": exc.message}
+
+    if provisional:
+        return {
+            "ok": True,
+            "appointment_id": appt.id,
+            "date": appt.date,
+            "start_time": appt.start_time,
+            "end_time": appt.end_time,
+            "status": appt.status,
+            "awaiting_confirmation": True,
+            "message": (
+                f"Agendamento PROVISORIO criado para {appt.date} das {appt.start_time} "
+                f"as {appt.end_time}. O cliente receberá um pedido de confirmacao no "
+                "WhatsApp e deve responder CONFIRMAR para confirmar. Informe o cliente."
+            ),
+        }
 
     return {
         "ok": True,
@@ -135,6 +157,7 @@ def _criar(
         "date": appt.date,
         "start_time": appt.start_time,
         "end_time": appt.end_time,
+        "status": appt.status,
         "message": f"Agendamento criado para {appt.date} das {appt.start_time} as {appt.end_time}.",
     }
 
@@ -377,16 +400,16 @@ AGENDA_TOOLS: list[dict] = [
             "date_to": {"type": "string", "description": "Fim do periodo (YYYY-MM-DD)."},
             "status": {
                 "type": "string",
-                "description": 'Status: scheduled, confirmed, completed ou canceled.',
+                "description": 'Status: scheduled, confirmed, awaiting_confirmation, completed ou canceled.',
             },
         },
         [],
     ),
     _tool_schema(
         "criar_agendamento",
-        "Cria um agendamento para o cliente. SO deve ser chamada depois de "
-        "verificar disponibilidade (verificar_disponibilidade) e com o horario "
-        "confirmado pelo cliente.",
+        "Cria um agendamento para o cliente (provisorio ate o cliente confirmar). "
+        "SO deve ser chamada depois de verificar disponibilidade "
+        "(verificar_disponibilidade) e com o horario confirmado pelo cliente.",
         {
             "date": {"type": "string", "description": "Data do agendamento (YYYY-MM-DD)."},
             "start_time": {"type": "string", "description": "Horario de inicio (HH:MM)."},
@@ -409,7 +432,7 @@ AGENDA_TOOLS: list[dict] = [
             "end_time": {"type": "string", "description": "Novo horario de termino (HH:MM)."},
             "service": {"type": "string", "description": "Novo tipo/assunto do compromisso."},
             "notes": {"type": "string", "description": "Novas observacoes."},
-            "status": {"type": "string", "description": "Novo status (scheduled/confirmed/completed/canceled)."},
+            "status": {"type": "string", "description": "Novo status (scheduled/confirmed/awaiting_confirmation/completed/canceled)."},
         },
         ["appointment_id"],
     ),

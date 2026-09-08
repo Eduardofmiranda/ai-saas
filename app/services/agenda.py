@@ -26,9 +26,17 @@ from app.services.business_hours import DAY_KEYS, DEFAULT_TIMEZONE, _valid_time,
 DEFAULT_SLOT_DURATION = 30
 DEFAULT_MIN_ADVANCE = 60
 DEFAULT_CONFIRMATION_MESSAGE = "Sua visita foi agendada. Em caso de imprevisto, avise-nos!"
+DEFAULT_CONFIRMATION_EXPIRY_HOURS = 24
+DEFAULT_CONFIRMATION_REQUEST_MESSAGE = (
+    "Olá {nome}! Para confirmar seu agendamento de {servico} no dia "
+    "{data} às {horario}, responda CONFIRMAR. Para desistir, responda CANCELAR."
+)
+DEFAULT_REMINDER_HOURS = "[24]"
+DEFAULT_REMINDER_MESSAGE = "Lembrete: você tem {servico} marcado para {data} às {horario}."
 
-ACTIVE_STATUSES = ("scheduled", "confirmed")
-ALLOWED_STATUSES = ("scheduled", "confirmed", "completed", "canceled")
+AWAITING_CONFIRMATION = "awaiting_confirmation"
+ACTIVE_STATUSES = ("scheduled", "confirmed", AWAITING_CONFIRMATION)
+ALLOWED_STATUSES = ("scheduled", "confirmed", AWAITING_CONFIRMATION, "completed", "canceled")
 
 
 class AgendaError(Exception):
@@ -70,6 +78,13 @@ def default_payload() -> dict:
         "min_advance": DEFAULT_MIN_ADVANCE,
         "blocked": [],
         "confirmation_message": DEFAULT_CONFIRMATION_MESSAGE,
+        "confirmation_required": True,
+        "confirmation_expiry_hours": DEFAULT_CONFIRMATION_EXPIRY_HOURS,
+        "confirmation_request_message": DEFAULT_CONFIRMATION_REQUEST_MESSAGE,
+        "reminders_enabled": False,
+        "reminder_hours": [24],
+        "reminder_message": DEFAULT_REMINDER_MESSAGE,
+        "whatsapp_number": "",
     }
 
 
@@ -106,6 +121,13 @@ def config_payload(cfg: AgendaConfig | None, company_id: int) -> dict:
         "min_advance": int(cfg.min_advance or DEFAULT_MIN_ADVANCE),
         "blocked": parse_blocked(cfg.blocked),
         "confirmation_message": cfg.confirmation_message or DEFAULT_CONFIRMATION_MESSAGE,
+        "confirmation_required": bool(cfg.confirmation_required),
+        "confirmation_expiry_hours": int(cfg.confirmation_expiry_hours or DEFAULT_CONFIRMATION_EXPIRY_HOURS),
+        "confirmation_request_message": cfg.confirmation_request_message or DEFAULT_CONFIRMATION_REQUEST_MESSAGE,
+        "reminders_enabled": bool(cfg.reminders_enabled),
+        "reminder_hours": parse_reminder_hours(cfg.reminder_hours),
+        "reminder_message": cfg.reminder_message or DEFAULT_REMINDER_MESSAGE,
+        "whatsapp_number": cfg.whatsapp_number or "",
     }
 
 
@@ -131,6 +153,51 @@ def parse_blocked(raw: str | list) -> list[dict]:
         if _valid_date(date) and _valid_time(start) and _valid_time(end):
             blocked.append({"date": date, "start": start, "end": end})
     return blocked
+
+
+def parse_reminder_hours(raw: str | list) -> list[int]:
+    """Normaliza a lista de horas de antecedencia em ints positivos unicos."""
+    if isinstance(raw, list):
+        data = raw
+    else:
+        try:
+            data = json.loads(raw or "[24]")
+        except ValueError:
+            data = []
+    if not isinstance(data, list):
+        return [24]
+    hours = []
+    for item in data:
+        try:
+            value = int(item)
+        except (ValueError, TypeError):
+            continue
+        if value > 0 and value not in hours:
+            hours.append(value)
+    return sorted(hours) or [24]
+
+
+def push_event(
+    db: Session,
+    appointment: Appointment,
+    *,
+    action: str,
+    actor_type: str = "system",
+    user_id: int | None = None,
+    user_name: str = "",
+    details: dict | None = None,
+) -> None:
+    """Registra um evento operacional (confirmacao, lembrete, pedido) e faz commit."""
+    _add_event(
+        db,
+        appointment,
+        action=action,
+        actor_type=actor_type,
+        user_id=user_id,
+        user_name=user_name,
+        details=details,
+    )
+    db.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -412,9 +479,14 @@ def add_appointment(
     user_name: str = "",
     actor_type: str = "user",
     skip_min_advance: bool = False,
+    status: str = "scheduled",
 ) -> Appointment:
     """Cria um compromisso. Agenda desabilitada continua permitindo criacao
-    manual (operador), mas os tools da IA nunca confirmam sem agenda ativa."""
+    manual (operador), mas os tools da IA nunca confirmam sem agenda ativa.
+
+    `status` inicial: "scheduled" por padrao; a IA usa AWAITING_CONFIRMATION
+    quando `confirmation_required` esta ativo.
+    """
     cfg = get_for_company(db, company_id)
     if not origin:
         origin = "manual"
@@ -436,12 +508,13 @@ def add_appointment(
         company_id=company_id,
     )
 
+    initial_status = status if status in ALLOWED_STATUSES else "scheduled"
     appt = Appointment(
         company_id=company_id,
         customer_id=customer_id,
         customer_name=(customer_name or "").strip() or None,
         phone=phone.strip(),
-        status="scheduled",
+        status=initial_status,
         date=date,
         start_time=start_time,
         end_time=end_time,
@@ -459,7 +532,13 @@ def add_appointment(
         actor_type=actor_type,
         user_id=user_id,
         user_name=user_name,
-        details={"date": date, "start_time": start_time, "end_time": end_time, "service": appt.service},
+        details={
+            "date": date,
+            "start_time": start_time,
+            "end_time": end_time,
+            "service": appt.service,
+            "status": appt.status,
+        },
     )
     db.commit()
     db.refresh(appt)

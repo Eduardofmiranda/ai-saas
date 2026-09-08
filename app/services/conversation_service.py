@@ -66,6 +66,51 @@ async def _send_closed_reply(db: Session, conversation, config, phone: str) -> s
     return "sent"
 
 
+async def _process_confirmation_reply(
+    db: Session,
+    *,
+    company_id: int,
+    phone: str,
+    text: str,
+    conversation,
+) -> dict | None:
+    """Intercepta respostas do cliente ao pedido de confirmacao da agenda.
+
+    Processado de forma deterministica ANTES da IA/workflow: confirmar libera o
+    slot e envia a mensagem de confirmacao; cancelar libera o slot. Retorna o
+    resultado pronto quando tratou (None caso contrario).
+    """
+    from app.services.agenda_confirmation import process_confirmation_reply
+
+    result = await process_confirmation_reply(db, company_id=company_id, phone=phone, text=text)
+    if result["status"] in ("confirmed", "canceled"):
+        if result.get("reply_text"):
+            bot_msg = Message(
+                conversation_id=conversation.id,
+                sender_type="bot",
+                content=result["reply_text"],
+            )
+            db.add(bot_msg)
+            db.commit()
+        return {
+            "status": result["status"],
+            "conversation_id": conversation.id,
+            "appointment_id": result["appointment_id"],
+        }
+    return None
+
+
+async def _send_pending_confirmation_requests(db: Session, *, company_id: int, phone: str) -> None:
+    """Envia pedidos de confirmacao de agendamentos provisorios pendentes.
+
+    Idempotente (deduplicado por evento): pode ser chamado apos cada mensagem
+    sem risco de duplicar mensagens ao cliente.
+    """
+    from app.services.agenda_confirmation import send_confirmation_requests_for_phone
+
+    await send_confirmation_requests_for_phone(db, company_id, phone)
+
+
 async def handle_incoming_message(
     db: Session,
     *,
@@ -148,6 +193,15 @@ async def handle_incoming_message(
         ).delete(synchronize_session=False)
         db.commit()
         return {"status": "pending_agent", "conversation_id": conversation.id}
+
+    # Confirmacao em 2 passos: o cliente respondendo CONFIRMAR/CANCELAR e
+    # processado ANTES da IA (deterministico, sem custo de LLM).
+    if conversation.status not in ("pending_agent", "agent"):
+        handled = await _process_confirmation_reply(
+            db, company_id=company_id, phone=phone, text=text, conversation=conversation
+        )
+        if handled:
+            return handled
 
     config = get_or_create_config(db, company_id)
 
@@ -239,6 +293,7 @@ async def handle_incoming_message(
             db.add(bot_msg)
             db.commit()
             db.refresh(conversation)
+            await _send_pending_confirmation_requests(db, company_id=company_id, phone=phone)
             return {"status": "replied", "conversation_id": conversation.id}
         except evolution.EvolutionError:
             return {"status": "ai_ready_but_send_failed", "conversation_id": conversation.id}
@@ -251,8 +306,10 @@ async def handle_incoming_message(
         )
         db.add(bot_msg)
         db.commit()
+        await _send_pending_confirmation_requests(db, company_id=company_id, phone=phone)
         return {"status": "ai_reply_drafted", "conversation_id": conversation.id}
 
+    await _send_pending_confirmation_requests(db, company_id=company_id, phone=phone)
     return {"status": "no_reply", "conversation_id": conversation.id}
 
 
@@ -329,6 +386,15 @@ async def handle_incoming_workflow(
         db.commit()
         return {"status": conversation.status, "conversation_id": conversation.id}
 
+    # Confirmacao em 2 passos: resposta CONFIRMAR/CANCELAR processada antes de
+    # qualquer workflow (deterministico, nao passa pelo motor).
+    if conversation.status not in ("pending_agent", "agent"):
+        handled = await _process_confirmation_reply(
+            db, company_id=company_id, phone=phone, text=text, conversation=conversation
+        )
+        if handled:
+            return handled
+
     config = get_or_create_config(db, company_id)
 
     # Fora do horario de atendimento: responde com a mensagem configurada
@@ -365,6 +431,7 @@ async def handle_incoming_workflow(
         from app.services.workflow_engine import resume_workflow
 
         execution = await resume_workflow(db, pending=pending, payload=payload, config=config)
+        await _send_pending_confirmation_requests(db, company_id=company_id, phone=phone)
         return {"status": "resumed", "execution_id": execution.id, "conversation_id": conversation.id}
 
     # 6) Workflow de mensagem ativo da empresa
@@ -381,9 +448,11 @@ async def handle_incoming_workflow(
         .first()
     )
     if not wf:
+        await _send_pending_confirmation_requests(db, company_id=company_id, phone=phone)
         return {"status": "no_workflow", "conversation_id": conversation.id}
 
     execution = await execute_workflow(db, workflow=wf, payload=payload, config=config)
+    await _send_pending_confirmation_requests(db, company_id=company_id, phone=phone)
     return {
         "status": execution.status,
         "execution_id": execution.id,

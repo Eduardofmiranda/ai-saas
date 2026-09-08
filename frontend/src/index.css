@@ -612,6 +612,7 @@ body {
   border-radius: 20px; font-size: 13px; font-weight: 600;
 }
 .state-pill.open { background: rgba(34,197,94,.15); color: var(--green); }
+.state-pill.awaiting { background: rgba(245,158,11,.12); color: #fbbf24; }
 .state-pill.not_configured, .state-pill.close, .state-pill.closed, .state-pill.unknown, .state-pill.error {
   background: rgba(239,68,68,.12); color: var(--red);
 }

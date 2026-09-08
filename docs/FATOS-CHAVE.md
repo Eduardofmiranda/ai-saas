@@ -103,13 +103,14 @@
 - Fase 8: funcionalidades core. Concluidas: midia (resposta automatica — nao
   implementar download, decisao 07/09/2026), upload KB, handoff, horario de
   atendimento, paginacao, senha/sessao. Pendentes: 8.5 Template Messages e 8.6
-  Agenda (backend + tools de IA + frontend `/agenda` da 8.6 concluidos em
-  08/09/2026 — migration `0013`, rotas `/agenda/*`, function calling em
-  `llm.generate_reply_with_tools` com executor `agenda_tools`, ativado no
-  pipeline quando a agenda da empresa esta habilitada, e pagina `/agenda` no
-  painel; faltam template, Workflow Engine, confirmacao em 2 passos + lembretes
-  (fase 8.6b, planejada) e integracao Google/Outlook (8.6c, planejada — ver
-  docs/23-agenda-confirmacao-lembretes.md).
+  Agenda (backend + tools de IA + frontend `/agenda` + confirmação 2 passos +
+  lembretes da 8.6 concluidos em 08/09/2026 — migrations `0013`/`0014`, rotas
+  `/agenda/*`, function calling em `llm.generate_reply_with_tools` com executor
+  `agenda_tools` ativado no pipeline E no no `ai` do Workflow Engine quando a
+  agenda da empresa esta habilitada, pagina `/agenda` no painel, status
+  `awaiting_confirmation`, pedido/processamento de confirmacao interceptado no
+  webhook e tasks Celery de expiracao/lembretes; faltam template e integracao
+  Google/Outlook (8.6c, planejada — ver docs/23-agenda-confirmacao-lembretes.md).
 - Fase 9: intelligence & analytics.
 - Fase 10: escala & multi-canal.
 - Detalhes em `PROGRESSO.md`.
