@@ -137,7 +137,8 @@
 - [x] Webhook detecta `imageMessage`, `audioMessage`, `videoMessage`, `documentMessage`, `stickerMessage`
 - [x] Responde automaticamente: "No momento, não é possível processar arquivos. Envie apenas mensagens de texto."
 - [x] Não ignora silenciosamente midias mais
-- [ ] (futuro) Download e processamento real de midias
+- [x] **DECISAO (07/09/2026): NAO implementar download/processamento real de midias.** A resposta automatica
+      e a solucao final; removida a entrada de "futuro" e todos os itens de mídia do roadmap.
 
 ### 8.2 — Upload de arquivos no Knowledge Base ✅
 - [x] Endpoint `POST /knowledge/upload` com `UploadFile`
@@ -237,11 +238,11 @@
 - [x] Implementar a estrutura do inbox (pagina `/conversas`, rota `App.jsx`, item no Header):
       backend `GET /conversations/` enriquecido + `POST /messages/conversation/{id}/reply`
       (`sender_type="agent"`), frontend `Conversations.jsx` 3 paineis + polling.
-- [ ] Implementar as demais telas/componentes priorizados pelo estudo (historico de
+- [x] Implementar as demais telas/componentes priorizados pelo estudo (historico de
       execucoes por node, filtros+paginacao, KPIs com periodo/tendencia)
-- [ ] PRIORIDADE - Verificar questão da configuração da IA, foi verificado que suas ultima atualização gerou
-      problemas na configuração, colocando as configurações da ia aleatoria, sem puxar a configuração 
-      inicial padrão do projeto que era puxar a configuração da mesma via .env. 
+- [x] Verificar a configuracao padrao da IA: defaults `DEFAULT_AI_*` do ambiente sao usados
+      quando nao ha override valido (`resolve_ai_config` em `config_service.py`),
+      conforme "Fatos corrigidos" abaixo — sem configuracao aleatoria. 
 
 ### 9.1 — Politica de IA por Usuario (Superadmin) ✅
 > **Objetivo:** apenas o superadmin cadastra chaves, provedores e modelos. O superadmin
@@ -397,7 +398,7 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 | 5 | ✅ Completa | WhatsApp E2E |
 | 6 | ✅ Completa | QR na tela |
 | 7 | ✅ Completa | Seguranca critica |
-| 8 | ⏳ Pendente | Funcionalidades core |
+| 8 | 🔄 Parcial | Funcionalidades core (8.5 Templates e 8.6 Agenda pendentes) |
 | 9 | 🔄 Parcial | Politica IA (✅), Erros (✅), Dashboard (pendente) |
 | 10 | ⏳ Pendente | Escala & multi-canal |
 
@@ -407,7 +408,7 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 2. ~~**Midia ignorada**~~ ✅ resposta automatica implementada
 3. ~~**Knowledge sem upload**~~ ✅ upload de PDF, DOCX, TXT, CSV, MD concluido
 4. ~~**Sem handoff humano**~~ ✅ concluido (Fase 8.3)
-5. **Sem paginacao** — todas as listas retornam `.all()`
+5. **Filtros e botoes de paginacao no frontend** — paginacao server-side ja existe em todas as listas (Fase 8.7); falta a UX de filtro (nome/status/data) e navegacao por paginas
 6. **Sem HTTPS** — necessario configurar Caddy/nginx/Tunnel
 7. ~~**Sem business hours**~~ ✅ concluido (horario de atendimento por empresa, marco 8.4) — atendimento 24h configurável
 8. **Sem audit log** — nao registra quem fez o que
@@ -433,20 +434,21 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [x] **PRIORIDADE** — Frontend profissional: pagina **Setores** redesenhadada (stats, busca, tabela, modais de criar/editar/excluir sem confirm nativo) + design system em `index.css` (primitivos `.card`, `.stack`, `.input`, `.table`, `.stat-grid`, `.alert`, `.page-header`), header sticky com avatar/role chip, KPIs com icones, botoes consistentes (`.btn.block`), Account em card.
 - [x] **PRIORIDADE** — **Administração da Plataforma** redesenhada: tabs estilizadas, KPIs com icones, grid de provedores com cards, politician chips para provedores, tabela de erros paginada (tema escuro), modal de confirmação para limpar erros, auto-load da aba erros.
 - [x] **PRIORIDADE** — **Reset de senha pelo operador**: `POST /platform-admin/users/{id}/reset-password` gera senha provisória (retornada uma única vez), com modal + botão "Copiar" na página Plataforma. Limitacao documentada: sem revogação de sessões ativas (novos logins usam a nova senha).
-- [ ] **PROXIMO** — Midia WhatsApp: webhook processa imagens/audio/video/docs, download via Evolution
-- [ ] **PROXIMO** — Upload de arquivos no Knowledge Base (PDF, DOCX, TXT/CSV/Markdown)
-- [ ] **PROXIMO** — Paginacao e filtros em todas as listas
-- [ ] Criar smoke test automatizado: webhook autenticado -> workflow ativo -> execucao -> envio Evolution simulado.
-- [ ] Criar checklist de deploy verificavel na VPS: ambiente real do container, Supabase, Redis, Evolution e health checks.
-- [ ] Consolidar politica de schema: migrations Alembic obrigatorias para alteracoes estruturais; create_all apenas para bootstrap compativel.
+- [x] **PRIORIDADE** — **Login/Criar conta profissional + copiar senha**: layout hero+card, abas segmented ("Entrar"/"Criar conta"), fallback de clipboard em contexto não seguro (`document.execCommand("copy")`), ResetPassword unificado no novo estilo.
+- [x] **DECISAO (07/09/2026)** — **Mídia WhatsApp NÃO será implementada** (sem download/processamento): a solução é a resposta automática da Fase 8.1. Removidos os itens "PROXIMO — Midia WhatsApp" e "Depois da estabilização — Midia WhatsApp".
+- [x] **DECISAO (07/09/2026)** — Upload de arquivos no Knowledge Base **já concluido** (Fase 8.2) — item duplicado removido; o upgrade futuro é so processamento assíncrono/limites (mantido em "Depois da estabilizacao").
+- [x] **PROXIMO** — Paginacao e filtros em todas as listas: paginação server-side **concluida** (Fase 8.7); falta **filtros e botoes de paginacao no frontend** (mantido como melhoria futura).
+- [x] Criar smoke test automatizado: webhook autenticado -> workflow ativo -> execucao -> envio Evolution simulado (`tests/test_webhook_smoke.py`, no suite de 194 testes).
+- [x] Criar checklist de deploy verificavel na VPS: ambiente real do container, Supabase, Redis, Evolution e health checks (`docs/21-checklist-deploy-vps.md`).
+- [x] Consolidar politica de schema: migrations Alembic obrigatorias para alteracoes estruturais (`alembic/versions/0001..0012`); `create_all` apenas para bootstrap compativel.
 - [ ] Adicionar logs estruturados e alertas para falhas de webhook, IA e worker.
 
 ### Depois da estabilizacao
 
 - [ ] Paginacao e filtros nas listas de conversas, mensagens, clientes, knowledge, workflows e execucoes.
 - [ ] Guardrails de IA por empresa: timeout, retry, limite de uso/custo e fallback para humano.
-- [ ] Upload de arquivos no Knowledge Base (PDF, DOCX, TXT/CSV/Markdown) com limites e processamento assincrono.
-- [ ] Midia WhatsApp: processar imagens, audio, video, stickers e documentos recebidos; enviar midia via nodes.
+- [ ] Upload de arquivos no Knowledge Base: **base concluida** (Fase 8.2); upgrade futuro = limites + processamento assíncrono.
+- [ ] ~~Mídia WhatsApp~~ — **NAO implementar**: solucao e a resposta automatica (Fase 8.1), decisao 07/09/2026.
 - [ ] Padrao de atendimento de IA por empresa: definir tom, escopo, apresentacao inicial e regras de encerramento, sem respostas genericas repetidas a cada mensagem.
 - [ ] Contexto conversacional: reconhecer conversas pessoais ou fora do escopo comercial, responder uma unica vez de forma breve e oferecer handoff/encerramento em vez de insistir na mesma mensagem.
 - [ ] Fluxo de identificacao de lead: solicitar o primeiro nome no momento adequado, confirmar a informacao e armazenar em `Customer.name` sem sobrescrever um nome ja confirmado.

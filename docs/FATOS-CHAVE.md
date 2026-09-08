@@ -100,7 +100,9 @@
 
 - Fases 0-7: **concluidas** (visao, backend, workflows, frontend, deploy,
   WhatsApp E2E, QR na tela, seguranca).
-- Fase 8: funcionalidades core (midia, upload KB, handoff, horarios, etc.) — proxima.
+- Fase 8: funcionalidades core. Concluidas: midia (resposta automatica — nao
+  implementar download, decisao 07/09/2026), upload KB, handoff, horario de
+  atendimento, paginacao, senha/sessao. Pendentes: 8.5 Template Messages e 8.6 Agenda.
 - Fase 9: intelligence & analytics.
 - Fase 10: escala & multi-canal.
 - Detalhes em `PROGRESSO.md`.

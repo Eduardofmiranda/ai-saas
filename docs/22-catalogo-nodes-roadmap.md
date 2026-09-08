@@ -119,7 +119,9 @@ reativados apenas para igualar o catálogo de outra plataforma.
 ### P3 — IA e integrações de escala
 
 1. Classificação, extração de lead, resumo, memória e avaliação de qualidade.
-2. Transcrição de áudio e ingestão controlada de documentos.
+2. Transcrição de áudio e ingestão controlada de documentos. **Nota (07/09/2026):**
+   mídia WhatsApp NÃO será processada (webhook responde automaticamente, Fase 8.1);
+   áudio/documentos só entram aqui se surgir demanda real de outro canal.
 3. Integrações de marketing, pagamentos, suporte e operações conforme uso real.
 4. Catálogo administrável por empresa, permissões por papel, auditoria e
    marketplace/SDK somente após a plataforma de credenciais estar madura.
