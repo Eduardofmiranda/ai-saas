@@ -47,7 +47,15 @@ pytest tests/test_crypto.py -xvs
 
 # Com cobertura
 pytest tests/ --cov=app --cov-report=html
+
+# Teste de concorrencia da agenda (requer Postgres descartavel)
+TEST_POSTGRES_URL=postgresql://postgres:test@localhost:5432/ai_saas_test pytest tests/test_agenda_concurrency.py -xvs
 ```
+
+O teste de concorrencia (`test_agenda_concurrency.py`) e pulado quando
+`TEST_POSTGRES_URL` nao esta definido. No CI, o Postgres do servico ja esta
+configurado. Para rodar localmente, suba o Postgres do docker-compose e defina
+a env var apontando para ele.
 
 ## Rodar o Projeto
 

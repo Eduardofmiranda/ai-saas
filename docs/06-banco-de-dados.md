@@ -12,7 +12,7 @@
 ### Ciclo de schema
 
 **Implementado:** a migration `0001_initial_schema` descreve o schema base de
-forma idempotente; `0002` a `0006` evoluem as tabelas. Bancos existentes que
+forma idempotente; `0002` a `0015` evoluem as tabelas. Bancos existentes que
 ja estavam em `0005_password_reset_tokens` avancam normalmente para `0006` sem
 recriar nem apagar tabelas.
 
@@ -62,6 +62,7 @@ extensao no Supabase e nao marque a revisao como aplicada manualmente.
 | email | String | UNIQUE, NOT NULL, index |
 | password_hash | String | NOT NULL |
 | role | String | NOT NULL, default "agent" |
+| is_platform_admin | Boolean | default False — acesso ao painel `/plataforma` |
 
 ### company_configs
 | Coluna | Tipo | Constraints |
@@ -287,28 +288,73 @@ converte datas relativas para o fuso antes de chamar o servico).
 **Implementado (migration `0013_agenda`).** Historico de auditoria de cada
 compromisso; cada criacao/alteracao/cancelamento gera um registro.
 
+### departments
+| Coluna | Tipo | Constraints |
+|--------|------|------------|
+| id | Integer | PK, index |
+| company_id | Integer | FK -> companies.id, NOT NULL |
+| name | String | NOT NULL |
+| description | Text | default "" |
+| is_active | Boolean | default True |
+| created_at | DateTime(timezone) | |
+| updated_at | DateTime(timezone) | |
+
+**Implementado (migration `0010_departments`).** Setores da empresa para
+encaminhamento de conversas.
+
+### platform_ai_providers
+| Coluna | Tipo | Constraints |
+|--------|------|------------|
+| id | Integer | PK, index |
+| provider | String | UNIQUE (ex.: groq, openai, deepseek) |
+| model | String | modelo padrao |
+| api_key | String | criptografado com Fernet |
+| base_url | String | URL base do provedor |
+| enabled | Boolean | default True |
+
+**Implementado (migration `0007_platform_admin`).** Credenciais globais de IA
+gerenciadas pelo operador da plataforma.
+
+### user_ai_configs
+| Coluna | Tipo | Constraints |
+|--------|------|------------|
+| id | Integer | PK, index |
+| user_id | Integer | FK -> users.id, UNIQUE |
+| allowed_providers | Text | JSON com provedores permitidos |
+| default_provider | String | provedor padrao do usuario |
+| default_model | String | modelo padrao do usuario |
+| created_by | Integer | FK -> users.id (quem criou a politica) |
+
+**Implementado (migration `0008_user_ai_config`).** Politica de IA por usuario.
+Resolucao: usuario -> empresa -> plataforma -> .env.
+
 ## Relacionamentos
 
 ```
 Company 1──N User
 Company 1──1 CompanyConfig
 Company 1──1 BusinessHours
+Company 1──1 AgendaConfig
 Company 1──N Customer
+Company 1──N Department
 Company 1──N Workflow
 Company 1──N Conversation
 Company 1──N Execution
 Company 1──N PendingFlow
+Company 1──N Appointment
 
 Customer 1──N Conversation
 Conversation 1──N Message
 Workflow 1──N Execution
 Execution 1──N PendingFlow
+Appointment 1──N AppointmentEvent
+User 1──1 UserAIConfig
 ```
 
 ## Migrations
 
 **Implementado:** Alembic controla todo schema de producao. Em bancos novos,
-`0001_initial_schema` cria a base; `0002` a `0006` aplicam as evolucoes. As
+`0001_initial_schema` cria a base; `0002` a `0015` aplicam as evolucoes. As
 migrations sao idempotentes para permitir adocao de bancos legados que antes
 foram criados pelo ORM.
 

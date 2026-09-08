@@ -153,6 +153,20 @@ pip install -r requirements.txt
 **Verificar:**
 1. `SECRET_KEY` e a mesma usada para criar o token?
 2. Token nao expirou (24h)?
+3. O projeto usa **PyJWT** (nao `python-jose`). Se houver erro de import,
+   verifique se `requirements.txt` tem `PyJWT==2.13.0` e nao `python-jose`.
+
+### Agenda — conflito de horario em concorrencia
+
+**Sintoma:** dupla reserva (dois compromissos no mesmo horario).
+
+**Causa (resolvida em 08/09/2026):** leitura de conflito (`has_conflict`)
+antes do INSERT sem lock transacional. Resolvido com `pg_advisory_xact_lock`
+em `app/services/agenda.py` (`_serialize_booking`).
+
+**Verificar:** migration `0015_agenda_slot_index` aplicada (`alembic current`
+deve estar em `0015`). Em SQLite (dev), o lock e no-op; a garantia real e
+apenas no Postgres/Supabase.
 
 ### Erro de IA
 

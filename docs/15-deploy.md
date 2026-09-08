@@ -73,7 +73,7 @@ A Agenda 8.6b (confirmação 2 passos + lembretes) introduz a migration
 duas tarefas periodicas novas.
 
 ```bash
-# O alembic current deve estar em 0014_agenda_confirmation (head) apos o deploy
+# O alembic current deve estar em 0015_agenda_slot_index (head) apos o deploy
 docker compose exec backend alembic current
 
 # Colunas novas existentes (confirma + lembrete)
@@ -89,6 +89,12 @@ docker compose exec celery-beat celery -A app.tasks.celery_app inspect registere
 
 Se o beat nao registrar as tarefas, recrie o container: `docker compose up -d
 --no-deps --force-recreate celery-beat` (restart nao reaplica o schedule).
+
+### Migration 0015 — indice composto da agenda
+
+A migration `0015_agenda_slot_index` adiciona o indice composto
+`ix_appointments_company_date` em `(company_id, date)` para performance da
+checagem de conflito. O `alembic upgrade head` do backend aplica automaticamente.
 
 ## Portas
 

@@ -132,6 +132,12 @@ embeddings.
 |----------|---------|-----------|
 | `VITE_API_BASE` | `http://localhost:8000` | URL do backend para o frontend |
 
+## Testes
+
+| Variavel | Default | Finalidade |
+|----------|---------|-----------|
+| `TEST_POSTGRES_URL` | — (vazio) | URL de um banco Postgres descartavel para teste de concorrencia da agenda. Se ausente, o teste de concorrencia e pulado. No CI, aponta para o Postgres do servico |
+
 ## Regras Importantes
 
 1. **SECRET_KEY**: Nunca altere depois de salvar dados criptografados

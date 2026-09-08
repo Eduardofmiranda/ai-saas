@@ -39,6 +39,15 @@
 
 Pagina: `frontend/src/pages/Departments.jsx`. Rota `/setores` em `App.jsx`.
 
+### `/leads`
+- Rota protegida
+- Lista clientes/leads da empresa (`GET /customers/`) com paginacao, busca e contagem de conversas.
+- Detalhe do cliente (modal) com ultimas conversas.
+- Exportacao de leads (`GET /customers/export/xlsx`) como planilha Excel.
+- Envio de mensagem em massa (`POST /customers/bulk-message`) para leads selecionados.
+
+Pagina: `frontend/src/pages/Leads.jsx`. Rota `/leads` em `App.jsx`.
+
 ### `/` (Dashboard)
 - Metricas da empresa (KPIs) e status WhatsApp/Evolution.
 - Se existem conversas pendentes (`pending_conversations > 0`), exibe um **banner de alerta**

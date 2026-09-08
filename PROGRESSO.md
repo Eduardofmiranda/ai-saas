@@ -21,7 +21,11 @@
 - [x] Revisados de34e14, 800a142 e 997e2bc; isolamento de clientes nas tools corrigido localmente.
 - [x] Regressoes locais: escopo por remetente/empresa, workflow dry-run, erros LLM, CI/Docker.
 - [x] Atualizar dependencias Python apontadas pelo pip-audit e repetir validacao (75→0; fatia acima).
-- [ ] Garantia transacional contra dupla reserva + testes concorrentes Postgres.
+- [x] Garantia transacional contra dupla reserva + testes concorrentes Postgres.
+      `app/services/agenda.py` (`_serialize_booking`, advisory lock transacional
+      `pg_advisory_xact_lock` por company_id+data), migration `0015` (indice
+      composto company_id+date) e `tests/test_agenda_concurrency.py` (roda contra
+      Postgres descartavel via `TEST_POSTGRES_URL`; no SQLite e no-op).
 - [ ] Confirmacao server-side para remarcar/cancelar; limites de abuso e permissoes granulares.
 - [ ] Concluir auditoria ampliada de sessoes, uploads, historico/segredos e infraestrutura.
 

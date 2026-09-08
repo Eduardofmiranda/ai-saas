@@ -8,7 +8,7 @@
 - Verificadas com `verify_password()`
 
 ### JWT
-- Tokens assinados com HS256
+- Tokens assinados com HS256 (via **PyJWT** 2.13.0; `python-jose` removido em 08/09/2026)
 - **Access token** expira em 24 horas (`ACCESS_TOKEN_EXPIRE_MINUTES`)
 - **Refresh token** expira em 7 dias (`REFRESH_TOKEN_EXPIRE_MINUTES`) com claim `type=refresh`;
   usado apenas em `POST /auth/refresh` (rotacionado); access token nao e aceito como refresh (401)
@@ -71,6 +71,24 @@ Todos os routers que manipulam dados sao protegidos por `Depends(get_current_use
 - Resposta padrao de excesso: HTTP **429** com mensagem em portugues.
 - O import e condicional (via `try/except ImportError`), entao o app funciona
   mesmo se slowapi nao estiver instalado (apenas sem rate limiting).
+
+### Garantia Transacional contra Dupla Reserva (Agenda)
+- **Implementado:** `_serialize_booking` em `app/services/agenda.py` usa
+  `pg_advisory_xact_lock` transacional chaveado por `(company_id, date)` antes
+  da leitura de conflito em `add_appointment`/`update_appointment`.
+- Em READ COMMITTED (Supabase), a segunda transacao bloqueada so executa o
+  `has_conflict` apos o commit da primeira, enxergando a linha recem-gravada.
+- Em SQLite (dev/testes): no-op (lock global de escrita do banco ja serializa).
+- Migration `0015`: indice composto `(company_id, date)` para performance.
+- Teste concorrente em `tests/test_agenda_concurrency.py` (Postgres descartavel
+  via `TEST_POSTGRES_URL`, CI-only).
+- Veja `docs/SEGURANCA-2026-09-08-AGENDA.md` (item #2 concluido).
+
+### Confirmacao Server-side (Agenda)
+- **Pendente:** a confirmacao de remarcar/cancelar via WhatsApp atualmente
+  depende de instrucao no prompt do LLM, nao de consentimento server-side.
+  A criacao provisoria (`awaiting_confirmation`) e processamento de
+  `CONFIRMAR`/`CANCELAR` ja sao deterministico (sem LLM).
 
 ### CORS via Ambiente
 - Origens permitidas configuradas pela env var `ALLOWED_ORIGINS`

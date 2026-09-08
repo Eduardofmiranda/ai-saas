@@ -84,8 +84,13 @@ segredos. Pelo nginx de producao, use o prefixo `/api`, por exemplo
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
-| GET | `/customers/` | Lista clientes da empresa | JWT |
+| POST | `/customers/` | Cria cliente (lead) | JWT |
+| GET | `/customers/` | Lista clientes com paginacao e contagem de conversas | JWT |
+| GET | `/customers/export` | Exporta leads como JSON | JWT |
+| GET | `/customers/export/xlsx` | Exporta leads como planilha Excel (.xlsx) | JWT |
+| POST | `/customers/bulk-message` | Envia mensagem WhatsApp em massa para leads | JWT |
 | GET | `/customers/{id}` | Busca cliente | JWT |
+| DELETE | `/customers/{id}` | Exclui cliente + conversas + mensagens | JWT |
 
 
 ### Conversations
@@ -98,6 +103,8 @@ segredos. Pelo nginx de producao, use o prefixo `/api`, por exemplo
 | GET | `/conversations/{id}` | Busca conversa (dados enriquecidos) | JWT |
 | PATCH | `/conversations/{id}` | Atualiza status da conversa (`{ "status": "closed" }`) | JWT |
 | DELETE | `/conversations/{id}` | Exclui conversa | JWT |
+| POST | `/conversations/{id}/assume` | Assume atendimento manual (desabilita IA na conversa) | JWT |
+| POST | `/conversations/{id}/pause-workflow` | Cancela PendingFlow ativo da conversa | JWT |
 
 **Resposta enriquecida** (`_to_response` em `app/routers/conversation_router.py`):
 `id, company_id, customer_id, status, created_at, updated_at, customer`
@@ -180,9 +187,43 @@ clientes autenticados e permite os efeitos normais do workflow.
 | GET | `/knowledge/` | Lista documentos | JWT |
 | GET | `/knowledge/{id}` | Busca documento com chunks | JWT |
 | POST | `/knowledge/` | Cria e indexa documento | JWT |
-| PATCH | `/knowledge/{id}` | Atualiza documento | JWT |
+| POST | `/knowledge/upload` | Upload de arquivo (PDF, DOCX, TXT, CSV, MD, etc.) para knowledge | JWT |
+| PATCH | `/knowledge/{id}` | Atualiza documento (+ re-embed se conteudo mudar) | JWT |
 | DELETE | `/knowledge/{id}` | Deleta documento e chunks | JWT |
 | POST | `/knowledge/search` | Busca semantica | JWT |
+
+### Templates de Workflow
+
+| Metodo | URL | Descricao | Auth |
+|--------|-----|-----------|------|
+| GET | `/templates/` | Lista templates disponiveis | Nao |
+| GET | `/templates/{id}` | Detalhe do template | Nao |
+| POST | `/templates/{id}/use` | Cria workflow a partir do template | JWT |
+
+### Users (gestao de equipe)
+
+| Metodo | URL | Descricao | Auth |
+|--------|-----|-----------|------|
+| GET | `/users/` | Lista membros da equipe | JWT |
+| POST | `/users/` | Cria membro da equipe | JWT (gestor+) |
+| PATCH | `/users/{id}` | Atualiza papel/senha | JWT (gestor+) |
+| DELETE | `/users/{id}` | Remove membro da equipe | JWT (gestor+) |
+
+### Departments (setores)
+
+| Metodo | URL | Descricao | Auth |
+|--------|-----|-----------|------|
+| GET | `/departments/` | Lista setores da empresa | JWT |
+| POST | `/departments/` | Cria setor | JWT |
+| PATCH | `/departments/{id}` | Atualiza setor | JWT |
+| DELETE | `/departments/{id}` | Exclui setor | JWT |
+
+### Config AI (resolucao por usuario)
+
+| Metodo | URL | Descricao | Auth |
+|--------|-----|-----------|------|
+| GET | `/config/ai/allowed` | Provedores de IA permitidos para o usuario | JWT |
+| GET | `/config/ai/effective` | Config efetiva de IA do usuario (resolucao user->company->platform->.env) | JWT |
 
 ### Agenda da Secretaria IA
 

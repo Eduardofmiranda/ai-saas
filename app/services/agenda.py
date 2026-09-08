@@ -429,6 +429,8 @@ def _serialize_booking(db: Session, company_id: int, date: str) -> None:
     """
     if db.get_bind().dialect.name != "postgresql":
         return
+    if not _valid_date(date):
+        return
     key = int(company_id) * 1_000_000_000 + int(date.replace("-", ""))
     db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
 

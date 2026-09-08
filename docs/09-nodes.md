@@ -16,11 +16,12 @@
 | Log | `log` | Registra mensagem nos logs |
 | Aguardar mensagem | `wait_until_message` | Pausa ate proxima mensagem do cliente |
 | Transferir para humano | `transfer_to_agent` | Marca conversa como pendente de atendimento humano (handoff) e encerra a automacao da mensagem atual |
+| Transferir para setor | `transfer_to_department` | Encaminha conversa para um setor especifico (departamento) |
 | IA RAG | `ai_rag` | Busca na base de conhecimento e responde com IA |
 | Codigo | `code` | **Indisponivel por seguranca**; sera reintroduzido apenas com sandbox real |
 | Loop | `loop` | Itera sobre uma lista |
 | Aggregate | `aggregate` | Junta itens em um resultado |
-| Schedule | `schedule` | Trigger por cron |
+| Schedule | `schedule` | Trigger por cron (parcial) |
 | Executar Workflow | `execute_workflow` | Chama sub-workflow |
 | Capturar lead | `capture_lead` | Extrai dados do cliente da conversa com IA e atualiza o contato |
 | Horario Comercial | `check_business_hours` | Verifica se esta no horario de atendimento (bifurca true/false) |
@@ -126,6 +127,20 @@ no proprio campo, sem inventar um destino.
 - **Saida:** `transferred` (bool), `conversation_id`
 - **Comportamento:** Seta `Conversation.status` para `pending_agent`, registra um `ConversationTransfer` (action=`transfer_requested`, actor_type=`workflow`) e encerra a automacao da mensagem atual. Enquanto estiver pendente, novas mensagens sao gravadas para o atendente, mas a IA nao responde nem retoma flows pausados. Se a conversa ja esta `pending_agent`, apenas registra log e retorna `transferred=true` sem regravar.
 
+### transfer_to_department
+- **Categoria:** whatsapp
+- **Entrada:** Qualquer
+- **Saida:** `transferred` (bool), `conversation_id`, `department_id`
+- **Dados:** `data.department_id` (ID do setor destino)
+- **Comportamento:** Atribui o setor (`department_id`) a conversa, muda status para `pending_agent` e registra `ConversationTransfer` (action=`transfer_requested`, actor_type=`workflow`). O setor precisa existir, estar ativo e pertencer a mesma empresa. Se o setor for invalido, o node registra erro e continua ou para conforme `on_error`.
+
+### execute_workflow
+- **Categoria:** core
+- **Entrada:** Qualquer
+- **Saida:** `success`, `error`
+- **Dados:** `data.workflow_id` (ID do workflow alvo, obrigatorio)
+- **Comportamento:** Chama outro workflow da mesma empresa como sub-workflow, passando o contexto atual. O workflow alvo precisa existir e estar ativo. Em modo `dry_run`, executa em modo seguro (sem efeitos colaterais). Limite de profundidade: a engine previne recursao infinita.
+
 ### ai_rag
 - **Icone:** Brain (lilas)
 - **Entrada:** Qualquer
@@ -149,6 +164,11 @@ no proprio campo, sem inventar um destino.
 - **Comportamento:** Carrega o historico da conversa, chama o LLM pedindo um JSON estruturado (nome, email, telefone, empresa, cidade e notas) e atualiza o contato (Customer) da conversa quando encontrado. Em modo de teste (`dry_run`) apenas simula e salva nada. Os dados extraidos ficam no contexto em `data.lead`.
 - **Extracao:** usa o modo `response_format=json_object` quando o provedor suporta; caso contrario, repete sem o modo e usa um parser tolerante de JSON. Nada e salvo se a conversa nao tiver mensagens ou o contato nao for encontrado. Falha de extracao (provedor fora do ar, 429, etc.) loga o erro e **continua o fluxo** sem salvar (`saved=false`).
 - **Requer:** Configuracao de IA da empresa.
+
+### schedule
+- **Categoria:** trigger
+- **Status:** Parcial — registrado mas sem mecanismo de agendamento real (cron) ativo. O registro e mantido para que workflows legados possam ser visualizados.
+- **Saida:** `success`
 
 ### check_business_hours
 - **Categoria:** logic
@@ -185,3 +205,5 @@ Todos os nos possuem o campo `on_error`:
 | check_business_hours | #f59e0b (ambar) |
 | wait_until_message | #ef4444 (vermelho) |
 | transfer_to_agent | #22c55e (verde, whatsapp) |
+| transfer_to_department | #22c55e (verde, whatsapp) |
+| execute_workflow | #a855f7 (lilas, core) |

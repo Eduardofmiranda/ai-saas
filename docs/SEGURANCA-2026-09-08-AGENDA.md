@@ -129,6 +129,14 @@ Producao continua usando Supabase para o banco do app; nao foi acessada.
 2. **Prioridade alta:** impedir dupla reserva concorrente com garantia transacional
    no Postgres/Supabase; leitura antes do INSERT nao oferece essa garantia.
    Requer desenho/migration com architect e teste concorrente em banco descartavel.
+   **CONCLUIDO 08/09/2026** (commit `e08ff8d`): `_serialize_booking` em
+   `app/services/agenda.py` usa `pg_advisory_xact_lock` transacional chaveado por
+   (company_id, date) antes da leitura de conflito em `add_appointment`/
+   `update_appointment`; em SQLite (dev/testes) e no-op (o lock global de escrita
+   do banco ja serializa). Migration `0015` adiciona indice composto
+   (company_id, date) para performance. Teste de concorrencia em
+   `tests/test_agenda_concurrency.py` (executa contra Postgres descartavel via
+   `TEST_POSTGRES_URL`, agora tambem no CI; pulado localmente sem Postgres).
 3. **Prioridade alta:** confirmacao server-side de remarcar/cancelar; instrucao no
    prompt nao comprova consentimento. Criacao provisoria/confirmacao da 8.6b ja esta
    no trabalho local, mas nao nos tres commits analisados, e nao resolve todas acoes.

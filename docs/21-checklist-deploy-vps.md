@@ -61,6 +61,15 @@ webhook apontando para http://backend:8000/webhook/whatsapp/<company_id>.
 5. Se falhar, salve somente logs sem chaves e compare ambiente real, instancia,
    webhook e workflow ativo.
 
+## 6. Confirmar migrations
+
+Apos o deploy, confirme que todas as migrations foram aplicadas:
+
+    docker compose exec backend alembic current
+
+O resultado deve estar em `0015_agenda_slot_index` (head). Se estiver atrasado,
+o backend aplicou automaticamente no startup; verifique os logs.
+
 ## Resultado esperado
 
 O deploy so esta concluido quando banco, Redis, Evolution e os health checks

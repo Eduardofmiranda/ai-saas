@@ -61,6 +61,7 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           SECRET_KEY: test-secret-key
           DEFAULT_AI_PROVIDER: mock
+          TEST_POSTGRES_URL: postgresql://postgres:test@localhost:5432/ai_saas_test
         run: |
           pytest tests -xvs --tb=short
 

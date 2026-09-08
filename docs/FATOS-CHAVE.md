@@ -48,13 +48,15 @@
 | Banco (producao) | **Supabase** (PostgreSQL) |
 | Banco (dev local) | SQLite (`sqlite:///./aissaas.db`) |
 | Cache/Filas | Redis 7 + Celery (worker/beat) |
-| WhatsAApp | Evolution API (v2.3.7, compose separado, porta 8080) |
+| WhatsApp | Evolution API (v2.3.7, compose separado, porta 8080) |
 | IA | Adapter multi-provedor (groq/openai/deepseek/mistral/ollama/mock) |
+| Autenticacao | PyJWT 2.13.0 + bcrypt (HS256) |
 | Deploy | Docker + Docker Compose na VPS |
 
 ## 5. Autenticacao / Seguranca (Fase 7)
 
-- JWT HS256, expiracao 24h (`ACCESS_TOKEN_EXPIRE_MINUTES`).
+- JWT HS256 via **PyJWT** 2.13.0 (`python-jose` removido em 08/09/2026),
+  expiracao 24h (`ACCESS_TOKEN_EXPIRE_MINUTES`).
 - **`SECRET_KEY` obrigatoria** no startup (sem ela o servidor nao inicia).
 - `SECRET_KEY` != `SECRET_ENCRYPTION_KEY` (devem ser distintas).
 - Todos os routers de dados protegidos com `get_current_user` + isolamento
@@ -64,6 +66,8 @@
 - Sessao: access 24h + **refresh token rotacionado** (`/auth/refresh`, `type=refresh`).
 - Recuperacao de senha: link por email (SMTP; 503 se nao configurado), token com hash SHA-256 + uso unico.
 - CORS via `ALLOWED_ORIGINS` (env).
+- **Agenda:** garantia transacional contra dupla reserva via `pg_advisory_xact_lock`
+  (commit `e08ff8d`; veja `docs/SEGURANCA-2026-09-08-AGENDA.md` item #2).
 
 ## 5.1 Politica de IA por usuario (Fase 9.1 — Planejado)
 

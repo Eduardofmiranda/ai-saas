@@ -82,4 +82,17 @@ celery_app.conf.update(
 | Broker do Celery | Strings (mensagens) |
 | Backend do Celery | Strings (resultados) |
 | Agendador RedBeat | Sorted sets |
+| Rate limiting (slowapi) | Strings com TTL (contagem de requisicoes por IP) |
 | Cache | Nao utilizado diretamente |
+
+## Rate Limiting (slowapi)
+
+O rate limiting usa o proprio Redis como backend (slowapi). Limites configurados:
+
+| Endpoint | Limite | Descricao |
+|----------|--------|-----------|
+| `POST /auth/login` | 5/min por IP | Login |
+| `POST /auth/register` | 5/min por IP | Cadastro |
+| `POST /auth/forgot-password` | 10/min por IP | Recuperacao de senha |
+
+Resposta padrao: HTTP `429` com mensagem em portugues.

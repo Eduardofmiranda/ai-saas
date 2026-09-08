@@ -52,17 +52,25 @@ ai-saas/
 │   │   └── session.py            # Dependency get_db
 │   ├── models/                   # Models SQLAlchemy
 │   │   ├── __init__.py
+│   │   ├── agenda_config.py
+│   │   ├── appointment.py
+│   │   ├── appointment_event.py
+│   │   ├── business_hours.py
 │   │   ├── company.py
 │   │   ├── company_config.py
 │   │   ├── conversation.py
 │   │   ├── conversation_transfer.py
 │   │   ├── customer.py
+│   │   ├── department.py
 │   │   ├── execution.py
 │   │   ├── knowledge.py
+│   │   ├── knowledge_chunk.py
 │   │   ├── message.py
 │   │   ├── password_reset_token.py
 │   │   ├── pending_flow.py
+│   │   ├── platform_ai_provider.py
 │   │   ├── user.py
+│   │   ├── user_ai_config.py
 │   │   └── workflow.py
 │   ├── schemas/                  # Schemas Pydantic
 │   │   ├── auth_schema.py
@@ -77,20 +85,27 @@ ai-saas/
 │   │   ├── message_schema.py
 │   │   ├── user_schema.py
 │   │   └── workflow_schema.py
-│   ├── routers/                  # Endpoints da API
-│   │   ├── auth_router.py
-│   │   ├── company_router.py
-│   │   ├── config_router.py
-│   │   ├── conversation_router.py
-│   │   ├── customer_router.py
-│   │   ├── dashboard_router.py
-│   │   ├── knowledge_router.py
-│   │   ├── message_router.py
-│   │   ├── template_router.py
-│   │   ├── users_router.py
-│   │   ├── webhook_router.py
-│   │   └── workflow_router.py
+│   ├── routers/                  # Endpoints da API (~91 endpoints)
+│   │   ├── agenda_router.py      # /agenda/*
+│   │   ├── auth_router.py        # /auth/*
+│   │   ├── company_router.py     # /companies/*
+│   │   ├── config_router.py      # /config/* (incl. whatsapp, business-hours, ai)
+│   │   ├── conversation_router.py# /conversations/*
+│   │   ├── customer_router.py    # /customers/*
+│   │   ├── dashboard_router.py   # /dashboard/*
+│   │   ├── department_router.py  # /departments/*
+│   │   ├── knowledge_router.py   # /knowledge/*
+│   │   ├── message_router.py     # /messages/*
+│   │   ├── platform_admin_router.py # /platform-admin/*
+│   │   ├── template_router.py    # /templates/*
+│   │   ├── users_router.py       # /users/*
+│   │   ├── webhook_router.py     # /webhook/*
+│   │   └── workflow_router.py    # /workflows/*
 │   ├── services/                 # Logica de negocio
+│   │   ├── agenda.py             # Servico de agenda (CRUD + slots + advisory lock)
+│   │   ├── agenda_confirmation.py# Confirmacao 2 passos + lembretes
+│   │   ├── agenda_tools.py       # Tools de function calling para IA
+│   │   ├── business_hours.py     # Horario de atendimento
 │   │   ├── config_service.py
 │   │   ├── conversation_service.py
 │   │   ├── deps.py
@@ -99,10 +114,15 @@ ai-saas/
 │   │   ├── evolution.py
 │   │   ├── field_crypto.py
 │   │   ├── llm.py
-│   │   ├── security.py
-│   │   ├── templates.py
-│   │   ├── vector_store.py
+│   │   ├── platform_access.py
+│   │   ├── platform_bootstrap.py
+│   │   ├── platform_ai_provider_service.py
+│   │   ├── rate_limit.py
+│   │   ├── security.py           # JWT (PyJWT) + bcrypt
+│   │   ├── templates.py          # Templates de workflow
+│   │   ├── vector_store.py       # pgvector + fallback JSON
 │   │   ├── workflow_engine.py
+│   │   ├── workflow_validation.py
 │   │   └── nodes/
 │   │       ├── __init__.py
 │   │       ├── context.py
@@ -110,10 +130,16 @@ ai-saas/
 │   │       └── registry.py
 │   └── tasks/                    # Celery workers
 │       ├── __init__.py
+│       ├── agenda_tasks.py       # Expiracao + lembretes da agenda
 │       ├── celery_app.py
 │       └── workflow_tasks.py
-├── tests/                        # Testes automatizados
+├── tests/                        # Testes automatizados (300+)
 │   ├── conftest.py
+│   ├── test_agenda.py
+│   ├── test_agenda_confirmation.py
+│   ├── test_agenda_concurrency.py
+│   ├── test_agenda_security.py
+│   ├── test_agenda_tools.py
 │   ├── test_auth.py
 │   ├── test_config.py
 │   ├── test_crypto.py
@@ -123,6 +149,7 @@ ai-saas/
 │   ├── test_knowledge.py
 │   ├── test_nodes_registry.py
 │   ├── test_password.py
+│   ├── test_security_commit.py
 │   ├── test_sprint3_nodes.py
 │   ├── test_users.py
 │   └── test_workflow_engine.py
@@ -137,15 +164,19 @@ ai-saas/
 │   │   ├── context/
 │   │   │   └── AuthContext.jsx
 │   │   └── pages/
-│   │       ├── Admin.jsx
-│   │       ├── AI.jsx
 │   │       ├── Account.jsx
+│   │       ├── Admin.jsx
+│   │       ├── Agenda.jsx
+│   │       ├── AI.jsx
 │   │       ├── Conversations.jsx
 │   │       ├── Dashboard.jsx
+│   │       ├── Departments.jsx
 │   │       ├── Editor.jsx
 │   │       ├── Home.jsx
 │   │       ├── Knowledge.jsx
+│   │       ├── Leads.jsx
 │   │       ├── Login.jsx
+│   │       ├── PlatformAdmin.jsx
 │   │       ├── ResetPassword.jsx
 │   │       └── WhatsApp.jsx
 │   ├── package.json
@@ -156,10 +187,21 @@ ai-saas/
 │   ├── env.py
 │   ├── script.py.mako
 │   └── versions/
+│       ├── 0001_initial_schema.py
 │       ├── 0002_pending_flows.py
 │       ├── 0003_knowledge.py
 │       ├── 0004_conversation_transfers.py
-│       └── 0005_password_reset_tokens.py
+│       ├── 0005_password_reset_tokens.py
+│       ├── 0006_pgvector_knowledge.py
+│       ├── 0007_platform_admin.py
+│       ├── 0008_user_ai_config.py
+│       ├── 0009_workflow_user_id.py
+│       ├── 0010_departments.py
+│       ├── 0011_customer_lead_fields.py
+│       ├── 0012_business_hours.py
+│       ├── 0013_agenda.py
+│       ├── 0014_agenda_confirmation.py
+│       └── 0015_agenda_slot_index.py
 ├── docker-compose.yml
 ├── docker-compose.dev.yml
 ├── docker-compose.evolution.yml
@@ -175,10 +217,11 @@ ai-saas/
 
 | Categoria | Quantidade |
 |-----------|-----------|
-| Arquivos Python (backend, app/) | ~50 |
-| Arquivos de teste (tests/) | 10 |
-| Arquivos JSX/JS (frontend) | ~10 |
+| Arquivos Python (backend, app/) | ~60 |
+| Arquivos de teste (tests/) | ~20 |
+| Arquivos JSX/JS (frontend) | ~15 |
 | Arquivos de configuracao | ~10 |
 | Arquivos Docker | 5 |
-| Arquivos de documentacao (docs/ + raiz) | >20 |
-| **Total aproximado** | **~100** |
+| Arquivos de documentacao (docs/ + raiz) | ~30 |
+| Migrations (alembic/versions/) | 15 |
+| **Total aproximado** | **~150** |

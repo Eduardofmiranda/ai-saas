@@ -33,17 +33,21 @@ Referências estudadas:
   `app/services/workflow_engine.py`.
 - Trigger de mensagem WhatsApp, IA, RAG, definir variável, condição, atraso,
   log, envio por WhatsApp, handoff humano, espera por nova mensagem,
-  captura de lead (`capture_lead`) e horário comercial
-  (`check_business_hours`, default `America/Sao_Paulo`, 24/7 sem config).
+  transferência para setor (`transfer_to_department`), captura de lead
+  (`capture_lead`), horário comercial (`check_business_hours`) e
+  sub-workflow (`execute_workflow`).
 - Configuração criptografada por empresa para IA e Evolution em
   `app/models/company_config.py` e `app/services/field_crypto.py`.
 - Validação do grafo antes de ativar ou executar workflows.
 
 ### Parcial ou indisponível
 
-- Webhook externo, agendamento, loop, agregação, filtro, HTTP e código estão
+- Webhook externo, agendamento (`schedule`), loop, agregação e filtro estão
   registrados, mas não devem ser liberados para novos fluxos enquanto não
   tiverem contrato e segurança completos.
+- **Bloqueado por segurança:** `code` (exec em Python sem sandbox) e `http`
+  (requisicoes a URLs arbitrarias sem anti-SSRF). O registro e mantido para
+  que workflows legados possam ser visualizados; execucao esta desabilitada.
 - Não existe ainda um modelo de credenciais genéricas por empresa para OAuth,
   API key, token renovável ou conexão de conectores.
 - Não existe SDK/manifesto versionado de conectores, marketplace ou permissões

@@ -25,14 +25,18 @@ Cada empresa tem:
 
 ## Capacidades Atuais
 
-- Autenticacao JWT (login/cadastro)
+- Autenticacao JWT (login/cadastro, PyJWT + bcrypt)
 - Editor visual de workflows (drag & drop)
-- 11 tipos de nodes implementados
-- Motor de execucao de workflows
+- 20 nodes registrados (14 implementados, 7 indisponiveis/parciais por seguranca)
+- Motor de execucao de workflows (pausa/retomada, sub-workflows)
 - IA multi-provedor (Groq, OpenAI, DeepSeek, Mistral, Ollama, mock)
 - Memoria de conversa (historico do banco)
 - Aguardar proxima mensagem (wait_until_message)
-- Webhook WhatsApp (Evolution API v2)
-- Credenciais criptografadas em repouso
+- Webhook WhatsApp (Evolution API v2.3.7)
+- Base de conhecimento (RAG) com embeddings e pgvector
+- Agenda da Secretaria IA (confirmação 2 passos, lembretes)
+- Horario de atendimento (business hours)
+- Credenciais criptografadas em repouso (Fernet)
+- Rate limiting (slowapi)
 - Deploy via Docker Compose
-- Testes automatizados (25 testes)
+- Testes automatizados (300+ testes backend)
