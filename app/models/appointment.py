@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.database.database import Base
@@ -20,6 +20,7 @@ class Appointment(Base):
     """
 
     __tablename__ = "appointments"
+    __table_args__ = (Index("ix_appointments_company_date", "company_id", "date"),)
 
     id = Column(Integer, primary_key=True, index=True)
 

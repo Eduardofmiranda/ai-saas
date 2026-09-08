@@ -16,6 +16,7 @@ import json
 from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.models.agenda_config import AgendaConfig
@@ -414,6 +415,24 @@ def _add_event(
     )
 
 
+def _serialize_booking(db: Session, company_id: int, date: str) -> None:
+    """Serializa a criacao/alteracao de compromissos para (company_id, date).
+
+    A validacao de conflito em `add_appointment`/`update_appointment` e uma
+    leitura ANTES do INSERT. Sob concorrencia, duas transacoes podem ler o slot
+    livre e ambas inserir (dupla reserva). Em Postgres/Supabase o
+    `pg_advisory_xact_lock` transacional (chave = company_id + data) garante que
+    a segunda transacao so faca a leitura de conflito DEPOIS do commit da
+    primeira; em READ COMMITTED o SELECT subsequente enxerga a linha recen-
+    commitada e a reserva e rejeitada. Em SQLite (dev/testes) o lock global de
+    escrita do proprio banco ja serializa as escritas; nao ha advisory lock.
+    """
+    if db.get_bind().dialect.name != "postgresql":
+        return
+    key = int(company_id) * 1_000_000_000 + int(date.replace("-", ""))
+    db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
+
+
 def _validate_interval(
     db: Session,
     cfg: AgendaConfig | None,
@@ -497,6 +516,7 @@ def add_appointment(
         ).first()
         if customer is None:
             raise AgendaError("Cliente nao encontrado.", "not_found")
+    _serialize_booking(db, company_id, date)
     _validate_interval(
         db,
         cfg,
@@ -580,6 +600,7 @@ def update_appointment(
     rescheduled = (new_date, new_start, new_end) != (appt.date, appt.start_time, appt.end_time)
     reactivating = appt.status not in ACTIVE_STATUSES and fields.get("status") in ACTIVE_STATUSES
     if rescheduled or reactivating:
+        _serialize_booking(db, company_id, new_date)
         cfg = get_for_company(db, company_id)
         _validate_interval(
             db,
