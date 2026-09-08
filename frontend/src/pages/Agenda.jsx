@@ -74,7 +74,7 @@ export default function Agenda() {
         api.getAgendaAppointments({ limit: 200 }),
       ]);
       setCfg(c);
-      setAppts(Array.isArray(list) ? list : []);
+      setAppts(Array.isArray(list?.items) ? list.items : []);
       setError("");
     } catch (e) {
       setError(e.message);

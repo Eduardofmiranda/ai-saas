@@ -62,7 +62,7 @@ jobs:
           SECRET_KEY: test-secret-key
           DEFAULT_AI_PROVIDER: mock
         run: |
-          pytest -xvs --tb=short 2>/dev/null || echo "No pytest tests yet - skipping"
+          pytest tests -xvs --tb=short
 
       - name: Type check (if mypy configured)
         run: |
@@ -87,7 +87,10 @@ jobs:
         run: cd frontend && npm ci
 
       - name: Lint
-        run: cd frontend && npm run lint 2>/dev/null || echo "No lint script"
+        run: cd frontend && npm run lint
+
+      - name: Frontend regression tests
+        run: cd frontend && npm test
 
       - name: Type check
         run: cd frontend && npx tsc --noEmit 2>/dev/null || echo "TypeScript check skipped"

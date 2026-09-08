@@ -186,7 +186,7 @@ async def handle_incoming_message(
             from app.services.agenda_tools import (
                 AGENDA_TOOLS,
                 AGENDA_TOOLS_INSTRUCTION,
-                execute_agenda_tool,
+                execute_customer_agenda_tool,
             )
 
             agenda_cfg = get_agenda_for_company(db, company_id)
@@ -199,7 +199,9 @@ async def handle_incoming_message(
                     api_key=ai_api_key,
                     base_url=ai_base_url,
                     tools=AGENDA_TOOLS,
-                    execute_tool=lambda name, args, /: execute_agenda_tool(db, company_id, name, args),
+                    execute_tool=lambda name, args, /: execute_customer_agenda_tool(
+                        db, company_id, name, args, phone=phone,
+                    ),
                 )
             else:
                 reply_text = await llm.generate_reply(

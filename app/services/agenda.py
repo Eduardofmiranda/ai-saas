@@ -418,6 +418,13 @@ def add_appointment(
     cfg = get_for_company(db, company_id)
     if not origin:
         origin = "manual"
+    if customer_id is not None:
+        from app.models.customer import Customer
+        customer = db.query(Customer).filter(
+            Customer.id == customer_id, Customer.company_id == company_id,
+        ).first()
+        if customer is None:
+            raise AgendaError("Cliente nao encontrado.", "not_found")
     _validate_interval(
         db,
         cfg,
@@ -491,7 +498,9 @@ def update_appointment(
     new_date = fields.get("date", appt.date)
     new_start = fields.get("start_time", appt.start_time)
     new_end = fields.get("end_time", appt.end_time)
-    if (new_date, new_start, new_end) != (appt.date, appt.start_time, appt.end_time):
+    rescheduled = (new_date, new_start, new_end) != (appt.date, appt.start_time, appt.end_time)
+    reactivating = appt.status not in ACTIVE_STATUSES and fields.get("status") in ACTIVE_STATUSES
+    if rescheduled or reactivating:
         cfg = get_for_company(db, company_id)
         _validate_interval(
             db,
@@ -503,7 +512,6 @@ def update_appointment(
             exclude_id=appt.id,
             company_id=company_id,
         )
-        rescheduled = True
 
     allowed = {f for f in ("customer_name", "service", "notes", "status", "date", "start_time", "end_time") if f in fields}
     if "status" in fields:
@@ -576,11 +584,14 @@ def list_appointments(
     status: str | None = None,
     offset: int = 0,
     limit: int = 50,
+    phone: str | None = None,
 ) -> dict:
     limit = max(1, min(int(limit), 200))
     offset = max(0, int(offset))
 
     q = db.query(Appointment).filter(Appointment.company_id == company_id)
+    if phone is not None:
+        q = q.filter(Appointment.phone == phone)
     if date_from:
         if not _valid_date(date_from):
             raise AgendaError("date_from invalido. Use YYYY-MM-DD.", "invalid")

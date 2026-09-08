@@ -210,6 +210,7 @@ async def generate_reply_with_tools(
     temperature: float = 0.4,
     timeout: float = 40.0,
     max_tool_rounds: int = 4,
+    max_tool_calls: int = 16,
 ) -> str:
     """Gera resposta com suporte a function calling (tools OpenAI-compativeis).
 
@@ -251,6 +252,7 @@ async def generate_reply_with_tools(
 
     messages = [{"role": "system", "content": system_prompt}] + history
 
+    executed_calls = 0
     try:
         for _ in range(max_tool_rounds + 1):
             content, tool_calls = await _chat_with_tools(
@@ -265,6 +267,10 @@ async def generate_reply_with_tools(
             if not tool_calls:
                 return content
 
+            if executed_calls + len(tool_calls) > max_tool_calls:
+                raise LLMError("Limite de chamadas de ferramenta atingido")
+            executed_calls += len(tool_calls)
+
             assistant_msg = {"role": "assistant", "content": content or None, "tool_calls": tool_calls}
             messages.append(assistant_msg)
             for call in tool_calls:
@@ -274,8 +280,8 @@ async def generate_reply_with_tools(
                 call_id = (call.get("id") or "")
                 try:
                     result = execute_tool(name, args)
-                except Exception as exc:  # noqa: BLE001 - erro vira msg p/ o modelo
-                    result = {"error": str(exc)[:500]}
+                except Exception:  # noqa: BLE001 - never disclose DB errors or secrets to the provider
+                    result = {"error": "Falha interna ao executar ferramenta. Procure um operador."}
                 if isinstance(result, str):
                     tool_content = result
                 else:

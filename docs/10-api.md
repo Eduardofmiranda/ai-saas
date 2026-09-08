@@ -1,5 +1,13 @@
 # 10 — API REST
 
+> Seguranca da agenda (08/09/2026, alteracao local): tools de atendimento recebem
+> o telefone do remetente pelo servidor, nao pelo argumento do LLM. Consultas e
+> mutacoes restringem empresa + telefone; consultas omitem notas e identificadores
+> internos de cliente/empresa. Workflows em dry-run nao executam tools de agenda.
+> POST /agenda/appointments rejeita customer_id de outra empresa com 404.
+> CRUD HTTP continua disponivel a operadores autenticados da empresa; configuracao
+> continua restrita a gestores. Veja [revisao e pendencias](SEGURANCA-2026-09-08-AGENDA.md).
+
 Base URL direta do backend em desenvolvimento: `http://localhost:8000`.
 Em producao, o frontend usa o prefixo relativo `/api` e o nginx o remove antes
 de encaminhar ao backend; portanto uma chamada do navegador e `/api/config/`,

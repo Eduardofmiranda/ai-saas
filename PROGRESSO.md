@@ -1,5 +1,17 @@
 # Progresso — FlowAI (AI SaaS - Atendimento WhatsApp)
 
+## Revisao de seguranca da agenda — 08/09/2026
+
+- [x] Revisados de34e14, 800a142 e 997e2bc; isolamento de clientes nas tools corrigido localmente.
+- [x] Regressoes locais: escopo por remetente/empresa, workflow dry-run, erros LLM, CI/Docker.
+- [ ] Atualizar dependencias Python apontadas pelo pip-audit e repetir validacao.
+- [ ] Garantia transacional contra dupla reserva + testes concorrentes Postgres.
+- [ ] Confirmacao server-side para remarcar/cancelar; limites de abuso e permissoes granulares.
+- [ ] Concluir auditoria ampliada de sessoes, uploads, historico/segredos e infraestrutura.
+
+Detalhes e resultados: [revisao de seguranca](docs/SEGURANCA-2026-09-08-AGENDA.md).
+Itens marcados acima sao locais: nao houve commit, push ou deploy nesta revisao.
+
 > Use este documento para acompanhar onde estamos. Marque `[x]` quando concluido.
 > Documento de trabalho (nao substitui `docs/` tecnico — este e o **roadmap/estado**).
 

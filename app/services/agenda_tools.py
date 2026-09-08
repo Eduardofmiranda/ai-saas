@@ -240,7 +240,7 @@ def _cancelar(db: Session, company_id: int, args: dict) -> dict:
     }
 
 
-def _consultar(db: Session, company_id: int, args: dict) -> dict:
+def _consultar(db: Session, company_id: int, args: dict, *, phone: str | None = None) -> dict:
     cfg = agenda_service.get_for_company(db, company_id)
     date_from = str(args.get("date_from") or "").strip() or _today(cfg)
     date_to = str(args.get("date_to") or "").strip()
@@ -260,6 +260,7 @@ def _consultar(db: Session, company_id: int, args: dict) -> dict:
             status=status,
             offset=0,
             limit=20,
+            phone=phone,
         )
     except agenda_service.AgendaError as exc:
         return {"ok": False, "error": exc.message}
@@ -274,6 +275,47 @@ def _consultar(db: Session, company_id: int, args: dict) -> dict:
             else "Nenhum compromisso no período informado."
         ),
     }
+
+
+def execute_customer_agenda_tool(
+    db: Session, company_id: int, name: str, args: dict, *, phone: str,
+) -> dict:
+    """WhatsApp boundary: identity comes from the sender, never the LLM.
+
+    The unscoped executor is internal; operators use authenticated HTTP routes.
+    """
+    if not isinstance(phone, str) or not phone.strip():
+        return {"ok": False, "error": "Identidade do cliente indisponivel."}
+    if not isinstance(args, dict):
+        return {"ok": False, "error": "Argumentos invalidos."}
+    phone = phone.strip()
+    cfg = agenda_service.get_for_company(db, company_id)
+    if not cfg or not cfg.enabled:
+        return {"ok": False, "error": "A agenda da empresa nao esta ativa."}
+    if name == "consultar_agenda":
+        result = _consultar(db, company_id, args, phone=phone)
+        if result.get("ok"):
+            public_fields = {"id", "date", "start_time", "end_time", "service", "status"}
+            result["items"] = [
+                {key: value for key, value in item.items() if key in public_fields}
+                for item in result["items"]
+            ]
+        return result
+    if name in {"alterar_agendamento", "cancelar_agendamento"}:
+        appointment_id = args.get("appointment_id")
+        if isinstance(appointment_id, bool) or not isinstance(appointment_id, int):
+            return {"ok": False, "error": "Compromisso nao encontrado."}
+        try:
+            appointment = agenda_service.get_appointment(db, company_id, appointment_id)
+        except agenda_service.AgendaError:
+            return {"ok": False, "error": "Compromisso nao encontrado."}
+        if appointment.phone != phone:
+            return {"ok": False, "error": "Compromisso nao encontrado."}
+        if name == "alterar_agendamento" and "status" in args:
+            return {"ok": False, "error": "Mudanca de status exige confirmacao ou um operador."}
+    if name == "criar_agendamento":
+        return _criar(db, company_id, args, phone=phone)
+    return execute_agenda_tool(db, company_id, name, args)
 
 
 def execute_agenda_tool(db: Session, company_id: int, name: str, args: dict) -> dict:

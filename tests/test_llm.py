@@ -228,6 +228,7 @@ async def test_tools_error_from_executor_is_delivered_to_model(fake_llm):
     assert calls == [("criar_agendamento", {"appointment_id": 1})]
     tool_msg = [m for m in fake_llm["requests"][1]["json"]["messages"] if m["role"] == "tool"][0]
     assert "error" in tool_msg["content"]
+    assert "agenda bloqueada" not in tool_msg["content"]
 
 
 @pytest.mark.asyncio
@@ -273,3 +274,43 @@ async def test_tools_malformed_arguments_become_empty_dict(fake_llm):
     )
 
     assert calls == [("verificar_disponibilidade", {})]
+
+
+@pytest.mark.asyncio
+async def test_tool_call_budget_rejects_batch_before_side_effects(fake_llm):
+    fake_llm["responses"] = [
+        _FakeResponse(_chat_payload(_assistant_message(None, [
+            _tool_call("x", "{}", f"call_{i}") for i in range(3)
+        ]))),
+    ]
+    executed = []
+    with pytest.raises(llm.LLMError, match="Limite de chamadas"):
+        await generate_reply_with_tools(
+            system_prompt="synthetic", history=[], provider="openai", model="x",
+            api_key="synthetic", base_url="https://example.com/v1",
+            tools=[{"type": "function"}], max_tool_calls=2,
+            execute_tool=lambda name, args: executed.append(name),
+        )
+    assert not executed
+
+
+@pytest.mark.asyncio
+async def test_tool_errors_do_not_disclose_sensitive_exception(fake_llm):
+    fake_llm["responses"] = [
+        _FakeResponse(_chat_payload(_assistant_message(None, [_tool_call("x", "{}")]))),
+        _FakeResponse(_chat_payload(_assistant_message("safe response"))),
+    ]
+
+    def fail(name, args):
+        raise RuntimeError("postgresql://synthetic-secret SQL PARAMETERS synthetic-customer")
+
+    await generate_reply_with_tools(
+        system_prompt="synthetic", history=[], provider="openai", model="x",
+        api_key="synthetic", base_url="https://example.com/v1",
+        tools=[{"type": "function"}], execute_tool=fail,
+    )
+    messages = fake_llm["requests"][1]["json"]["messages"]
+    content = next(m["content"] for m in messages if m["role"] == "tool")
+    assert "synthetic-secret" not in content
+    assert "SQL" not in content
+    assert "synthetic-customer" not in content

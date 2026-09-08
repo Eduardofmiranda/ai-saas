@@ -51,6 +51,8 @@ class NodeContext:
         self.workflow_id = workflow_id
         # dados mutaveis compartilhados entre os nos
         self.data = data
+        # Preserve the initial sender: later nodes may mutate the shared data.
+        self._agenda_phone = data.get("phone")
         self.dry_run = dry_run
         self.config = config
         self.user_id = user_id
@@ -121,9 +123,40 @@ class NodeContext:
         if provider == "mock":
             return f"[mock] {prompt[:120]}"
 
+        history = (history or []) + [{"role": "user", "content": prompt}]
+
+        # Agenda ativa: habilita as tools da Secretaria IA (function calling).
+        try:
+            from app.services.agenda import get_for_company as get_agenda_for_company
+            from app.services.agenda_tools import (
+                AGENDA_TOOLS,
+                AGENDA_TOOLS_INSTRUCTION,
+                execute_customer_agenda_tool,
+            )
+
+            agenda_cfg = get_agenda_for_company(self.db, self.company_id)
+            if (agenda_cfg and agenda_cfg.enabled and not self.dry_run
+                    and isinstance(self._agenda_phone, str) and self._agenda_phone.strip()):
+                return await llm.generate_reply_with_tools(
+                    system_prompt=sys_prompt + AGENDA_TOOLS_INSTRUCTION,
+                    history=history,
+                    provider=provider,
+                    model=model,
+                    api_key=api_key,
+                    base_url=base_url,
+                    tools=AGENDA_TOOLS,
+                    execute_tool=lambda name, args, /: execute_customer_agenda_tool(
+                        self.db, self.company_id, name, args, phone=self._agenda_phone,
+                    ),
+                )
+        except Exception:
+            # Provedor/ferramentas indisponiveis: segue sem tools em vez de
+            # quebrar a execucao do workflow.
+            pass
+
         return await llm.generate_reply(
             system_prompt=sys_prompt,
-            history=(history or []) + [{"role": "user", "content": prompt}],
+            history=history,
             provider=provider,
             model=model,
             api_key=api_key,
