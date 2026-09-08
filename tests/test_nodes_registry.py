@@ -128,3 +128,74 @@ def test_whatsapp_node_exposes_reply_defaults():
     assert "5511999999999" in fields["phone"]["help"]
     assert fields["text"]["default"] == "{{ data.ai_reply }}"
     assert "Ola! Recebi sua mensagem." in fields["text"]["help"]
+
+
+@pytest.mark.asyncio
+async def test_capture_lead_node_updates_customer(db_session, config, customer, conversation):
+    node = {"id": "n1", "type": "capture_lead", "data": {}}
+    ctx = NodeContext(
+        db=db_session,
+        company_id=customer.company_id,
+        execution_id=1,
+        workflow_id=1,
+        data={"conversation_id": conversation.id, "phone": customer.phone},
+        config=config,
+    )
+    result = await run_node(ctx, node)
+
+    outputs = result["outputs"]
+    assert outputs["saved"] is True
+    assert outputs["customer_id"] == customer.id
+    assert outputs["lead"]["email"] == "cliente@mock.com"
+
+    db_session.refresh(customer)
+    assert customer.email == "cliente@mock.com"
+
+
+@pytest.mark.asyncio
+async def test_capture_lead_no_overwrite_keeps_existing_fields(db_session, config, customer, conversation):
+    customer.email = "existente@x.com"
+    db_session.commit()
+
+    node = {"id": "n1", "type": "capture_lead", "data": {"overwrite": "off"}}
+    ctx = NodeContext(
+        db=db_session,
+        company_id=customer.company_id,
+        execution_id=1,
+        workflow_id=1,
+        data={"conversation_id": conversation.id, "phone": customer.phone},
+        config=config,
+    )
+    result = await run_node(ctx, node)
+
+    assert result["outputs"]["saved"] is False
+    db_session.refresh(customer)
+    assert customer.email == "existente@x.com"
+
+
+@pytest.mark.asyncio
+async def test_capture_lead_dry_run_simulates_without_saving(db_session, config, customer, conversation):
+    node = {"id": "n1", "type": "capture_lead", "data": {}}
+    ctx = NodeContext(
+        db=db_session,
+        company_id=customer.company_id,
+        execution_id=1,
+        workflow_id=1,
+        data={"conversation_id": conversation.id, "phone": customer.phone},
+        config=config,
+        dry_run=True,
+    )
+    result = await run_node(ctx, node)
+
+    assert result["outputs"]["simulated"] is True
+    assert result["outputs"]["saved"] is False
+    db_session.refresh(customer)
+    assert customer.email is None
+
+
+def test_capture_lead_node_is_available_in_editor():
+    types = {item["type"]: item for item in list_node_types()}
+    node = types["capture_lead"]
+    assert node["editor_available"] is True
+    keys = {f["key"] for f in node["fields"]}
+    assert {"overwrite", "instruction"} <= keys

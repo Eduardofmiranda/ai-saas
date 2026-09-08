@@ -26,6 +26,7 @@ const ICONS = {
   integration: "⇄",
   whatsapp: "✆",
   core: "◆",
+  atendimento: "★",
 };
 
 const NODE_COLORS = {
@@ -36,6 +37,7 @@ const NODE_COLORS = {
   integration: "#22d3ee",
   whatsapp: "#22c55e",
   core: "#6ea8ff",
+  atendimento: "#f472b6",
 };
 
 const NODE_GUIDANCE = {
@@ -54,6 +56,7 @@ const NODE_GUIDANCE = {
   delay: "Aguarda pelo numero de segundos informado antes de continuar. Evite tempos longos em fluxos que precisam responder rapidamente.",
   log: "Registra uma mensagem no log da execucao para facilitar diagnosticos. Nao inclua senhas, tokens ou dados sensiveis.",
   execute_workflow: "Executa outro workflow da mesma empresa. Use-o para reaproveitar uma automacao que ja foi testada.",
+  capture_lead: "Analisa a conversa com IA e salva os dados do cliente (nome, email, telefone, empresa, cidade e notas) no lead. Coloque-o depois da troca de mensagens que deseja analisar. Os dados ficam em {{ data.lead }}.",
 };
 
 function NodeShell({ data, selected }) {

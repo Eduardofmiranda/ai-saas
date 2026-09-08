@@ -130,6 +130,37 @@ class NodeContext:
             base_url=base_url,
         )
 
+    async def extract_structured(
+        self,
+        *,
+        instruction: str = "",
+        history: list[dict] | None = None,
+    ) -> dict:
+        """Extrai dados estruturados da conversa via LLM.
+
+        Retorna um dict padronizado (name, email, phone, company, city, notes)
+        com strings vazias para campos nao encontrados.
+        """
+        resolved_ai = resolve_ai_config(self.config, self.db, user_id=self.user_id)
+        system_prompt = (
+            "Voce extrai dados comerciais de conversas de atendimento e responde "
+            "SOMENTE com um objeto JSON valido usando EXATAMENTE estas chaves: "
+            '"name", "email", "phone", "company", "city", "notes". '
+            'Valores nao encontrados devem ficar como "" (string vazia). '
+            "Preencha apenas o que estiver explicito ou claramente inferivel na "
+            "conversa. Nao invente informacoes."
+        )
+        if instruction:
+            system_prompt += f"\n\nInstrucoes extras do operador:\n{instruction}"
+        return await llm.generate_structured_json(
+            system_prompt=system_prompt,
+            history=history or [],
+            provider=resolved_ai["provider"],
+            model=resolved_ai["model"],
+            api_key=resolved_ai["api_key"],
+            base_url=resolved_ai["base_url"],
+        )
+
     async def send_whatsapp(self, phone: str, text: str) -> dict:
         """Envia mensagem WhatsApp via Evolution API, salvo em modo de teste."""
         if self.dry_run:

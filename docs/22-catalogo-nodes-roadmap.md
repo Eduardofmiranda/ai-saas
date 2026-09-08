@@ -124,10 +124,12 @@ reativados apenas para igualar o catálogo de outra plataforma.
 
 ## Ordem do próximo lote
 
-As tres primeiras entregas de P0 estao implementadas. O proximo codigo deve
-evoluir a auditoria da execucao (resposta gerada, destinatario e resultado do
-envio), antes do node de captura estruturada de lead e das credenciais genericas
-para conectores.
+As tres primeiras entregas de P0 estao implementadas. **Captura estruturada de
+lead (P1) esta implementada**: o node `capture_lead` extrai nome, email,
+telefone, empresa, cidade e notas com IA e atualiza o contato automaticamente
+(com toggle de sobrescrita). O proximo codigo deve evoluir a auditoria da
+execucao (resposta gerada, destinatario e resultado do envio) e o apoio de tags
+e atualizacao de contato, antes das credenciais genericas para conectores.
 
 ## Critério de aceite por lote
 

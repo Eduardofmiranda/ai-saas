@@ -19,6 +19,7 @@ import re
 from app.config import get_secret
 from app.models.conversation import Conversation
 from app.models.conversation_transfer import ConversationTransfer
+from app.models.customer import Customer
 from app.services import llm
 from app.services.nodes.context import NodeError
 from app.services.nodes.rag_node import run_rag_node
@@ -403,6 +404,97 @@ async def _run_transfer_to_agent(ctx, node):
     }
 
 
+async def _apply_lead_fields(customer, fields: dict, *, overwrite: bool) -> bool:
+    """Atualiza os campos do contato com os valores extraidos.
+
+    Nunca sobrescreve um campo preenchido quando overwrite=False e nunca apaga
+    um valor existente com vazio.
+    """
+    changed = False
+    for key in ("name", "email", "company", "city", "notes"):
+        val = fields.get(key)
+        if not val:
+            continue
+        current = getattr(customer, key, None)
+        if not current or overwrite:
+            if current != val:
+                setattr(customer, key, val)
+                changed = True
+    return changed
+
+
+async def _run_capture_lead(ctx, node):
+    """Extrai dados comerciais da conversa com IA e atualiza o contato (lead)."""
+    cfg = node.get("data", {})
+    instruction = cfg.get("instruction", "") or ""
+    overwrite = str(cfg.get("overwrite", "on")) not in ("", "off", "false", "False")
+
+    history = await ctx.load_history(force=True)
+    if not history and ctx.data.get("message", {}).get("text"):
+        history = [{"role": "user", "content": ctx.data["message"]["text"]}]
+
+    empty_fields = {"name": "", "email": "", "phone": "", "company": "", "city": "", "notes": ""}
+
+    if ctx.dry_run:
+        ctx.log("Teste: extracao de lead simulada; nenhum dado foi salvo no contato.")
+        return {"outputs": {"lead": empty_fields, "saved": False, "simulated": True}}
+
+    extracted = await ctx.extract_structured(instruction=instruction, history=history)
+    fields = {}
+    for key in ("name", "email", "phone", "company", "city", "notes"):
+        fields[key] = str(extracted.get(key) or "").strip()
+
+    ctx.data["lead"] = fields
+
+    customer = None
+    conv_id = ctx.data.get("conversation_id") or (ctx.data.get("conversation") or {}).get("id")
+    if conv_id:
+        try:
+            conv_id = int(conv_id)
+        except (TypeError, ValueError):
+            conv_id = None
+    if conv_id:
+        conv = (
+            ctx.db.query(Conversation)
+            .filter(Conversation.id == conv_id, Conversation.company_id == ctx.company_id)
+            .first()
+        )
+        if conv:
+            customer = (
+                ctx.db.query(Customer)
+                .filter(Customer.id == conv.customer_id, Customer.company_id == ctx.company_id)
+                .first()
+            )
+    if not customer:
+        phone = str(ctx.data.get("phone") or ctx.data.get("customer") or "").strip()
+        if phone:
+            customer = (
+                ctx.db.query(Customer)
+                .filter(Customer.company_id == ctx.company_id, Customer.phone == phone)
+                .first()
+            )
+
+    saved = False
+    if customer:
+        changed = await _apply_lead_fields(customer, fields, overwrite=overwrite)
+        ctx.db.commit()
+        saved = changed
+        ctx.log(
+            f"Lead atualizado: nome='{customer.name}' email='{customer.email}' "
+            f"empresa='{customer.company}' cidade='{customer.city}'"
+        )
+    else:
+        ctx.log("Nenhum contato encontrado no contexto; dados extraidos nao foram persistidos.")
+
+    return {
+        "outputs": {
+            "lead": fields,
+            "saved": saved,
+            "customer_id": customer.id if customer else None,
+        }
+    }
+
+
 async def _run_transfer_to_department(ctx, node):
     """Transfere a conversa para um setor especifico."""
     cfg = node.get("data", {})
@@ -551,6 +643,15 @@ NODE_TYPES: dict[str, dict] = {
             [{"key": "department_id", "label": "Setor", "type": "select_department",
               "requires_explicit_value": True,
               "help": "Selecione o setor para onde a conversa sera encaminhada."}]),
+    },
+    "capture_lead": {
+        "type": "capture_lead",
+        **_make_node("Capturar lead", "atendimento", "Extrai dados do cliente da conversa com IA e atualiza o contato automaticamente.", [], _run_capture_lead,
+            [{"key": "overwrite", "label": "Atualizar dados ja preenchidos", "type": "toggle", "default": "on",
+              "help": "Padrao: ligado. Atualiza nome, email, telefone, empresa, cidade e notas sempre que a IA encontrar um valor novo. Desligue para preencher apenas campos vazios."},
+             {"key": "instruction", "label": "Instrucoes extras (opcional)", "type": "textarea", "default": "",
+              "placeholder": "Ex: capture tambem o produto de interesse e o orcamento estimado.",
+              "help": "Padrao: extrai nome, email, telefone, empresa, cidade e notas. Adicione instrucoes para refinar a extracao deste fluxo."}]),
     },
     "ai": {
         "type": "ai",

@@ -22,6 +22,7 @@
 | Aggregate | `aggregate` | Junta itens em um resultado |
 | Schedule | `schedule` | Trigger por cron |
 | Executar Workflow | `execute_workflow` | Chama sub-workflow |
+| Capturar lead | `capture_lead` | Extrai dados do cliente da conversa com IA e atualiza o contato |
 
 ## Configuracao padrao no editor
 
@@ -136,6 +137,17 @@ no proprio campo, sem inventar um destino.
 ### code
 - **Status:** indisponivel para execucao e para novos fluxos. O registro e mantido apenas para que workflows legados possam ser visualizados e corrigidos.
 - **Motivo:** `exec` em Python nao e um isolamento de seguranca suficiente. A reintroducao depende de sandbox isolado, limites de CPU/memoria e auditoria.
+
+### capture_lead
+- **Categoria:** atendimento
+- **Entrada:** Qualquer
+- **Saida:** `lead` (dict com name/email/phone/company/city/notes), `saved` (bool), `customer_id`
+- **Dados:**
+  - `data.overwrite`: "on"/"off" (default "on"). "off" preenche apenas campos vazios.
+  - `data.instruction`: instrucoes extras para a extracao (opcional)
+- **Comportamento:** Carrega o historico da conversa, chama o LLM pedindo um JSON estruturado (nome, email, telefone, empresa, cidade e notas) e atualiza o contato (Customer) da conversa quando encontrado. Em modo de teste (`dry_run`) apenas simula e salva nada. Os dados extraidos ficam no contexto em `data.lead`.
+- **Extracao:** usa o modo `response_format=json_object` quando o provedor suporta; caso contrario, repete sem o modo e usa um parser tolerante de JSON. Nada e salvo se a conversa nao tiver mensagens ou o contato nao for encontrado.
+- **Requer:** Configuracao de IA da empresa.
 
 ## Error Handling
 

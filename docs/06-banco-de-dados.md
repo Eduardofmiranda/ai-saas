@@ -85,6 +85,14 @@ extensao no Supabase e nao marque a revisao como aplicada manualmente.
 | company_id | Integer | FK -> companies.id, NOT NULL |
 | name | String | |
 | phone | String | NOT NULL |
+| email | String | `0011_customer_lead_fields` |
+| company | String | idem |
+| city | String | idem |
+| notes | Text | idem |
+
+Os campos `email`, `company`, `city` e `notes` sao preenchidos pelo node
+`capture_lead` (ver 09-nodes.md). Colunas adicionadas na migration
+`0011_customer_lead_fields`.
 
 ### conversations
 | Coluna | Tipo | Constraints |
