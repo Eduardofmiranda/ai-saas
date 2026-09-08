@@ -219,7 +219,7 @@ export default function Agenda() {
                 Quando ativa, a IA usa a agenda para consultar disponibilidade e criar, alterar e cancelar agendamentos pelo WhatsApp.
               </p>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "flex-end" }}>
               <label className="toggle">
                 <input
                   type="checkbox"
