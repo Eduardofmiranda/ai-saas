@@ -4,6 +4,8 @@ As rotas deste módulo nunca são protegidas por ``owner``/``admin`` de empresa.
 """
 from __future__ import annotations
 
+import secrets
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -145,6 +147,41 @@ def list_platform_users(
         }
         for user, company_name in rows
     ]
+
+
+class UserPasswordResetResponse(BaseModel):
+    user_id: int
+    name: str
+    message: str
+    temporary_password: str
+
+
+@router.post("/users/{user_id}/reset-password", response_model=UserPasswordResetResponse)
+def reset_user_password(
+    user_id: int,
+    _: User = Depends(get_current_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """Gera uma senha provisoria e redefine a senha do usuario (operador da plataforma).
+
+    A senha provisoria e retornada uma unica vez nesta resposta. Nao e enviada
+    por email nem gravada em log: o operador deve repassa-la diretamente ao
+    usuario, que devera troca-la no /conta.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario nao encontrado")
+
+    temporary_password = secrets.token_urlsafe(12)
+    user.set_password(temporary_password)
+    db.commit()
+
+    return {
+        "user_id": user.id,
+        "name": user.name,
+        "message": f"Senha de {user.name} redefinida com sucesso.",
+        "temporary_password": temporary_password,
+    }
 
 
 @router.get("/providers")

@@ -220,3 +220,19 @@ chaves, prompts ou conteúdo de conversas.
 | GET | `/platform-admin/providers` | Estado público de cada provedor suportado |
 | PUT | `/platform-admin/providers/{provider}` | Cadastra/atualiza modelo, URL, chave cifrada e disponibilidade |
 | POST | `/platform-admin/providers/deepseek/balance` | Consulta saldo oficial do DeepSeek, sem expor a chave |
+| GET | `/platform-admin/user-ai-config` | Lista políticas de IA de todos os usuários |
+| GET | `/platform-admin/user-ai-config/{user_id}` | Política de IA de um usuário específico |
+| PUT | `/platform-admin/user-ai-config/{user_id}` | Cria/atualiza a política de IA de um usuário |
+| GET | `/platform-admin/errors` | Execuções com erro (paginado; filtros `company_id`/`workflow_id`) |
+| DELETE | `/platform-admin/errors` | Remove todas as execuções com erro |
+| POST | `/platform-admin/users/{user_id}/reset-password` | Gera senha provisória do usuário (retornada **uma única vez**) |
+
+### Reset de senha pelo operador
+
+- `POST /platform-admin/users/{user_id}/reset-password` (JWT de operador global).
+- Gera uma senha provisória com `secrets.token_urlsafe(12)`, define o hash no
+  `users.password_hash` e **retorna nessa única resposta**: `{ user_id, name, message, temporary_password }`.
+- A senha não é enviada por email nem gravada em log. O operador deve repassá-la
+  ao usuário, que troca no `/conta`.
+- Sem revogação de sessões ativas (o sistema não versiona tokens); o efeito é
+  imediato apenas para **novos logins**.

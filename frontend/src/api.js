@@ -105,6 +105,7 @@ export const api = {
   // Administração global da plataforma (somente operador autorizado)
   getPlatformOverview: () => request("GET", "/platform-admin/overview"),
   getPlatformUsers: () => request("GET", "/platform-admin/users"),
+  resetUserPassword: (userId) => request("POST", `/platform-admin/users/${userId}/reset-password`),
   getPlatformProviders: () => request("GET", "/platform-admin/providers"),
   updatePlatformProvider: (provider, body) => request("PUT", `/platform-admin/providers/${provider}`, body),
   getPlatformProviderBalance: (provider) => request("POST", `/platform-admin/providers/${provider}/balance`, {}),

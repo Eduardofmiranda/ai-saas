@@ -46,6 +46,11 @@ export default function PlatformAdmin() {
   const [confirmClearErrors, setConfirmClearErrors] = useState(false);
   const ERRORS_PAGE = 20;
   const [tab, setTab] = useState("overview");
+  // Redefinicao de senha (operador)
+  const [resetTarget, setResetTarget] = useState(null);
+  const [resetResult, setResetResult] = useState(null);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   async function load() {
     setError("");
@@ -73,6 +78,9 @@ export default function PlatformAdmin() {
       if (e.key === "Escape") {
         setEditingUser(null);
         setConfirmClearErrors(false);
+        setResetTarget(null);
+        setResetResult(null);
+        setCopied(false);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -172,6 +180,47 @@ export default function PlatformAdmin() {
       setError(err.message);
     } finally {
       setErrorsLoading(false);
+    }
+  }
+
+  // --- Redefinicao de senha de usuario ---
+  function openResetPassword(user) {
+    setResetTarget(user);
+    setResetResult(null);
+    setCopied(false);
+    setError("");
+  }
+
+  function closeResetModal() {
+    if (resetLoading) return;
+    setResetTarget(null);
+    setResetResult(null);
+    setCopied(false);
+  }
+
+  async function generateNewPassword() {
+    if (!resetTarget || resetLoading) return;
+    setResetLoading(true);
+    setError("");
+    try {
+      const res = await api.resetUserPassword(resetTarget.id);
+      setResetResult(res);
+      setMessage("");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
+  async function copyTemporaryPassword() {
+    if (!resetResult?.temporary_password) return;
+    try {
+      await navigator.clipboard.writeText(resetResult.temporary_password);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      setError("Não foi possível copiar. Selecione a senha manualmente.");
     }
   }
 
@@ -388,6 +437,9 @@ export default function PlatformAdmin() {
                       <strong>{user.company_name}</strong>
                       <span className={`role-chip role-${user.role}`}>{ROLE_LABELS[user.role] || user.role}</span>
                       {user.is_platform_admin && <span className="role-chip role-platform">Plataforma</span>}
+                      <button className="btn ghost small" onClick={() => openResetPassword(user)}>
+                        Redefinir senha
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -484,6 +536,60 @@ export default function PlatformAdmin() {
                 {errorsLoading ? "Removendo..." : "Apagar tudo"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {resetTarget && (
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) closeResetModal(); }}>
+          <div className="modal" role="dialog" aria-modal="true">
+            <div className="modal-header">
+              <div className="modal-title">
+                {resetResult ? "Senha redefinida" : "Redefinir senha"}
+              </div>
+              <button className="modal-close" onClick={closeResetModal} aria-label="Fechar">✕</button>
+            </div>
+            {resetResult ? (
+              <>
+                <div className="modal-body">
+                  <p style={{ margin: 0, lineHeight: 1.5 }}>
+                    A senha provisória de <strong>{resetResult.name}</strong> é:
+                  </p>
+                  <div className="temp-password-box">
+                    <code>{resetResult.temporary_password}</code>
+                    <button className="btn ghost small" onClick={copyTemporaryPassword}>
+                      {copied ? "Copiada!" : "Copiar"}
+                    </button>
+                  </div>
+                  <p className="muted" style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+                    Esta senha é exibida apenas agora. Envie ao usuário com segurança —
+                    ele pode trocá-la em <strong>Conta</strong> após o login.
+                  </p>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn primary" onClick={closeResetModal}>Fechar</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="modal-body">
+                  <p style={{ margin: 0, lineHeight: 1.5 }}>
+                    Gerar uma nova senha provisória para <strong>{resetTarget.name}</strong>{" "}
+                    ({resetTarget.email})?
+                  </p>
+                  <p className="muted" style={{ margin: "6px 0 0", fontSize: 13 }}>
+                    A senha atual deixará de funcionar imediatamente para o acesso
+                    pelo login.
+                  </p>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn ghost" onClick={closeResetModal}>Cancelar</button>
+                  <button className="btn primary" onClick={generateNewPassword} disabled={resetLoading}>
+                    {resetLoading ? "Gerando..." : "Gerar nova senha"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

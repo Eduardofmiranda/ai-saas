@@ -432,6 +432,7 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [x] **PRIORIDADE** — Horario de atendimento por empresa (marco 8.4): node `check_business_hours`, gate no conversation_service, template `verificacao_horario`, UI em WhatsApp com dias/fuso/mensagem.
 - [x] **PRIORIDADE** — Frontend profissional: pagina **Setores** redesenhadada (stats, busca, tabela, modais de criar/editar/excluir sem confirm nativo) + design system em `index.css` (primitivos `.card`, `.stack`, `.input`, `.table`, `.stat-grid`, `.alert`, `.page-header`), header sticky com avatar/role chip, KPIs com icones, botoes consistentes (`.btn.block`), Account em card.
 - [x] **PRIORIDADE** — **Administração da Plataforma** redesenhada: tabs estilizadas, KPIs com icones, grid de provedores com cards, politician chips para provedores, tabela de erros paginada (tema escuro), modal de confirmação para limpar erros, auto-load da aba erros.
+- [x] **PRIORIDADE** — **Reset de senha pelo operador**: `POST /platform-admin/users/{id}/reset-password` gera senha provisória (retornada uma única vez), com modal + botão "Copiar" na página Plataforma. Limitacao documentada: sem revogação de sessões ativas (novos logins usam a nova senha).
 - [ ] **PROXIMO** — Midia WhatsApp: webhook processa imagens/audio/video/docs, download via Evolution
 - [ ] **PROXIMO** — Upload de arquivos no Knowledge Base (PDF, DOCX, TXT/CSV/Markdown)
 - [ ] **PROXIMO** — Paginacao e filtros em todas as listas

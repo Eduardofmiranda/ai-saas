@@ -73,6 +73,9 @@ Pagina: `frontend/src/pages/Departments.jsx`. Rota `/setores` em `App.jsx`.
   usuários listados com avatar, email, política e empresa.
 - **Usuários de todas as empresas**: lista com nome, email, empresa, papel (Dono/Admin/Atendente)
   e badge "Plataforma" para operadores.
+- **Redefinir senha**: botão por usuário abre modal que gera uma **senha provisória**
+  (`POST /platform-admin/users/{id}/reset-password`), exibida uma única vez com botão
+  "Copiar" — sem `prompt`/`confirm` nativos.
 - **Painel de Erros**: tabela paginada com empresa, workflow, erro e data; limpar todos com
   **modal de confirmação** (sem `confirm()` nativo).
 - Auto-load da aba "Erros" ao entrar nela.
