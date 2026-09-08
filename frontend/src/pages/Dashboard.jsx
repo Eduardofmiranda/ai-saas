@@ -47,14 +47,14 @@ export default function Dashboard() {
   const isEmpty = (data?.workflows_total || 0) === 0;
 
   const cards = [
-    ["Fluxos", data?.workflows_total || 0, "workflows", `/fluxos`],
-    ["Fluxos ativos", data?.workflows_active || 0, "ativos", null],
+    ["Fluxos", data?.workflows_total || 0, "workflows", `/fluxos`, "⚙️", ""],
+    ["Fluxos ativos", data?.workflows_active || 0, "ativos", null, "▶️", "kpi-green"],
     ["Conversas", data?.conversations || 0,
       (data?.pending_conversations || 0) > 0 ? `${data.pending_conversations} aguardando` : "abertas",
-      `/conversas`],
-    ["Clientes", data?.customers || 0, "cadastrados", null],
-    ["Mensagens", data?.messages || 0, "trocadas", null],
-    ["Execuções", data?.executions_total || 0, "totais", null],
+      `/conversas`, "💬", "kpi-amber"],
+    ["Clientes", data?.customers || 0, "cadastrados", null, "👤", ""],
+    ["Mensagens", data?.messages || 0, "trocadas", null, "✉️", "kpi-green"],
+    ["Execuções", data?.executions_total || 0, "totais", null, "🔄", ""],
   ];
 
   const execOk = data?.executions_success || 0;
@@ -116,16 +116,19 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="kpi-grid">
-            {cards.map(([label, value, sub, to]) => (
+            {cards.map(([label, value, sub, to, icon, tone]) => (
               <div
                 key={label}
-                className="kpi-card"
+                className={`kpi-card ${tone || ""}`}
                 onClick={to ? () => navigate(to) : undefined}
                 style={to ? { cursor: "pointer" } : undefined}
               >
-                <div className="kpi-value">{value}</div>
-                <div className="kpi-label">{label}</div>
-                <div className="kpi-sub">{sub}</div>
+                <span className="kpi-icon">{icon}</span>
+                <div className="kpi-body">
+                  <div className="kpi-value">{value}</div>
+                  <div className="kpi-label">{label}</div>
+                  <div className="kpi-sub">{sub}</div>
+                </div>
               </div>
             ))}
           </div>

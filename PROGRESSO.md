@@ -409,7 +409,7 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 4. ~~**Sem handoff humano**~~ ✅ concluido (Fase 8.3)
 5. **Sem paginacao** — todas as listas retornam `.all()`
 6. **Sem HTTPS** — necessario configurar Caddy/nginx/Tunnel
-7. **Sem business hours** — atendimento 24h sem configuracao
+7. ~~**Sem business hours**~~ ✅ concluido (horario de atendimento por empresa, marco 8.4) — atendimento 24h configurável
 8. **Sem audit log** — nao registra quem fez o que
 9. **pgvector ausente** — busca vetorial em memoria (O(N))
 10. **Sem WebSocket** — sem atualizacao em tempo real
@@ -429,6 +429,8 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 
 - [x] **PRIORIDADE** — Politica de IA por usuario: superadmin controla provedores/chaves/modelos por usuario; backend valida; usuario so ve config efetiva
 - [x] **PRIORIDADE** — Painel de erros no superadmin (tabela, paginacao, limpar)
+- [x] **PRIORIDADE** — Horario de atendimento por empresa (marco 8.4): node `check_business_hours`, gate no conversation_service, template `verificacao_horario`, UI em WhatsApp com dias/fuso/mensagem.
+- [x] **PRIORIDADE** — Frontend profissional: pagina **Setores** redesenhadada (stats, busca, tabela, modais de criar/editar/excluir sem confirm nativo) + design system em `index.css` (primitivos `.card`, `.stack`, `.input`, `.table`, `.stat-grid`, `.alert`, `.page-header`), header sticky com avatar/role chip, KPIs com icones, botoes consistentes (`.btn.block`), Account em card.
 - [ ] **PROXIMO** — Midia WhatsApp: webhook processa imagens/audio/video/docs, download via Evolution
 - [ ] **PROXIMO** — Upload de arquivos no Knowledge Base (PDF, DOCX, TXT/CSV/Markdown)
 - [ ] **PROXIMO** — Paginacao e filtros em todas as listas

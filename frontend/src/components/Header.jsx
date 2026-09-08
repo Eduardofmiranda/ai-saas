@@ -41,8 +41,9 @@ export default function Header({ children }) {
       )}
 
       <div className="topbar-right">
-        <span className="user">
-          {user?.name || user?.email}
+        <span className="user" title={user?.email || user?.name}>
+          <span className="user-avatar">{(user?.name || user?.email || "?").charAt(0).toUpperCase()}</span>
+          <span className="user-name">{user?.name || user?.email}</span>
           {user?.is_platform_admin && <span className="role-chip role-platform">Plataforma</span>}
           {user?.role && (
             <span className={`role-chip role-${user.role}`}>
@@ -50,8 +51,10 @@ export default function Header({ children }) {
             </span>
           )}
         </span>
-        <button className="btn ghost" onClick={() => navigate("/conta")}>Senha</button>
-        <button className="btn ghost" onClick={logout}>Sair</button>
+        <div className="btn-group">
+          <button className="btn ghost small" onClick={() => navigate("/conta")}>Senha</button>
+          <button className="btn ghost small" onClick={logout}>Sair</button>
+        </div>
       </div>
     </header>
   );

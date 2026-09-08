@@ -82,7 +82,7 @@ export default function Login() {
           ))}
           {info && <div className="notice" style={{ marginBottom: 12 }}>{info}</div>}
           {error && <div className="error">{error}</div>}
-          <button className="btn primary" disabled={loading}>
+          <button className="btn primary block" disabled={loading}>
             {loading
               ? "Aguarde..."
               : mode === "login"

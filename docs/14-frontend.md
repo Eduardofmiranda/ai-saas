@@ -26,6 +26,17 @@
 - Rota protegida
 - Formulario para alterar a senha (`POST /auth/change-password`)
 
+### `/setores`
+- Rota protegida
+- Lista os setores da empresa (`GET /departments/`) em uma tabela com busca por nome/descricao.
+- Card de resumo (total de setores, com descricao e disponiveis no encaminhamento).
+- Criar/editar via **modal** (`POST /departments/` e `PATCH /departments/{id}`) com validacao
+  (nome obrigatorio) e feedback de sucesso/erro.
+- Exclusao com **confirmacao por modal** (sem `confirm()` nativo).
+- Estados de loading, vazio (CTA de criar) e busca sem resultado.
+
+Pagina: `frontend/src/pages/Departments.jsx`. Rota `/setores` em `App.jsx`.
+
 ### `/` (Dashboard)
 - Metricas da empresa (KPIs) e status WhatsApp/Evolution.
 - Se existem conversas pendentes (`pending_conversations > 0`), exibe um **banner de alerta**
@@ -88,31 +99,44 @@ src/
 ├── api.js               # API client (fetch wrapper, prefixo /api)
 ├── index.css            # Estilos globais
 ├── components/
-│   └── Header.jsx       # Navegacao do topo (Painel, Fluxos, Conversas, IA, ...)
+│   ├── Header.jsx            # Navegacao do topo (sticky, avatar + role chip)
+│   ├── BusinessHoursPanel.jsx# Horario de atendimento (painel do WhatsApp)
+│   └── KnowledgeSummaryCard.jsx
 ├── context/
 │   └── AuthContext.jsx  # Context de autenticacao
 └── pages/
-    ├── Login.jsx        # Login
-    ├── Dashboard.jsx    # Painel inicial (KPIs + status WhatsApp)
-    ├── Home.jsx         # Lista de workflows (Fluxos)
-    ├── Conversations.jsx# Inbox 3 paineis
-    ├── Editor.jsx       # Editor visual de workflows
-    ├── AI.jsx           # Configuracao/manage de IA
-    ├── Knowledge.jsx    # Base de conhecimento (RAG)
-    ├── Admin.jsx        # Administracao / usuarios
-    └── WhatsApp.jsx     # Conexao WhatsApp/Evolution
+    ├── Login.jsx            # Login
+    ├── ResetPassword.jsx    # Redefinir senha (rota publica)
+    ├── Dashboard.jsx        # Painel inicial (KPIs + status WhatsApp)
+    ├── Home.jsx             # Lista de workflows (Fluxos)
+    ├── Conversations.jsx    # Inbox 3 paineis
+    ├── Leads.jsx            # Leads / clientes
+    ├── Editor.jsx           # Editor visual de workflows
+    ├── AI.jsx               # Configuracao/manage de IA
+    ├── Knowledge.jsx        # Base de conhecimento (RAG)
+    ├── Departments.jsx      # Setores da empresa
+    ├── Admin.jsx            # Administracao / usuarios
+    ├── PlatformAdmin.jsx    # Admin de plataforma (providers/usuarios/erros)
+    ├── Account.jsx          # Minha conta (alterar senha)
+    └── WhatsApp.jsx         # Conexao WhatsApp/Evolution
 ```
 
 ## API Client (`api.js`)
 
 ```javascript
-const BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
-const BASE_URL = `${BASE}/api`;
+// Em PRODUCAO (nginx): prefixo relativo "/api" — o nginx descarta o prefixo
+// (`location /api/ { proxy_pass http://backend:8000/; }`). O backend NAO conhece
+// o prefixo. Separacao que evita "Not authenticated" em rotas do SPA.
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 // Interceptors:
 // - Adiciona Authorization: Bearer <token>
 // - Trata 401 → limpa token + redireciona para /login
 ```
+
+Regra fixa: **toda chamada de API** usa `API_BASE + caminho` via `api.js` — nunca
+`fetch()` com caminho solto. Em dev o Vite proxy replica o comportamento do nginx
+(remove `/api` e repassa ao backend).
 
 ## Editor Visual
 
@@ -144,8 +168,18 @@ Cada tipo de node tem:
 
 ## CSS
 
-- Layout: `100dvh`, flex column
+- Tema escuro centralizado em variaveis CSS (`:root`): `--bg`, `--panel`, `--panel2`,
+  `--border`, `--text`, `--muted`, `--accent`, `--accent2`, `--green`, `--red`.
+- **Design system (primitivos)** em `index.css` para consistencia entre paginas:
+  `.page-header`, `.card`, `.stack`, `.input`, `.table`, `.stat-grid`/`.stat-card`,
+  `.toolbar`, `.search-box`, `.count-pill`, `.avatar-sm`, `.empty-state`, `.alert`
+  (`alert-error`/`alert-success`/`alert-info`).
+- Botoes: `.btn` base; variantes `.primary`, `.secondary`, `.ghost`, `.danger`,
+  `.solid-danger`; tamanhos `.small`; `.block` para largura total em formularios
+  (login, conta, reset de senha).
+- Header `.topbar` sticky com blur; `.user` mostra avatar com inicial + role chip.
+- Topbar, nav ativo, cards (`wf-card`/`kpi-card`) com hover/highlight suave.
+- Scrollbar customizada (webkit).
 - Login: card centralizado
-- Home: barra lateral + area de conteudo
+- Home: grade de cards de fluxos
 - Editor: paleta + canvas + inspector
-- Cores: fundo escuro (`#111827`), cards (`#1f2937`)

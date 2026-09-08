@@ -45,7 +45,7 @@ export default function ResetPassword() {
         ) : done ? (
           <>
             <p className="muted">Senha redefinida com sucesso. Faca login com a nova senha.</p>
-            <button className="btn primary" onClick={() => navigate("/login")}>
+            <button className="btn primary block" onClick={() => navigate("/login")}>
               Ir para o login
             </button>
           </>
@@ -70,7 +70,7 @@ export default function ResetPassword() {
               />
             </label>
             {error && <div className="error">{error}</div>}
-            <button className="btn primary" disabled={loading}>
+            <button className="btn primary block" disabled={loading}>
               {loading ? "Aguarde..." : "Redefinir senha"}
             </button>
           </form>
