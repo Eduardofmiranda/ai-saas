@@ -28,6 +28,7 @@ def test_unavailable_templates_are_not_offered_to_users():
         "faq_com_rag",
         "captura_lead",
         "verificacao_horario",
+        "secretaria_agenda",
     } <= template_ids
 
 
@@ -70,3 +71,24 @@ def test_lead_template_collects_data_with_capture_lead_node():
 
     capture_node = next(n for n in template["data"]["nodes"] if n["id"] == "capture-1")
     assert capture_node["data"]["overwrite"] == "on"
+
+
+def test_agenda_template_sends_to_current_customer():
+    template = next(t for t in TEMPLATES if t["id"] == "secretaria_agenda")
+    send_node = next(node for node in template["data"]["nodes"] if node["id"] == "send-1")
+    assert send_node["data"]["phone"] == "{{ data.phone }}"
+
+
+def test_agenda_template_uses_ai_node_and_flow():
+    template = next(t for t in TEMPLATES if t["id"] == "secretaria_agenda")
+    node_types = {node["id"]: node["type"] for node in template["data"]["nodes"]}
+
+    assert node_types["ai-1"] == "ai"
+    assert node_types["send-1"] == "whatsapp_send"
+    assert node_types["wait-1"] == "wait_until_message"
+
+    edges = template["data"]["edges"]
+    order = [(e["source"], e["target"]) for e in edges]
+    assert ("trigger-1", "ai-1") in order
+    assert ("ai-1", "send-1") in order
+    assert ("send-1", "wait-1") in order

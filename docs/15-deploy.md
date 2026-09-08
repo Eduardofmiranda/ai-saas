@@ -66,6 +66,30 @@ Para `ENABLE_PGVECTOR=true`, `alembic current` deve mostrar
 extensao, nao force o deploy: habilite `vector` no Supabase ou volte a
 `ENABLE_PGVECTOR=false` antes de recriar o backend.
 
+### Agenda 8.6b — validacao extra apos atualizar
+
+A Agenda 8.6b (confirmação 2 passos + lembretes) introduz a migration
+`0014_agenda_confirmation` (aplicada pelo `alembic upgrade head` do backend) e
+duas tarefas periodicas novas.
+
+```bash
+# O alembic current deve estar em 0014_agenda_confirmation (head) apos o deploy
+docker compose exec backend alembic current
+
+# Colunas novas existentes (confirma + lembrete)
+docker compose exec backend python -c "
+from app.database.database import engine
+from sqlalchemy import text
+sql = \"select column_name from information_schema.columns where table_name='agenda_config' and column_name in ('confirmation_required','reminders_enabled','whatsapp_number')\"
+print([r[0] for r in engine.connect().execute(text(sql)).all()])"
+
+# beat com as novas tarefas? (listar o schedule no container beat)
+docker compose exec celery-beat celery -A app.tasks.celery_app inspect registered 2>/dev/null | Select-String 'agenda'
+```
+
+Se o beat nao registrar as tarefas, recrie o container: `docker compose up -d
+--no-deps --force-recreate celery-beat` (restart nao reaplica o schedule).
+
 ## Portas
 
 | Porta | Servico |

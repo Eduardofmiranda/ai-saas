@@ -44,6 +44,20 @@ celery_app = Celery(
 - **Agendamento**: Diariamente as 03:00 (cron)
 - **Funcao**: Remove execucoes com mais de 30 dias
 
+### expire_unconfirmed_appointments
+- **Agendamento (beat)**: a cada 30 minutos
+- **Funcao**: Cancela compromissos da Agenda com status `awaiting_confirmation`
+  sem resposta dentro de `confirmation_expiry_hours` (registra evento
+  `confirmation_expired`). Depende de `agenda_config` do arquivo
+  `app/tasks/agenda_tasks.py`.
+
+### send_agenda_reminders
+- **Agendamento (beat)**: a cada 15 minutos
+- **Funcao**: Envia `evolution.send_text` com `reminder_message` aos pedidos
+  `confirmed`/`scheduled` nas janelas de `reminder_hours` (deduplicado por evento
+  `reminder_sent`). Ativo apenas quando `agenda_config.enabled`,
+  `reminders_enabled` e `whatsapp_number` estao preenchidos.
+
 ## Configuracoes Celery
 
 ```python

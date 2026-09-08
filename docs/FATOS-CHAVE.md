@@ -109,8 +109,13 @@
   `agenda_tools` ativado no pipeline E no no `ai` do Workflow Engine quando a
   agenda da empresa esta habilitada, pagina `/agenda` no painel, status
   `awaiting_confirmation`, pedido/processamento de confirmacao interceptado no
-  webhook e tasks Celery de expiracao/lembretes; faltam template e integracao
-  Google/Outlook (8.6c, planejada — ver docs/23-agenda-confirmacao-lembretes.md).
+  webhook, tasks Celery de expiracao/lembretes e template de workflow "Secretaria
+  IA (Agenda)"; integracao Google/Outlook (8.6c, planejada) fica para depois —
+  ver docs/23-agenda-confirmacao-lembretes.md).
+- Agenda fatia 4 concluida: template de workflow "Secretaria IA (Agenda)" em
+  `app/services/templates.py` (o no `ai` ativa as tools de agenda sozinho quando
+  `agenda_config.enabled`) + testes de contrato; docs de deploy/filas/banco/API
+  atualizados (migration `0014`, beat `agenda-*`).
 - Fase 9: intelligence & analytics.
 - Fase 10: escala & multi-canal.
 - Detalhes em `PROGRESSO.md`.

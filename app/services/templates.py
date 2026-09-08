@@ -238,6 +238,53 @@ TEMPLATES = [
         },
     },
     {
+        "id": "secretaria_agenda",
+        "name": "Secretaria IA (Agenda)",
+        "description": "Secretaria IA: verifica disponibilidade e cria/cancela agendamentos pela conversa. Requer a Agenda habilitada na configuracao.",
+        "category": "atendimento",
+        "data": {
+            "nodes": [
+                {
+                    "id": "trigger-1",
+                    "type": "trigger_message",
+                    "data": {"label": "WhatsApp"},
+                    "position": [250, 300],
+                },
+                {
+                    "id": "ai-1",
+                    "type": "ai",
+                    "data": {
+                        "label": "Secretaria IA",
+                        "prompt": "Voce e a Secretaria IA. Atenda o cliente de forma educada e objetiva. Identifique a intencao: agendar, consultar, remarcar ou cancelar um atendimento. Use obrigatoriamente as ferramentas da agenda disponiveis: verifique a disponibilidade antes de propor horario e confirme o horario escolhido antes de criar. Quando criar um agendamento, avise que o cliente precisa responder a confirmacao que sera enviada. Na resposta, use {nome} e {servico} quando aplicavel. Mantenha a conversa natural em portugues.",
+                        "history": "on",
+                    },
+                    "position": [500, 300],
+                },
+                {
+                    "id": "send-1",
+                    "type": "whatsapp_send",
+                    "data": {
+                        "label": "Enviar Resposta",
+                        "phone": "{{ data.phone }}",
+                        "text": "{{ data.ai_reply }}",
+                    },
+                    "position": [750, 300],
+                },
+                {
+                    "id": "wait-1",
+                    "type": "wait_until_message",
+                    "data": {"label": "Aguardar Proxima"},
+                    "position": [1000, 300],
+                },
+            ],
+            "edges": [
+                {"id": "e1", "source": "trigger-1", "target": "ai-1", "sourceHandle": "success"},
+                {"id": "e2", "source": "ai-1", "target": "send-1", "sourceHandle": "success"},
+                {"id": "e3", "source": "send-1", "target": "wait-1", "sourceHandle": "success"},
+            ],
+        },
+    },
+    {
         "id": "webhook_recebimento",
         "name": "Webhook de Recebimento",
         "description": "Recebe dados via webhook e processa com IA.",

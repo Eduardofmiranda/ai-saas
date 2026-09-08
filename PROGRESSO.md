@@ -194,8 +194,8 @@ Itens marcados acima sao locais: nao houve commit, push ou deploy nesta revisao.
 > criação e cancelamento via modal, e configuração (gestor). **Fase 8.6b (confirmação em 2
 > passos + lembretes) concluída**: status `awaiting_confirmation`, pedido/processamento de
 > confirmação (interceptado no webhook), expiração e lembretes via Celery Beat, migration
-> `0014` e novos campos de config.
-> Fatia 4 = template + docs/deploy.
+> `0014` e novos campos de config. **Fatia 4 concluída**: template de workflow
+> "Secretaria IA (Agenda)" + docs/deploy (15, 07, 23, FATOS-CHAVE).
 
 - [x] Criar módulo de Agenda por empresa para gerenciamento de compromissos e agendamentos
 - [x] Permitir que a Secretaria IA consulte a agenda da empresa e verifique disponibilidade de datas e horários (tool `consultar_agenda`/`verificar_disponibilidade` + rotas `/agenda/*`)
@@ -248,6 +248,10 @@ Itens marcados acima sao locais: nao houve commit, push ou deploy nesta revisao.
 **Concluído (integração/roadmap):**
 - [x] Permitir que a Agenda seja utilizada por diferentes agentes e workflows (o nó **ai** do Workflow Engine ativa as tools de agenda quando a agenda está ativa)
 - [x] Integrar a Agenda ao Workflow Engine (nó `ai` usa function calling de agenda da mesma forma que o pipeline de atendimento)
+
+**Concluído (Fatia 4 — template + docs/deploy):**
+- [x] Template de workflow "Secretaria IA (Agenda)" em `app/services/templates.py` (trigger message -> nó `ai` -> enviar -> aguardar; as tools de agenda ativam automaticamente com a agenda configurada) + testes de contrato em `tests/test_templates.py`
+- [x] Docs: `docs/23` (8.6b implementado / 8.6c planejado), `docs/07-redis-e-filas.md` (tasks beat de expiração e lembretes), `docs/15-deploy.md` (validação da migration `0014` e beat), `docs/10-api.md`, `docs/06-banco-de-dados.md`, `FATOS-CHAVE.md`
 
 ### 8.7 — Paginacao e Busca ✅
 - [x] Conversations: `skip`/`limit` com paginação server-side
