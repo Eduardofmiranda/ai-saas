@@ -1,18 +1,19 @@
-fastapi==0.115.12
+fastapi==0.141.1
+starlette==1.6.0
 uvicorn[standard]==0.34.2
 sqlalchemy==2.0.41
 psycopg2-binary==2.9.10
-python-dotenv==1.1.0
+python-dotenv==1.2.3
 pydantic==2.11.3
 pydantic[email]==2.11.3
 
 # Autenticacao (JWT)
-python-jose[cryptography]==3.4.0
+PyJWT==2.13.0
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.20
+python-multipart==0.0.32
 
 # Criptografia de campos sensiveis (chaves por empresa)
-cryptography==45.0.4
+cryptography==50.0.1
 
 # HTTP client (Evolution API + LLM)
 httpx==0.28.1
@@ -25,10 +26,10 @@ celery==5.5.2
 redis==6.2.0
 
 # Rate limiting
-slowapi==0.1.9
+slowapi==0.1.10
 
 # Knowledge Base — parsing de arquivos
-pypdf==5.1.0
+pypdf==6.18.0
 python-docx==1.1.2
 
 # Export de leads

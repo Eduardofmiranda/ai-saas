@@ -33,7 +33,7 @@
 | Workers | Celery | — |
 | Agendador Celery | RedBeat | — |
 | Migrations | Alembic | — |
-| Autenticacao | JWT (python-jose) + bcrypt | — |
+| Autenticacao | JWT (PyJWT) + bcrypt | — |
 | Criptografia | cryptography (Fernet/AES) | — |
 | HTTP Client | httpx | — |
 | Containerizacao | Docker + Docker Compose | — |

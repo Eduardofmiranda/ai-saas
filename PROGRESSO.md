@@ -1,10 +1,26 @@
 # Progresso — FlowAI (AI SaaS - Atendimento WhatsApp)
 
+## Atualizacao de dependencias vulneraveis — 08/09/2026
+
+- [x] `pip-audit -r requirements.txt`: **75 vulnerabilidades em 7 pacotes → 0** ("No known vulnerabilities found").
+- [x] Upgrades: fastapi 0.115.12→0.141.1, starlette 0.46.2→1.6.0 (pin explicito), python-dotenv 1.1.0→1.2.3,
+      python-multipart 0.0.20→0.0.32, cryptography 45.0.4→50.0.1, pypdf 5.1.0→6.18.0, slowapi 0.1.9→0.1.10.
+- [x] **Substituicao `python-jose` → `PyJWT`** (2.13.0): remove `ecdsa` (CVE-2024-23342/Minerva, sem fix publicado) e
+      `pyasn1` da arvore; JWT continua HS256 (utilitario trocado em `app/services/security.py`).
+- [x] Regressao backend: **298 passed** (fastapi 0.141.1 + starlette 1.6.0 + PyJWT + slowapi 0.1.10).
+- [x] Docs atualizados: `PROGRESSO.md`, `README.md`, `docs/00-indice-tecnico.md`, `SEGURANCA-2026-09-08-AGENDA.md`.
+- [ ] Validar comportamento real na VPS apos deploy (autenticacao/login e upload de PDF) — item manual.
+
+> Use este documento para acompanhar onde estamos. Marque `[x]` quando concluido.
+> Documento de trabalho (nao substitui `docs/` tecnico — este e o **roadmap/estado**).
+
+---
+
 ## Revisao de seguranca da agenda — 08/09/2026
 
 - [x] Revisados de34e14, 800a142 e 997e2bc; isolamento de clientes nas tools corrigido localmente.
 - [x] Regressoes locais: escopo por remetente/empresa, workflow dry-run, erros LLM, CI/Docker.
-- [ ] Atualizar dependencias Python apontadas pelo pip-audit e repetir validacao.
+- [x] Atualizar dependencias Python apontadas pelo pip-audit e repetir validacao (75→0; fatia acima).
 - [ ] Garantia transacional contra dupla reserva + testes concorrentes Postgres.
 - [ ] Confirmacao server-side para remarcar/cancelar; limites de abuso e permissoes granulares.
 - [ ] Concluir auditoria ampliada de sessoes, uploads, historico/segredos e infraestrutura.
@@ -25,7 +41,7 @@ Itens marcados acima sao locais: nao houve commit, push ou deploy nesta revisao.
 ---
 
 ## FASE 1 — Fundacao do Backend ✅
-- [x] Auth JWT (register/login, bcrypt, python-jose)
+- [x] Auth JWT (register/login, bcrypt, PyJWT)
 - [x] Config por empresa (GET/PATCH /config/)
 - [x] Adaptador multi-provedor de IA (groq/openai/deepseek/mistral/ollama/mock)
 - [x] Evolution API (WhatsApp) + webhook `POST /webhook/whatsapp/{company_id}`

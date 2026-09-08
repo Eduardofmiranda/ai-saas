@@ -6,7 +6,7 @@ e a própria Evolution API (WhatsApp). Troca de IA sem tocar em código (adapter
 ## Stack
 - **Backend:** FastAPI + Uvicorn + SQLAlchemy + Pydantic v2
 - **Frontend:** Vite + React 19 + React Flow (@xyflow/react) + React Router
-- Autenticação JWT (bcrypt + python-jose)
+- Autenticação JWT (bcrypt + PyJWT)
 - Provedores de IA: groq (padrão) | openai | deepseek | mistral | ollama | mock
 - WhatsApp via Evolution API
 - **Motor de workflows visual (estilo n8n):** grafo JSON `{nodes, edges}` no campo `data`; execução assíncrona registrada em `executions`.

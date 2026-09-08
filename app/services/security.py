@@ -3,7 +3,8 @@ import sys
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 
 from app.config import get_secret
 
@@ -59,5 +60,5 @@ def decode_access_token(token: str) -> dict | None:
     algorithm = get_secret("ALGORITHM", "HS256")
     try:
         return jwt.decode(token, _SECRET_KEY, algorithms=[algorithm])
-    except JWTError:
+    except InvalidTokenError:
         return None

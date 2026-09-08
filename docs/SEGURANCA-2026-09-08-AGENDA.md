@@ -108,6 +108,11 @@ Producao continua usando Supabase para o banco do app; nao foi acessada.
   incluindo registros repetidos: python-dotenv, python-multipart, cryptography,
   pypdf, pyasn1, starlette e ecdsa. Resultado da resolucao de requirements,
   NAO inventario do container VPS. Nao equivalem a 75 exploracoes comprovadas.
+  **RESOLVIDO em 08/09/2026** (fatia dedicada): 75 -> 0. Upgrades
+  (fastapi 0.141.1, starlette 1.6.0 pinned, python-dotenv 1.2.3,
+  python-multipart 0.0.32, cryptography 50.0.1, pypdf 6.18.0, slowapi 0.1.10)
+  e troca de `python-jose` por `PyJWT` (remove `ecdsa`/`pyasn1`; JWT segue HS256).
+  Regressao: 298 passed. Ver PROGRESSO.md.
 - `bandit -r app`: 10 alertas (9 baixos, 1 medio), sem erros de analise.
   O medio e exec no node code, cuja execucao por run_node esta bloqueada.
   Tres alertas de senha sao os literais de tipo JWT access/refresh (falsos positivos).
@@ -119,9 +124,8 @@ Producao continua usando Supabase para o banco do app; nao foi acessada.
 
 ## Pendentes — nao tratar como concluido
 
-1. **Prioridade alta:** atualizar dependencias vulneraveis em fatia dedicada,
-   validando compatibilidade FastAPI/Starlette, parsers e criptografia. ecdsa
-   veio sem versao de correcao no scanner; avaliar alcance/alternativa, nao ignorar.
+1. ~~Atualizar dependencias vulneraveis~~ **CONCLUIDO 08/09/2026** (75->0; ver bloco de scanners acima e PROGRESSO.md).
+   Validacao manual na VPS apos deploy continua pendente (login/auth e upload de PDF).
 2. **Prioridade alta:** impedir dupla reserva concorrente com garantia transacional
    no Postgres/Supabase; leitura antes do INSERT nao oferece essa garantia.
    Requer desenho/migration com architect e teste concorrente em banco descartavel.

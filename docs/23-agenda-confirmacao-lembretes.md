@@ -108,4 +108,4 @@ Maior esforço; depende de decisões de produto antes de código.
 - `tests/test_agenda_pipeline.py` (2 testes de wiring do pipeline).
 - `tests/test_agenda_confirmation.py` (32 testes da 8.6b: parsing de resposta,
   envio/deduplicação do pedido, interceptação nos pipelines, expiração e lembretes).
-- Suite: 275 passed (08/09/2026).
+- Suite: 298 passed (08/09/2026, apos upgrade de dependencias).
