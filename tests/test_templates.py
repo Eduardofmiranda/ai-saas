@@ -22,9 +22,22 @@ def test_templates_normalize_positions_and_common_handles():
 def test_unavailable_templates_are_not_offered_to_users():
     template_ids = {template["id"] for template in get_templates()}
 
-    assert "verificacao_horario" not in template_ids
     assert "webhook_recebimento" not in template_ids
-    assert {"atendimento_basico", "faq_com_rag", "captura_lead"} <= template_ids
+    assert {
+        "atendimento_basico",
+        "faq_com_rag",
+        "captura_lead",
+        "verificacao_horario",
+    } <= template_ids
+
+
+def test_business_hours_template_uses_check_business_hours_node():
+    template = next(t for t in TEMPLATES if t["id"] == "verificacao_horario")
+    node_types = {node["id"]: node["type"] for node in template["data"]["nodes"]}
+    assert node_types["bh-1"] == "check_business_hours"
+    edges = template["data"]["edges"]
+    assert ("bh-1", "ai-1") in [(e["source"], e["target"]) for e in edges]
+    assert ("bh-1", "send-ofh-1") in [(e["source"], e["target"]) for e in edges]
 
 
 def test_template_trigger_type_matches_trigger_node():

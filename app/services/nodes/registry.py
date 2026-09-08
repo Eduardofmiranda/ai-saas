@@ -113,6 +113,20 @@ async def _run_set(ctx, node):
     return {"outputs": {var: value}}
 
 
+async def _run_check_business_hours(ctx, node):
+    """Verifica se estamos dentro do horario de atendimento da empresa.
+
+    Sem configuracao ou desabilitado, considera aberto (24/7). Expos as
+    variaveis `business_hours` e `is_business_hours` para nodes de condicao.
+    """
+    from app.services.business_hours import get_for_company, is_open
+
+    bh = get_for_company(ctx.db, ctx.company_id)
+    open_now = is_open(bh)
+    ctx.log(f"horario comercial: aberto={open_now}")
+    return {"outputs": {"business_hours": open_now, "is_business_hours": open_now}}
+
+
 async def _run_condition(ctx, node):
     cfg = node.get("data", {})
     value_path = cfg.get("value", "")
@@ -708,6 +722,12 @@ NODE_TYPES: dict[str, dict] = {
               "help": "Padrao: segue pela saida Sim quando houver uma mensagem. Escolha outro operador para comparar valores."},
              {"key": "reference", "label": "Comparar com", "type": "text", "default": "",
               "help": "Deixe vazio para is_empty, is_not_empty e is_true. Nos demais operadores, informe o valor de comparacao."}]),
+    },
+    "check_business_hours": {
+        "type": "check_business_hours",
+        **_make_node("Horario Comercial", "logic",
+            "Verifica se estamos dentro do horario de atendimento da empresa (saidas sim/nao).", [],
+            _run_check_business_hours),
     },
     "loop": {
         "type": "loop",

@@ -23,6 +23,7 @@
 | Schedule | `schedule` | Trigger por cron |
 | Executar Workflow | `execute_workflow` | Chama sub-workflow |
 | Capturar lead | `capture_lead` | Extrai dados do cliente da conversa com IA e atualiza o contato |
+| Horario Comercial | `check_business_hours` | Verifica se esta no horario de atendimento (bifurca true/false) |
 
 ## Configuracao padrao no editor
 
@@ -146,8 +147,15 @@ no proprio campo, sem inventar um destino.
   - `data.overwrite`: "on"/"off" (default "on"). "off" preenche apenas campos vazios.
   - `data.instruction`: instrucoes extras para a extracao (opcional)
 - **Comportamento:** Carrega o historico da conversa, chama o LLM pedindo um JSON estruturado (nome, email, telefone, empresa, cidade e notas) e atualiza o contato (Customer) da conversa quando encontrado. Em modo de teste (`dry_run`) apenas simula e salva nada. Os dados extraidos ficam no contexto em `data.lead`.
-- **Extracao:** usa o modo `response_format=json_object` quando o provedor suporta; caso contrario, repete sem o modo e usa um parser tolerante de JSON. Nada e salvo se a conversa nao tiver mensagens ou o contato nao for encontrado.
+- **Extracao:** usa o modo `response_format=json_object` quando o provedor suporta; caso contrario, repete sem o modo e usa um parser tolerante de JSON. Nada e salvo se a conversa nao tiver mensagens ou o contato nao for encontrado. Falha de extracao (provedor fora do ar, 429, etc.) loga o erro e **continua o fluxo** sem salvar (`saved=false`).
 - **Requer:** Configuracao de IA da empresa.
+
+### check_business_hours
+- **Categoria:** logic
+- **Entrada:** Qualquer
+- **Saida:** `business_hours` (bool), `is_business_hours` (bool)
+- **Dados:** nenhum configurável
+- **Comportamento:** Consulta o `BusinessHours` da empresa (configurado no painel > WhatsApp > Horário de atendimento) e bifurca o fluxo pelas handles `true` (dentro do expediente) e `false` (fora do expediente). Sem registro ou com `enabled` desligado → sempre `true` (24/7). Config incompleta (nenhum dia com janela valida) → `true` (nao bloqueia atendimento). Fuso padrao `America/Sao_Paulo`; janelas que cruzam a meia-noite sao suportadas.
 
 ## Error Handling
 
@@ -174,5 +182,6 @@ Todos os nos possuem o campo `on_error`:
 | whatsapp_send | #16a34a (verde escuro) |
 | filter | #f97316 (laranja) |
 | log | #6b7280 (cinza escuro) |
+| check_business_hours | #f59e0b (ambar) |
 | wait_until_message | #ef4444 (vermelho) |
 | transfer_to_agent | #22c55e (verde, whatsapp) |

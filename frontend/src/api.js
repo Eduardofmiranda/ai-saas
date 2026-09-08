@@ -131,6 +131,9 @@ export const api = {
   connectWhatsApp: () => request("POST", "/config/whatsapp/connect", {}),
   setupWhatsApp: () => request("POST", "/config/whatsapp/setup", {}),
   disconnectWhatsApp: () => request("POST", "/config/whatsapp/disconnect", {}),
+  // Horario de atendimento
+  getBusinessHours: () => request("GET", "/config/business-hours"),
+  updateBusinessHours: (body) => request("PUT", "/config/business-hours", body),
   // Inbox / Conversas
   getConversations: () => request("GET", "/conversations/"),
   getConversation: (id) => request("GET", `/conversations/${id}`),

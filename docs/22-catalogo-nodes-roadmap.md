@@ -32,7 +32,9 @@ Referências estudadas:
 - Execução de grafo, erros, pausa/retomada e sub-workflow em
   `app/services/workflow_engine.py`.
 - Trigger de mensagem WhatsApp, IA, RAG, definir variável, condição, atraso,
-  log, envio por WhatsApp, handoff humano e espera por nova mensagem.
+  log, envio por WhatsApp, handoff humano, espera por nova mensagem,
+  captura de lead (`capture_lead`) e horário comercial
+  (`check_business_hours`, default `America/Sao_Paulo`, 24/7 sem config).
 - Configuração criptografada por empresa para IA e Evolution em
   `app/models/company_config.py` e `app/services/field_crypto.py`.
 - Validação do grafo antes de ativar ou executar workflows.

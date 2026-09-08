@@ -156,12 +156,13 @@
 - [x] Botao "Assumir conversa" para agente humano
 - [x] Historico de transferencias (quem assumiu, quando) — tabela `conversation_transfers`
 
-### 8.4 — Horario de Atendimento
-- [ ] Model `BusinessHours` (empresa, dias, hora_inicio, hora_fim, timezone)
-- [ ] Config por empresa (ex.: segunda a sexta, 8h-18h)
-- [ ] Fora do horario: responder com mensagem automatica configuravel
-- [ ] Node `check_business_hours` no workflow engine
-- [ ] Integracao com o `conversation_service`
+### 8.4 — Horario de Atendimento ✅
+- [x] Model `BusinessHours` (empresa, timezone, enabled, schedule JSON, mensagem) — tabela `business_hours`
+- [x] Config por empresa via `GET/PUT /config/business-hours` (painel > WhatsApp > Horário de atendimento)
+- [x] Fora do horario: resposta automatica configuravel (uma vez por conversa; ignora `pending_agent`/`agent`)
+- [x] Node `check_business_hours` no workflow engine (saidas true/false) + template "Verificacao de Horario"
+- [x] Integracao com o `conversation_service` (gate `closed` em mensagens e workflows)
+- [x] Sem config ou desabilitado: 24/7 (atendimento nunca trava)
 
 ### 8.5 — Template Messages WhatsApp
 - [ ] Endpoint `POST /whatsapp/template` para enviar template oficial
@@ -448,7 +449,7 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [ ] Qualificacao de lead: registrar origem (WhatsApp/workflow), interesse, etapa, tags, ultimo contato e responsavel; encaminhar para humano quando houver intencao comercial ou pedido explicito.
 - [ ] Privacidade no lead capture: informar a finalidade quando aplicavel, coletar somente os dados necessarios e permitir correcao/remocao conforme a politica da empresa.
 - [ ] Template testavel "Recepcao e captura de lead": saudacao unica -> entender necessidade -> solicitar nome -> qualificar interesse -> responder ou transferir para humano.
-- [ ] Horario de atendimento por empresa.
+- [x] Horario de atendimento por empresa (ver marco 8.4).
 
 > Decisao: nao ampliar dashboard nem redesenhar o frontend antes de concluir o marco de estabilizacao e definir os dados e metricas que ele deve exibir.
 ### Revisao do editor React Flow e templates

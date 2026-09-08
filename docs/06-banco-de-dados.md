@@ -203,11 +203,29 @@ Os campos `email`, `company`, `city` e `notes` sao preenchidos pelo node
 | tokens | Integer | default 0 |
 | created_at | DateTime(timezone) | |
 
+### business_hours
+| Coluna | Tipo | Constraints |
+|--------|------|------------|
+| id | Integer | PK, index |
+| company_id | Integer | FK -> companies.id, NOT NULL, unique, index |
+| timezone | String | default "America/Sao_Paulo" |
+| enabled | Boolean | default False |
+| schedule | Text | JSON `{"mon": ["09:00","18:00"], ...}`; dia sem janela = fechado |
+| message | Text | mensagem automatica fora do horario |
+| created_at | DateTime(timezone) | |
+| updated_at | DateTime(timezone) | |
+
+**Implementado (migration `0012_business_hours`).** Sem registro ou com
+`enabled` desligado → aberto 24/7. Config incompleta (nenhum dia com janela
+valida) → aberto. Janela que cruza a meia-noite (ex.: `["18:00","02:00"]`) e
+suportada (chave do dia = dia em que o turno comeca).
+
 ## Relacionamentos
 
 ```
 Company 1──N User
 Company 1──1 CompanyConfig
+Company 1──1 BusinessHours
 Company 1──N Customer
 Company 1──N Workflow
 Company 1──N Conversation

@@ -347,8 +347,11 @@ async def _run_graph(
         if not outgoing:
             return
 
-        if current["type"] == "condition":
-            cond = ctx.data.get("condition_result", False)
+        if current["type"] in ("condition", "check_business_hours"):
+            if current["type"] == "condition":
+                cond = ctx.data.get("condition_result", False)
+            else:
+                cond = bool(ctx.data.get("business_hours", False))
             chosen = None
             for e in outgoing:
                 handle = e.get("sourceHandle") or ""

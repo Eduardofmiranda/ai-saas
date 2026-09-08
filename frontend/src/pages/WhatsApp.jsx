@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import Header from "../components/Header";
+import BusinessHoursPanel from "../components/BusinessHoursPanel";
 
 const STATE_LABELS = {
   not_configured: "Não configurado",
@@ -159,6 +160,8 @@ export default function WhatsApp() {
             )}
           </div>
         )}
+
+        <BusinessHoursPanel />
       </main>
     </div>
   );

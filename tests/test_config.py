@@ -12,6 +12,7 @@ from app.models.company_config import CompanyConfig
 from app.models.user import User
 from app.database.session import get_db
 from app.routers.config_router import _evo_config
+from app.services import business_hours as bh_service
 from app.services import llm
 from app.services.config_service import get_config, get_or_create_config
 from app.services.deps import get_current_user
@@ -229,6 +230,68 @@ def _make(http_db, current_user):
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
+
+
+class TestBusinessHoursEndpoint:
+    def test_get_returns_defaults(self, router_context):
+        client, _, _ = router_context
+        res = client.get("/config/business-hours")
+        assert res.status_code == 200
+        body = res.json()
+        assert body["company_id"] == 1
+        assert body["enabled"] is False
+        assert body["timezone"] == "America/Sao_Paulo"
+        assert body["schedule"]["mon"] == ["09:00", "18:00"]
+        assert body["message"] == bh_service.DEFAULT_MESSAGE
+
+    def test_put_saves_configuration(self, router_context):
+        client, _, _ = router_context
+        res = client.put(
+            "/config/business-hours",
+            json={
+                "enabled": True,
+                "timezone": "America/Manaus",
+                "schedule": {"mon": ["08:00", "12:00"], "sun": []},
+                "message": "Volte amanha!",
+            },
+        )
+        assert res.status_code == 200
+        body = res.json()
+        assert body["enabled"] is True
+        assert body["timezone"] == "America/Manaus"
+        assert body["schedule"]["mon"] == ["08:00", "12:00"]
+        assert body["schedule"]["sun"] is None
+        assert body["message"] == "Volte amanha!"
+
+    def test_put_rejects_invalid_time(self, router_context):
+        client, _, _ = router_context
+        res = client.put(
+            "/config/business-hours",
+            json={"schedule": {"mon": ["9:00"]}},
+        )
+        assert res.status_code == 400
+
+    def test_put_rejects_unknown_timezone(self, router_context):
+        client, _, _ = router_context
+        res = client.put("/config/business-hours", json={"timezone": "Fake/Zone"})
+        assert res.status_code == 400
+
+    def test_put_requires_manager_role(self, router_context):
+        client, session, company = router_context
+        operator = session.query(User).filter(User.company_id == company.id).one()
+        operator.role = "agent"
+        session.commit()
+        res = client.put("/config/business-hours", json={"enabled": True})
+        assert res.status_code == 403
+
+    def test_put_is_idempotent(self, router_context):
+        client, _, _ = router_context
+        payload = {"enabled": True, "timezone": "America/Sao_Paulo"}
+        first = client.put("/config/business-hours", json=payload)
+        second = client.put("/config/business-hours", json=payload)
+        assert first.status_code == 200
+        assert second.status_code == 200
+        assert client.get("/config/business-hours").json()["enabled"] is True
 
 
 class TestAITestEndpoint:

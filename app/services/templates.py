@@ -3,7 +3,7 @@ from copy import deepcopy
 
 # Estes modelos dependem de recursos ainda parciais; ficam preservados no codigo
 # como referencia, mas nao sao oferecidos para criar novos workflows.
-UNAVAILABLE_TEMPLATE_IDS = frozenset({"verificacao_horario", "webhook_recebimento"})
+UNAVAILABLE_TEMPLATE_IDS = frozenset({"webhook_recebimento"})
 
 
 TEMPLATES = [
@@ -192,7 +192,7 @@ TEMPLATES = [
     {
         "id": "verificacao_horario",
         "name": "Verificacao de Horario",
-        "description": "Verifica se esta dentro do horario comercial antes de atender.",
+        "description": "Verifica se esta dentro do horario comercial configurado antes de atender.",
         "category": "logica",
         "data": {
             "nodes": [
@@ -203,25 +203,10 @@ TEMPLATES = [
                     "position": [250, 300],
                 },
                 {
-                    "id": "code-1",
-                    "type": "code",
-                    "data": {
-                        "label": "Verificar Horario",
-                        "code": "from datetime import datetime\nnow = datetime.now()\nresult = 9 <= now.hour < 18",
-                        "result_variable": "is_business_hours",
-                    },
+                    "id": "bh-1",
+                    "type": "check_business_hours",
+                    "data": {"label": "Horario Comercial?"},
                     "position": [500, 300],
-                },
-                {
-                    "id": "cond-1",
-                    "type": "condition",
-                    "data": {
-                        "label": "Horario Comercial?",
-                        "value": "data.is_business_hours",
-                        "operator": "==",
-                        "reference": "True",
-                    },
-                    "position": [750, 300],
                 },
                 {
                     "id": "ai-1",
@@ -231,24 +216,24 @@ TEMPLATES = [
                         "prompt": "{{ data.message.text }}",
                         "history": "on",
                     },
-                    "position": [1000, 200],
+                    "position": [750, 200],
                 },
                 {
-                    "id": "send-auto-1",
+                    "id": "send-ofh-1",
                     "type": "whatsapp_send",
                     "data": {
-                        "label": "Resposta Automatica",
+                        "label": "Resposta Fora do Horario",
                         "phone": "{{ data.phone }}",
                         "text": "Estamos fora do horario comercial. Retornaremos em breve!",
                     },
-                    "position": [1000, 400],
+                    "position": [750, 400],
                 },
             ],
             "edges": [
-                {"id": "e1", "source": "trigger-1", "target": "code-1", "sourceHandle": "success"},
-                {"id": "e2", "source": "code-1", "target": "cond-1", "sourceHandle": "success"},
-                {"id": "e3", "source": "cond-1", "target": "ai-1", "sourceHandle": "true"},
-                {"id": "e4", "source": "cond-1", "target": "send-auto-1", "sourceHandle": "false"},
+                {"id": "e1", "source": "trigger-1", "target": "bh-1", "sourceHandle": "success"},
+                {"id": "e2", "source": "bh-1", "target": "ai-1", "sourceHandle": "true"},
+                {"id": "e3", "source": "bh-1", "target": "send-ofh-1", "sourceHandle": "false"},
+                {"id": "e4", "source": "ai-1", "target": "send-ofh-1", "sourceHandle": "success"},
             ],
         },
     },

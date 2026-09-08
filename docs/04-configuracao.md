@@ -72,6 +72,19 @@ A integracao com WhatsApp e feita via **Evolution API**. Configuracao:
 
 O webhook deve apontar para: `POST /webhook/whatsapp/{company_id}`
 
+### Horario de atendimento
+
+**Implementado.** A empresa configura horario (dias + janelas, fuso e mensagem
+fora do expediente) no painel > WhatsApp. Rote a no dia inclui:
+
+- Fora do expediente, mensagens recebidas nao executam workflows: o backend
+  responde uma vez com a mensagem configurada (nao repete a cada mensagem).
+  Conversas atendidas por humano (`pending_agent`/`agent`) nao sao bloqueadas.
+- Sem config ou com `enabled` desligado, o atendimento fica 24/7.
+- Dentro do workflow, o node `check_business_hours` bifurca por dentro/fora do
+  horario (ver `docs/09-nodes.md`).
+- API: `GET/PUT /config/business-hours` (PUT exige papel gestor ou superior).
+
 ## Credenciais por provedor e administração da plataforma
 
 **Implementado:** a resolução do chat não usa mais a chave do `.env` de um

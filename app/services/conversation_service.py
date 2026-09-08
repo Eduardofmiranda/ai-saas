@@ -15,6 +15,57 @@ from app.services.field_crypto import decrypt_field
 logger = logging.getLogger(__name__)
 
 
+async def _send_closed_reply(db: Session, conversation, config, phone: str) -> str:
+    """Resposta automatica fora do horario de atendimento.
+
+    Envia apenas uma vez por conversa (enquanto o expediente estiver fechado),
+    para nao spammar o cliente a cada mensagem. Retorna o que foi feito.
+    """
+    from app.models.business_hours import BusinessHours
+    from app.services.business_hours import is_open
+
+    bh = db.query(BusinessHours).filter(BusinessHours.company_id == config.company_id).first()
+    if not bh or not bh.enabled or is_open(bh):
+        return "no_gate"
+
+    message = (bh.message or "").strip()
+    if not message:
+        return "no_message"
+
+    last_bot = (
+        db.query(Message)
+        .filter(Message.conversation_id == conversation.id, Message.sender_type == "bot")
+        .order_by(Message.id.desc())
+        .first()
+    )
+    if last_bot and last_bot.content == message:
+        return "already_sent"
+
+    evolution_base = decrypt_field(config.evolution_base_url) or get_secret("EVOLUTION_BASE_URL")
+    evolution_key = decrypt_field(config.evolution_api_key) or get_secret("EVOLUTION_API_KEY")
+    evolution_inst = config.evolution_instance or get_secret("EVOLUTION_INSTANCE") or "default"
+
+    if not evolution_base:
+        return "no_evolution"
+
+    try:
+        await evolution.send_text(
+            to_phone=phone,
+            text=message,
+            base_url=evolution_base,
+            api_key=evolution_key,
+            instance=evolution_inst,
+        )
+    except evolution.EvolutionError:
+        logger.warning("Resposta fora do horario nao enviada.", extra={"company_id": config.company_id})
+        return "send_failed"
+
+    bot_msg = Message(conversation_id=conversation.id, sender_type="bot", content=message)
+    db.add(bot_msg)
+    db.commit()
+    return "sent"
+
+
 async def handle_incoming_message(
     db: Session,
     *,
@@ -99,6 +150,13 @@ async def handle_incoming_message(
         return {"status": "pending_agent", "conversation_id": conversation.id}
 
     config = get_or_create_config(db, company_id)
+
+    # Fora do horario de atendimento: responde com a mensagem configurada
+    # (uma unica vez) e nao gera nem retoma respostas da IA.
+    if conversation.status not in ("pending_agent", "agent"):
+        closed_status = await _send_closed_reply(db, conversation, config, phone)
+        if closed_status in ("sent", "already_sent", "send_failed", "no_evolution"):
+            return {"status": "closed", "conversation_id": conversation.id}
 
     resolved_ai = resolve_ai_config(config, db)
     ai_provider = resolved_ai["provider"]
@@ -247,6 +305,14 @@ async def handle_incoming_workflow(
         return {"status": conversation.status, "conversation_id": conversation.id}
 
     config = get_or_create_config(db, company_id)
+
+    # Fora do horario de atendimento: responde com a mensagem configurada
+    # (uma unica vez) e nao executa nem retoma workflows automaticos. O
+    # fluxo pausado permanece e volta a ser retomado dentro do expediente.
+    if conversation.status not in ("pending_agent", "agent"):
+        closed_status = await _send_closed_reply(db, conversation, config, phone)
+        if closed_status in ("sent", "already_sent", "send_failed", "no_evolution"):
+            return {"status": "closed", "conversation_id": conversation.id}
 
     customer_name = customer.name if customer and customer.name != phone else ""
 

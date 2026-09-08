@@ -48,6 +48,8 @@ segredos. Pelo nginx de producao, use o prefixo `/api`, por exemplo
 | GET | `/config/` | Busca configuracoes da empresa | JWT |
 | PATCH | `/config/` | Atualiza configuracoes | JWT |
 | POST | `/config/ai/test` | Testa a config de IA (chama o provedor; nao persiste) | JWT |
+| GET | `/config/business-hours` | Horario de atendimento da empresa | JWT |
+| PUT | `/config/business-hours` | Cria/atualiza horario de atendimento | JWT (gestor+) |
 
 ### WhatsApp (por empresa)
 

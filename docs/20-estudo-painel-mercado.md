@@ -65,7 +65,7 @@ referencial, nao dictado de produto.
   contexto do cliente (tres paineis — `Conversations.jsx`).
 - **Planejado:** atalhos de teclado e **command bar** (cmd+K) para navegacao.
 - **Planejado:** abas por atendente (minhas / nao atribuidas / todas) + bulk actions.
-- **Planejado:** **horario comercial** + auto-responder fora do horario.
+- **Implementado:** **horario comercial** (`check_business_hours`) + auto-responder fora do horario (uma vez por conversa).
 - **Planejado:** chat "ao vivo" de conversas em andamento.
 - **Parcial/Planejado:** formulario pre-chat / segmentacao de contatos.
 - **Planejado:** CSAT (pesquisa de satisfacao) ao fim de conversa.

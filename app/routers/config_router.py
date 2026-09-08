@@ -10,7 +10,7 @@ from app.models.user import User
 from app.schemas.config_schema import ConfigResponse, ConfigUpdate
 from app.services import llm
 from app.services.config_service import get_or_create_config, resolve_ai_config
-from app.services.deps import get_current_user
+from app.services.deps import get_current_user, require_company_manager
 from app.services.field_crypto import decrypt_field, encrypt_field
 from app.services.platform_access import is_platform_admin
 
@@ -194,6 +194,102 @@ def ai_effective(
         "credential_source": resolved.get("credential_source", "unknown"),
         "allowed_providers": allowed,
     }
+
+
+# ---------------------------------------------------------------------------
+# Horario de atendimento da empresa
+# ---------------------------------------------------------------------------
+
+import json as _json
+
+from app.services import business_hours as bh_service
+
+
+class BusinessHoursUpdate(BaseModel):
+    enabled: bool | None = None
+    timezone: str | None = None
+    schedule: dict[str, list[str]] | None = None
+    message: str | None = None
+
+
+def _validate_business_hours(data: BusinessHoursUpdate) -> None:
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+    if data.timezone is not None:
+        try:
+            ZoneInfo(data.timezone.strip())
+        except (ZoneInfoNotFoundError, ValueError):
+            raise HTTPException(status_code=400, detail=f"Fuso horario invalido: {data.timezone}")
+
+    if data.schedule is not None:
+        for key, value in data.schedule.items():
+            if key not in bh_service.DAY_KEYS:
+                raise HTTPException(status_code=400, detail=f"Dia invalido na agenda: {key}")
+            if value in (None, [], ""):
+                continue
+            if not (isinstance(value, list) and len(value) == 2
+                    and bh_service._valid_time(str(value[0])) and bh_service._valid_time(str(value[1]))):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Horario invalido para {key}: use [\"HH:MM\", \"HH:MM\"]",
+                )
+
+    if data.message is not None and len(data.message.strip()) > 500:
+        raise HTTPException(status_code=400, detail="Mensagem fora do horario muito longa (max 500)")
+
+
+def _business_hours_payload(db: Session, company_id: int) -> dict:
+    bh = bh_service.get_for_company(db, company_id)
+    if not bh:
+        return {"company_id": company_id, **bh_service.default_payload()}
+    return {
+        "company_id": company_id,
+        "enabled": bool(bh.enabled),
+        "timezone": bh.timezone or bh_service.DEFAULT_TIMEZONE,
+        "schedule": bh_service.parse_schedule(bh.schedule),
+        "message": bh.message or "",
+    }
+
+
+@router.get("/business-hours")
+def get_business_hours(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retorna a configuracao de horario de atendimento da empresa."""
+    return _business_hours_payload(db, current_user.company_id)
+
+
+@router.put("/business-hours")
+def update_business_hours(
+    data: BusinessHoursUpdate,
+    current_user: User = Depends(require_company_manager),
+    db: Session = Depends(get_db),
+):
+    """Cria ou atualiza o horario de atendimento da empresa (gestor.)."""
+    _validate_business_hours(data)
+
+    bh = bh_service.get_for_company(db, current_user.company_id)
+    if not bh:
+        bh = bh_service.BusinessHours(company_id=current_user.company_id)
+        db.add(bh)
+
+    updates = data.model_dump(exclude_unset=True)
+    if "enabled" in updates:
+        bh.enabled = 1 if updates["enabled"] else 0
+    if "timezone" in updates and updates["timezone"]:
+        bh.timezone = updates["timezone"].strip()
+    if "schedule" in updates:
+        normalized = {
+            key: (list(value) if isinstance(value, list) and len(value) == 2 else [])
+            for key, value in updates["schedule"].items()
+        }
+        bh.schedule = _json.dumps(normalized, ensure_ascii=False)
+    if "message" in updates:
+        bh.message = (updates["message"] or "").strip()
+
+    db.commit()
+    return _business_hours_payload(db, current_user.company_id)
 
 
 # ---------------------------------------------------------------------------
