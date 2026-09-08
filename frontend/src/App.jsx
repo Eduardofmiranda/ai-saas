@@ -14,6 +14,7 @@ import Departments from "./pages/Departments";
 import Account from "./pages/Account";
 import ResetPassword from "./pages/ResetPassword";
 import PlatformAdmin from "./pages/PlatformAdmin";
+import Agenda from "./pages/Agenda";
 
 
 function PlatformProtected({ children }) {
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="/admin" element={<Protected><Admin /></Protected>} />
           <Route path="/plataforma" element={<PlatformProtected><PlatformAdmin /></PlatformProtected>} />
           <Route path="/whatsapp" element={<Protected><WhatsApp /></Protected>} />
+          <Route path="/agenda" element={<Protected><Agenda /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

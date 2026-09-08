@@ -177,7 +177,9 @@
 > Fatia 1 (backend) concluída: models + migration `0013`, serviço `app/services/agenda.py`,
 > rotas `/agenda/*`, testes verdes. **Fatia 2 (tools de IA) concluída**: function calling
 > em `llm.generate_reply_with_tools` + executor `app/services/agenda_tools.py` ligado ao
-> pipeline (`conversation_service`) quando a agenda está ativa. Fatia 3 = frontend `/agenda`;
+> pipeline (`conversation_service`) quando a agenda está ativa. **Fatia 3 (frontend
+> `/agenda`) concluída**: página com resumo, lista com filtros, criação e cancelamento
+> via modal, e configuração (gestor) com horários/bloqueios/mensagem.
 > Fatia 4 = template + docs/deploy.
 
 - [x] Criar módulo de Agenda por empresa para gerenciamento de compromissos e agendamentos
@@ -205,9 +207,10 @@
 - [x] Criar ferramenta `cancelar_agendamento` para uso pelos agentes de IA
 - [x] Definir fluxo: WhatsApp -> IA -> identificar solicitação -> consultar agenda -> verificar disponibilidade -> criar agendamento -> confirmar via WhatsApp (confirmação na resposta da IA/pipeline)
 
-**Pendente (Fatia 3 — frontend `/agenda`):**
-- [ ] Permitir visualização dos agendamentos no painel administrativo
-- [ ] Permitir filtros por cliente no painel (filtro por status/data já existe na API)
+**Concluído (Fatia 3 — frontend `/agenda`):**
+- [x] Permitir visualização dos agendamentos no painel administrativo (página `/agenda`: resumo, tabela com status/origem, criação e cancelamento via modal)
+- [x] Permitir filtros por cliente no painel (busca por cliente/telefone/serviço client-side; filtro por status/data via API)
+- [x] Editar a configuração da agenda no painel (gestor): horários por dia, duração, antecedência, datas bloqueadas, mensagem de confirmação e fuso
 
 **Pendente (integração/roadmap):**
 - [ ] Permitir que a Agenda seja utilizada por diferentes agentes e workflows (hoje apenas o pipeline de atendimento usa as tools)

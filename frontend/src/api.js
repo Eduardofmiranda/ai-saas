@@ -182,6 +182,21 @@ export const api = {
   createDepartment: (body) => request("POST", "/departments/", body),
   updateDepartment: (id, body) => request("PATCH", `/departments/${id}`, body),
   deleteDepartment: (id) => request("DELETE", `/departments/${id}`),
+  // Agenda / Secretaria IA
+  getAgendaConfig: () => request("GET", "/agenda/config"),
+  updateAgendaConfig: (body) => request("PUT", "/agenda/config", body),
+  getAgendaAvailability: (date) => request("GET", `/agenda/availability?date=${date}`),
+  getAgendaAppointments: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set("status", params.status);
+    if (params.date_from) qs.set("date_from", params.date_from);
+    if (params.date_to) qs.set("date_to", params.date_to);
+    if (params.skip) qs.set("skip", params.skip);
+    if (params.limit) qs.set("limit", params.limit);
+    return request("GET", `/agenda/appointments?${qs.toString()}`);
+  },
+  createAgendaAppointment: (body) => request("POST", "/agenda/appointments", body),
+  cancelAgendaAppointment: (id) => request("DELETE", `/agenda/appointments/${id}`),
 };
 
 function downloadBlob(blob, filename) {

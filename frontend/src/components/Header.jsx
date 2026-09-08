@@ -9,6 +9,7 @@ const NAV = [
   ["/knowledge", "Conhecimento"],
   ["/setores", "Setores"],
   ["/whatsapp", "WhatsApp"],
+  ["/agenda", "Agenda"],
   ["/admin", "Administração"],
 ];
 

@@ -66,6 +66,24 @@ Pagina: `frontend/src/pages/Departments.jsx`. Rota `/setores` em `App.jsx`.
   que o status muda sozinho para "Conectado" apos o escaneamento, sem F5.
   Ao detectar `state: "open"`, o QR e limpo automaticamente.
 
+### `/agenda`
+- Rota protegida; pagina `frontend/src/pages/Agenda.jsx`, rota `/agenda` em `App.jsx`,
+  item "Agenda" no `Header.jsx`.
+- **Resumo**: cards com compromissos ativos, dias de agenda e cancelados.
+- **Painel Secretaria IA**: toggle ativar/desativar agenda (`PUT /agenda/config`
+  com `{enabled}`) e resumo (duração padrão, antecedência, fuso, horários por dia,
+  mensagem de confirmação). Edição de configuração via **modal** (somente
+  gestor/owner/admin), com fuso, horários por dia, duração, antecedência, mensagem
+  e **datas bloqueadas**.
+- **Lista de compromissos**: tabela (data, horário, cliente, telefone, serviço,
+  status, origem) com **filtros por status, data inicial/final (consumidos pela
+  API) e busca por cliente/telefone/serviço (client-side)**. Cancelamento com
+  **modal de confirmação** (`DELETE /agenda/appointments/{id}`).
+- **Novo agendamento** via modal (`POST /agenda/appointments`, `origin=manual`):
+  data + grade de horários livres (`GET /agenda/availability?date=`), fim
+  calculado pela duração padrão, telefone obrigatório.
+- Gestores editar configuracao; demais usuarios apenas visualizam/criam/cancelam.
+
 ### `/plataforma`
 - Rota protegida por `is_platform_admin`.
 - **Visão geral** (KPIs: empresas, usuários, workflows, execuções com erro; nota sobre uso/sessões).
@@ -139,6 +157,7 @@ src/
     ├── Admin.jsx            # Administracao / usuarios
     ├── PlatformAdmin.jsx    # Admin de plataforma (providers/usuarios/erros)
     ├── Account.jsx          # Minha conta (alterar senha)
+    ├── Agenda.jsx           # Agenda / Secretaria IA
     └── WhatsApp.jsx         # Conexao WhatsApp/Evolution
 ```
 
