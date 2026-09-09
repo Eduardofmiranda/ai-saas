@@ -141,7 +141,7 @@ A atualizacao de status (`PATCH`) registra automaticamente um `ConversationTrans
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
-| GET | `/dashboard/` | Metricas da empresa: companies, customers, conversations (`open_conversations`, `pending_conversations`, `closed_conversations`), messages, workflows, executions | JWT |
+| GET | `/dashboard/` | Metricas da empresa: companies, customers, conversations (`open_conversations`, `pending_conversations`, `agent_conversations`, `closed_conversations`), messages, workflows, executions + series dos ultimos 7 dias: `messages_last_7_days` (`[{date, count}]`), `executions_last_7_days` (`[{date, success, error}]`) | JWT |
 
 ### Workflows
 
@@ -227,6 +227,11 @@ clientes autenticados e permite os efeitos normais do workflow.
 
 ### Agenda da Secretaria IA
 
+Permissoes (papel + propriedade): ler e criar sao abertos a qualquer papel
+autenticado da empresa; **alterar/cancelar** exigem gestor (owner/admin) OU ser
+o criador do compromisso; compromissos de WhatsApp (sem criador) so a gestao
+altera/cancela. `PUT /agenda/config` e exclusivo de gestores. Sem permissao: 403.
+
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
 | GET | `/agenda/config` | Configuração de agenda da empresa (default se não criada) | JWT |
@@ -235,8 +240,8 @@ clientes autenticados e permite os efeitos normais do workflow.
 | GET | `/agenda/appointments` | Lista compromissos (filtros `date_from`/`date_to`/`status`, `skip`/`limit`) | JWT |
 | POST | `/agenda/appointments` | Cria compromisso (operador; cria manual mesmo sem agenda ativa) | JWT |
 | GET | `/agenda/appointments/{id}` | Detalhe do compromisso | JWT |
-| PATCH | `/agenda/appointments/{id}` | Altera compromisso (data/horario/status/etc.) | JWT |
-| DELETE | `/agenda/appointments/{id}` | Cancela (soft delete) e registra historico | JWT |
+| PATCH | `/agenda/appointments/{id}` | Altera compromisso (data/horario/status/etc.) | JWT gestor ou criador |
+| DELETE | `/agenda/appointments/{id}` | Cancela (soft delete) e registra historico | JWT gestor ou criador |
 
 - **Config:** `enabled`, `timezone`, `schedule` (`{"mon":["08:00","12:00"]}`),
   `slot_duration` (min), `min_advance` (min), `blocked`

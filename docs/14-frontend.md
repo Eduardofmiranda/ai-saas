@@ -155,6 +155,8 @@ src/
 │   ├── Header.jsx            # Navegacao do topo (sticky, avatar + role chip)
 │   ├── BusinessHoursPanel.jsx# Horario de atendimento (painel do WhatsApp)
 │   ├── KnowledgeSummaryCard.jsx
+│   ├── charts.jsx            # Graficos SVG/DOM sem dependencia: DonutChart,
+│   │                         #   BarChart, StackedBarChart, ChartLegend (+DAY_LABEL)
 │   └── ui/                   # Design system (componentes compartilhados)
 │       ├── Icon.jsx          # Icones SVG fixos (substituem emojis de UI)
 │       ├── Alert.jsx         # Feedback erro/sucesso/info (com onDismiss)
@@ -257,6 +259,11 @@ os glifos de categoria dos nodes (▶ ✦ ➜ ⇄ ✆ ◆ ★) e o atalho Delete
 - **Skeleton** (`<Skeleton variant="cards" />` para grids, `variant="lines"` para listas;
   `rows`/`cards` para numero de blocos): substitui textos "Carregando ..." no loading
   de paginas. Classes `.skeleton*` + keyframes `shimmer` em `index.css`.
+- **Graficos** (`components/charts.jsx`): SVG/CSS proprios, sem lib de chart —
+  `DonutChart` (segmentos com stroke-dasharray), `BarChart` e `StackedBarChart`
+  (barras por coluna), `ChartLegend`, `DAY_LABEL`. Usados no painel (`/`):
+  conversas por status, mensagens e execucoes dos ultimos 7 dias (dados reais de
+  `GET /dashboard/`, serao series preenchidas com zero nos dias sem dados).
 - **Utils**: `formatPhone`, `avatarColor` (`utils/format.js`) e `DAYS`/`TIMEZONES`
   (`utils/constants.js`) — nao duplicar localmente nas paginas.
 - **Botoes de perigo**: reversivel = `btn ghost small danger` (inline no card);

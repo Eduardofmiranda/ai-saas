@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import Header from "../components/Header";
 import { PageHeader, Alert, Icon, EmptyState, Skeleton } from "../components/ui";
+import { DonutChart, BarChart, StackedBarChart, ChartLegend, DAY_LABEL } from "../components/charts";
 
 const STATE_LABELS = {
   not_configured: "Não configurado",
@@ -154,6 +155,59 @@ export default function Dashboard() {
             <p className="muted">
               {execOk} com sucesso · {execErr} com erro · {data.executions_total} no total
             </p>
+          </div>
+        )}
+
+        {((data?.conversations || 0) > 0 || (data?.executions_total || 0) > 0) && (
+          <div className="chart-grid">
+            <div className="chart-card">
+              <h3>Conversas por status</h3>
+              <div className="chart-card-body">
+                <DonutChart
+                  segments={[
+                    { key: "open", value: data.open_conversations || 0, label: "Abertas", color: "var(--green)" },
+                    { key: "pending", value: data.pending_conversations || 0, label: "Aguardando humano", color: "#fbbf24" },
+                    { key: "agent", value: data.agent_conversations || 0, label: "Com humano", color: "#8b5cf6" },
+                    { key: "closed", value: data.closed_conversations || 0, label: "Fechadas", color: "var(--muted)" },
+                  ].filter((s) => s.value > 0)}
+                />
+                <ChartLegend
+                  items={[
+                    { key: "open", value: data.open_conversations || 0, label: "Abertas", color: "var(--green)" },
+                    { key: "pending", value: data.pending_conversations || 0, label: "Aguardando humano", color: "#fbbf24" },
+                    { key: "agent", value: data.agent_conversations || 0, label: "Com humano", color: "#8b5cf6" },
+                    { key: "closed", value: data.closed_conversations || 0, label: "Fechadas", color: "var(--muted)" },
+                  ].filter((s) => s.value > 0)}
+                />
+              </div>
+            </div>
+
+            <div className="chart-card">
+              <h3>Mensagens · últimos 7 dias</h3>
+              <div className="chart-card-body">
+                <BarChart
+                  data={(data.messages_last_7_days || []).map((d) => ({
+                    key: d.date,
+                    label: DAY_LABEL(d.date),
+                    value: d.count,
+                  }))}
+                />
+              </div>
+            </div>
+
+            <div className="chart-card">
+              <h3>Execuções · últimos 7 dias</h3>
+              <div className="chart-card-body">
+                <StackedBarChart
+                  data={(data.executions_last_7_days || []).map((d) => ({
+                    key: d.date,
+                    label: DAY_LABEL(d.date),
+                    success: d.success,
+                    error: d.error,
+                  }))}
+                />
+              </div>
+            </div>
           </div>
         )}
       </main>
