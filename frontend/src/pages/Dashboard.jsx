@@ -243,7 +243,6 @@ export default function Dashboard() {
               <h3>Conversas · últimos 30 dias</h3>
               <div className="chart-card-body" style={{ display: "block" }}>
                 <BarChart
-                  dense
                   labelEvery={5}
                   height={150}
                   data={(data.conversations_last_30_days || []).map((d) => ({
@@ -260,7 +259,6 @@ export default function Dashboard() {
                 <h3>Tokens de IA · últimos 30 dias</h3>
                 <div className="chart-card-body" style={{ display: "block" }}>
                   <BarChart
-                    dense
                     labelEvery={5}
                     height={150}
                     data={(data.ai_usage_last_30_days || []).map((d) => ({
