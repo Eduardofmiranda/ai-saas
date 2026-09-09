@@ -1,3 +1,5 @@
+import os
+
 import httpx
 
 from app.config import get_secret
@@ -34,6 +36,8 @@ async def generate_embeddings(
     model: str = "text-embedding-3-small",
     base_url: str = "",
 ) -> list[list[float]]:
+    if not api_key:
+        api_key = os.getenv("DEFAULT_EMBEDDING_API_KEY", "")
     if not api_key:
         raise EmbeddingError("Embeddings nao configurados: informe DEFAULT_EMBEDDING_API_KEY")
 
