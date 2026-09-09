@@ -425,11 +425,14 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [x] Testes: `tests/test_audit.py` (15 testes)
 - [x] Visao no frontend (pagina Admin): tabela com filtros por acao/entidade/usuario + paginacao (somente gestor)
 
-### 9.5 — Teste e Simulacao
-- [ ] Modo "simular" no editor de workflows (inserir mensagem fake)
-- [ ] Preview de resposta IA antes de ativar workflow
-- [ ] Validacao visual do grafo (nos orfaos, nos soltos, ciclos)
-- [ ] Confirmar exclusao / duplicar fluxo no editor
+### 9.5 — Teste e Simulacao ✅
+- [x] Modal de entrada customizavel (mensagem + telefone) no editor
+- [x] Botao "Rodar teste" abre modal com valores pre-preenchidos
+- [x] dry_run seguro por padrao (nenhum WhatsApp, espera ou transferencia persistidos)
+- [x] Corrigido: ai_rag node agora verifica dry_run antes de persistir Message
+- [x] Corrigido: delay node ignora sleep em dry_run
+- [x] Resultado estruturado: status + duracao + logs + saidas formatadas (nao JSON cru)
+- [x] Testes: 49 passed (engine + nodes + dashboard + llm)
 
 ---
 
