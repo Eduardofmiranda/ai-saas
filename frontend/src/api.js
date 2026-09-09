@@ -116,6 +116,11 @@ export const api = {
   // Versionamento
   getWorkflowVersions: (id) => request("GET", `/workflows/${id}/versions`),
   rollbackWorkflowVersion: (id, versionId) => request("POST", `/workflows/${id}/versions/${versionId}/rollback`),
+  // API Keys
+  getApiKeys: () => request("GET", "/api-keys/"),
+  createApiKey: (body) => request("POST", "/api-keys/", body),
+  updateApiKey: (id, body) => request("PATCH", `/api-keys/${id}`, body),
+  deleteApiKey: (id) => request("DELETE", `/api-keys/${id}`),
   // Usuarios / Administracao
   getUsers: (params = {}) => request("GET", `/users/${qs(params)}`),
   createUser: (body) => request("POST", "/users/", body),

@@ -318,6 +318,141 @@ function WebhooksSection() {
   );
 }
 
+function ApiKeysSection() {
+  const [keys, setKeys] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ name: "", scopes: "read" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [newKey, setNewKey] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  async function load() {
+    try {
+      setKeys(await api.getApiKeys());
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function create() {
+    setSaving(true);
+    try {
+      const res = await api.createApiKey(form);
+      setNewKey(res);
+      setShowForm(false);
+      setForm({ name: "", scopes: "read" });
+      load();
+    } catch (e) {
+      setError("Erro ao criar chave: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove(id) {
+    try {
+      await api.deleteApiKey(id);
+      setConfirmDelete(null);
+      load();
+    } catch (e) {
+      setError("Erro ao excluir: " + e.message);
+    }
+  }
+
+  async function toggle(ak) {
+    try {
+      await api.updateApiKey(ak.id, { active: !ak.active });
+      load();
+    } catch (e) {
+      setError("Erro ao alterar status: " + e.message);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 32 }}>
+      <h3>API Keys</h3>
+      <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
+        Chaves para acesso externo via API. Use o header <code>X-API-Key</code>.
+        Documentacao disponivel em <a href="/docs" target="_blank" rel="noreferrer">/docs</a>.
+      </p>
+
+      {error && <Alert variant="error" onDismiss={() => setError("")}>{error}</Alert>}
+
+      {newKey && (
+        <div className="notice" style={{ marginBottom: 12 }}>
+          <strong>Chave criada:</strong> <code>{newKey.key}</code>
+          <br /><span className="muted" style={{ fontSize: 12 }}>Guarde esta chave. Ela nao sera mostrada novamente.</span>
+          <button className="btn ghost small" style={{ marginLeft: 8 }} onClick={() => setNewKey(null)}>Fechar</button>
+        </div>
+      )}
+
+      {loading ? <Skeleton variant="lines" /> : (
+        <>
+          {keys.length === 0 && !showForm && (
+            <EmptyState icon={<Icon name="workflow" size={32} />} title="Nenhuma API key">
+              <button className="btn primary" onClick={() => setShowForm(true)}>+ Criar chave</button>
+            </EmptyState>
+          )}
+
+          {keys.length > 0 && (
+            <div className="dash-list">
+              {keys.map((ak) => (
+                <div key={ak.id} className="dash-list-row">
+                  <span className={`badge ${ak.active ? "on" : "off"}`} style={{ fontSize: 11 }}>
+                    {ak.active ? "Ativa" : "Inativa"}
+                  </span>
+                  <span className="dash-name" style={{ fontSize: 12 }}>{ak.name}</span>
+                  <span className="dash-meta" style={{ fontSize: 11 }}>{ak.key_prefix}... | {ak.scopes}</span>
+                  <button className="btn ghost small" onClick={() => toggle(ak)}>
+                    {ak.active ? "Desativar" : "Ativar"}
+                  </button>
+                  <button className="btn ghost small danger" onClick={() => setConfirmDelete(ak)}>Excluir</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!showForm && keys.length > 0 && (
+            <button className="btn secondary" style={{ marginTop: 12 }} onClick={() => setShowForm(true)}>+ Criar chave</button>
+          )}
+
+          {showForm && (
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+              <input className="input" placeholder="Nome da chave (ex: Integracao ERP)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <select className="input" value={form.scopes} onChange={(e) => setForm({ ...form, scopes: e.target.value })}>
+                <option value="read">Somente leitura</option>
+                <option value="read,write">Leitura e escrita</option>
+              </select>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn ghost" onClick={() => setShowForm(false)}>Cancelar</button>
+                <button className="btn primary" onClick={create} disabled={saving || !form.name.trim()}>
+                  {saving ? "Criando..." : "Criar"}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Excluir API key"
+          message={`Excluir a chave "${confirmDelete.name}"?`}
+          confirmLabel="Excluir"
+          onConfirm={() => remove(confirmDelete.id)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function Admin() {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
@@ -794,6 +929,10 @@ export default function Admin() {
 
         {isManager && (
           <WebhooksSection />
+        )}
+
+        {isManager && (
+          <ApiKeysSection />
         )}
 
         {confirmTarget && (
