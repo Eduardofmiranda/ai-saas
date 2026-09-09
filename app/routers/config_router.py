@@ -1,5 +1,5 @@
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.config import get_secret
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -9,6 +9,7 @@ from app.database.session import get_db
 from app.models.user import User
 from app.schemas.config_schema import ConfigResponse, ConfigUpdate
 from app.services import llm
+from app.services.audit import log_action
 from app.services.config_service import get_or_create_config, resolve_ai_config
 from app.services.deps import get_current_user, require_company_manager
 from app.services.field_crypto import decrypt_field, encrypt_field
@@ -65,6 +66,7 @@ def get_config(
 
 @router.patch("/", response_model=ConfigResponse)
 def update_config(
+    request: Request,
     data: ConfigUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -96,6 +98,10 @@ def update_config(
 
     db.commit()
     db.refresh(config)
+
+    log_action(db, current_user.company_id, current_user.id, "config.update",
+               entity="config", details={"fields": list(updates.keys())}, request=request)
+
     return _to_response(config, db, user_id=current_user.id)
 
 
@@ -267,6 +273,7 @@ def get_business_hours(
 
 @router.put("/business-hours")
 def update_business_hours(
+    request: Request,
     data: BusinessHoursUpdate,
     current_user: User = Depends(require_company_manager),
     db: Session = Depends(get_db),
@@ -294,6 +301,10 @@ def update_business_hours(
         bh.message = (updates["message"] or "").strip()
 
     db.commit()
+
+    log_action(db, current_user.company_id, current_user.id, "config.update_business_hours",
+               entity="business_hours", request=request)
+
     return _business_hours_payload(db, current_user.company_id)
 
 

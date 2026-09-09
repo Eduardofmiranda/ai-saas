@@ -7,7 +7,7 @@ from __future__ import annotations
 import secrets
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -18,6 +18,7 @@ from app.models.platform_ai_provider import PlatformAIProvider
 from app.models.user import User
 from app.models.workflow import Workflow
 from app.services import llm
+from app.services.audit import log_action
 from app.services.deps import get_current_platform_admin
 from app.services.field_crypto import encrypt_field
 from app.services.platform_access import is_platform_admin
@@ -115,12 +116,17 @@ def list_errors(
 
 @router.delete("/errors")
 def clear_errors(
-    _: User = Depends(get_current_platform_admin),
+    request: Request,
+    admin: User = Depends(get_current_platform_admin),
     db: Session = Depends(get_db),
 ):
     """Remove todas as execuções com erro."""
     count = db.query(Execution).filter(Execution.status == "error").delete(synchronize_session=False)
     db.commit()
+
+    log_action(db, admin.company_id, admin.id, "platform.clear_errors",
+               entity="execution", details={"deleted_count": count}, request=request)
+
     return {"deleted": count}
 
 
@@ -159,7 +165,8 @@ class UserPasswordResetResponse(BaseModel):
 @router.post("/users/{user_id}/reset-password", response_model=UserPasswordResetResponse)
 def reset_user_password(
     user_id: int,
-    _: User = Depends(get_current_platform_admin),
+    request: Request,
+    admin: User = Depends(get_current_platform_admin),
     db: Session = Depends(get_db),
 ):
     """Gera uma senha provisoria e redefine a senha do usuario (operador da plataforma).
@@ -175,6 +182,9 @@ def reset_user_password(
     temporary_password = secrets.token_urlsafe(12)
     user.set_password(temporary_password)
     db.commit()
+
+    log_action(db, admin.company_id, admin.id, "platform.reset_password",
+               entity="user", entity_id=user_id, request=request)
 
     return {
         "user_id": user.id,
@@ -215,8 +225,9 @@ def list_providers(
 @router.put("/providers/{provider}")
 def save_provider(
     provider: str,
+    request: Request,
     data: ProviderUpdate,
-    _: User = Depends(get_current_platform_admin),
+    admin: User = Depends(get_current_platform_admin),
     db: Session = Depends(get_db),
 ):
     provider = _require_provider(provider)
@@ -237,6 +248,11 @@ def save_provider(
 
     db.commit()
     db.refresh(record)
+
+    log_action(db, admin.company_id, admin.id, "platform.update_provider",
+               entity="provider", entity_id=None,
+               details={"provider": provider}, request=request)
+
     return provider_public_dict(record)
 
 
@@ -370,6 +386,7 @@ def get_user_ai_config(
 @router.put("/user-ai-config/{user_id}")
 def save_user_ai_config(
     user_id: int,
+    request: Request,
     data: UserAIConfigUpdate,
     admin: User = Depends(get_current_platform_admin),
     db: Session = Depends(get_db),
@@ -398,6 +415,10 @@ def save_user_ai_config(
 
     db.commit()
     db.refresh(uc)
+
+    log_action(db, admin.company_id, admin.id, "platform.update_user_ai_config",
+               entity="user_ai_config", entity_id=user_id, request=request)
+
     d = _user_ai_config_dict(uc)
     d["email"] = user.email
     d["name"] = user.name

@@ -312,6 +312,17 @@ Os checks de dependencia retornam `503` quando indisponiveis e nunca expõem
 segredos. Pelo nginx de producao, use o prefixo `/api`, por exemplo
 `/api/health/db`.
 
+### Audit Logs
+
+| Metodo | URL | Descricao | Auth |
+|--------|-----|-----------|------|
+| GET | `/audit-logs/` | Lista registros de auditoria (filtros: user_id, action, entity; paginacao limit/offset) | JWT gestor |
+
+Acoes registradas: auth.register, auth.login, auth.change_password, auth.forgot_password,
+auth.reset_password, user.create/update/delete, config.update, config.update_business_hours,
+workflow.create/update/delete/run, platform.clear_errors, platform.reset_password,
+platform.update_provider, platform.update_user_ai_config.
+
 ## Autenticacao
 
 Todos os endpoints protegidos exigem header:

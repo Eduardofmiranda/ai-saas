@@ -12,7 +12,7 @@
 ### Ciclo de schema
 
 **Implementado:** a migration `0001_initial_schema` descreve o schema base de
-forma idempotente; `0002` a `0017` evoluem as tabelas. Bancos existentes que
+forma idempotente; `0002` a `0018` evoluem as tabelas. Bancos existentes que
 ja estavam em `0005_password_reset_tokens` avancam normalmente para `0006` sem
 recriar nem apagar tabelas.
 
@@ -393,7 +393,7 @@ User 1──1 UserAIConfig
 ## Migrations
 
 **Implementado:** Alembic controla todo schema de producao. Em bancos novos,
-`0001_initial_schema` cria a base; `0002` a `0017` aplicam as evolucoes. As
+`0001_initial_schema` cria a base; `0002` a `0018` aplicam as evolucoes. As
 migrations sao idempotentes para permitir adocao de bancos legados que antes
 foram criados pelo ORM.
 

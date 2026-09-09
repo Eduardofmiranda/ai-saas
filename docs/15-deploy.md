@@ -73,7 +73,7 @@ A Agenda 8.6b (confirmação 2 passos + lembretes) introduz a migration
 duas tarefas periodicas novas.
 
 ```bash
-# O alembic current deve estar em 0017_ai_limits (head) apos o deploy
+# O alembic current deve estar em 0018_audit_log (head) apos o deploy
 docker compose exec backend alembic current
 
 # Colunas novas existentes (confirma + lembrete)
@@ -109,6 +109,12 @@ A migration `0017_ai_limits` adiciona colunas de limites em `company_configs`
 (ai_daily_message_limit, ai_daily_token_limit, ai_timeout_seconds,
 ai_max_retries, ai_fallback_message) e cria a tabela `company_ai_usage`
 (company_id, usage_date, message_count, token_count).
+
+### Migration 0018 — audit log
+
+A migration `0018_audit_log` cria a tabela `audit_logs` (company_id, user_id,
+action, entity, entity_id, details, ip_address, user_agent, created_at).
+Registra acoes criticas: auth, CRUD de users/workflows, config, platform_admin.
 
 ## Portas
 

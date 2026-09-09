@@ -24,6 +24,7 @@ from app.services import email_service
 from app.services.deps import get_current_user
 from app.services.platform_access import is_platform_admin
 from app.services.rate_limit import limiter
+from app.services.audit import log_action
 from app.services.security import (
     create_access_token,
     create_refresh_token,
@@ -95,6 +96,10 @@ def register(
     db.commit()
     db.refresh(user)
 
+    log_action(db, company.id, user.id, "auth.register", entity="company",
+               entity_id=company.id, details={"email": data.email, "company_name": data.company_name},
+               request=request)
+
     return _build_login_response(user)
 
 
@@ -108,6 +113,9 @@ def login(
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
+
+    log_action(db, user.company_id, user.id, "auth.login", entity="user",
+               entity_id=user.id, request=request)
 
     return _build_login_response(user)
 
@@ -129,6 +137,7 @@ def me(
 
 @router.post("/change-password")
 def change_password(
+    request: Request,
     data: ChangePasswordRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -140,6 +149,10 @@ def change_password(
         raise HTTPException(status_code=400, detail="A nova senha deve ter pelo menos 6 caracteres")
     current_user.set_password(data.new_password)
     db.commit()
+
+    log_action(db, current_user.company_id, current_user.id, "auth.change_password",
+               entity="user", entity_id=current_user.id, request=request)
+
     return {"message": "Senha alterada com sucesso"}
 
 
@@ -188,6 +201,9 @@ def forgot_password(
     )
     db.commit()
 
+    log_action(db, user.company_id, user.id, "auth.forgot_password", entity="user",
+               entity_id=user.id, request=request)
+
     frontend_url = get_secret("FRONTEND_URL", "http://localhost:5173").rstrip("/")
     reset_url = f"{frontend_url}/reset-password?token={token}"
     email_service.send_reset_email(user.email, reset_url)
@@ -196,6 +212,7 @@ def forgot_password(
 
 @router.post("/reset-password")
 def reset_password(
+    request: Request,
     data: ResetPasswordRequest,
     db: Session = Depends(get_db),
 ):
@@ -222,4 +239,8 @@ def reset_password(
     user.set_password(data.new_password)
     record.used_at = now
     db.commit()
+
+    log_action(db, user.company_id, user.id, "auth.reset_password", entity="user",
+               entity_id=user.id, request=request)
+
     return {"message": "Senha redefinida com sucesso"}

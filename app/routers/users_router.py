@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.models.user import User
 from app.schemas.user_schema import UserCreate, UserResponse, UserUpdate
+from app.services.audit import log_action
 from app.services.deps import get_current_user
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -33,6 +34,7 @@ def list_users(
 
 @router.post("/", response_model=UserResponse)
 def create_user(
+    request: Request,
     data: UserCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -57,12 +59,18 @@ def create_user(
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    log_action(db, current_user.company_id, current_user.id, "user.create",
+               entity="user", entity_id=user.id,
+               details={"email": data.email, "role": data.role}, request=request)
+
     return user
 
 
 @router.patch("/{user_id}", response_model=UserResponse)
 def update_user(
     user_id: int,
+    request: Request,
     data: UserUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -86,12 +94,18 @@ def update_user(
 
     db.commit()
     db.refresh(user)
+
+    log_action(db, current_user.company_id, current_user.id, "user.update",
+               entity="user", entity_id=user_id,
+               details={"fields": list(updates.keys())}, request=request)
+
     return user
 
 
 @router.delete("/{user_id}")
 def delete_user(
     user_id: int,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -110,4 +124,8 @@ def delete_user(
 
     db.delete(user)
     db.commit()
+
+    log_action(db, current_user.company_id, current_user.id, "user.delete",
+               entity="user", entity_id=user_id, request=request)
+
     return {"ok": True}

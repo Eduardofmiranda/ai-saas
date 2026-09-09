@@ -84,7 +84,15 @@
 - Tabela `company_ai_usage` rastreia uso diario (migration `0017_ai_limits`).
 - `tests/test_ai_limits.py` (16 testes).
 
-## 5.2 Politica de IA por usuario (Fase 9.1 — Implementado)
+## 5.2 Audit Log (Fase 9.4 — Implementado)
+
+- Model `AuditLog`: company_id, user_id, action, entity, entity_id, details, ip_address, user_agent.
+- `app/services/audit.py`: `log_action` (registra), `get_audit_logs` (lista com filtros).
+- Integrado em: auth, config, users, workflows, platform_admin (24 endpoints).
+- Endpoint `GET /audit-logs/` (somente gestores, filtros user/action/entity, paginacao).
+- `tests/test_audit.py` (13 testes).
+
+## 5.3 Politica de IA por usuario (Fase 9.1 — Implementado)
 
 - Superadmin controla provedores/chaves/modelos por usuario.
 - Prioridade: **usuario → empresa → plataforma → .env**.

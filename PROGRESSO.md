@@ -407,11 +407,14 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [ ] Uso por node (quais nodes sao mais chamados)
 - [ ] Logs de execucao estruturados
 
-### 9.4 — Audit Log
-- [ ] Model `AuditLog` (user, action, entity, entity_id, timestamp, details)
-- [ ] Registrar: login, CRUD de workflows, mudanca de config, envio de mensagem
-- [ ] Endpoint `GET /audit-logs` com filtros (user, action, data)
-- [ ] Visao no frontend (pagina Admin)
+### 9.4 — Audit Log ✅
+- [x] Model `AuditLog` (user, action, entity, entity_id, timestamp, details, ip, user_agent)
+- [x] Service `app/services/audit.py` (log_action, get_audit_logs)
+- [x] Migration `0018_audit_log`
+- [x] Integrado em: auth (register/login/password), config, users, workflows, platform_admin
+- [x] Endpoint `GET /audit-logs/` (somente gestores, filtros user/action/entity, paginacao)
+- [x] Testes: `tests/test_audit.py` (13 testes)
+- [ ] Visao no frontend (pagina Admin) — melhoria futura
 
 ### 9.5 — Teste e Simulacao
 - [ ] Modo "simular" no editor de workflows (inserir mensagem fake)

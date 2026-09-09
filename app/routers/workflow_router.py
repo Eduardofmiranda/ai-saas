@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -11,6 +11,7 @@ from app.schemas.workflow_schema import (
     WorkflowUpdate,
 )
 from app.schemas.execution_schema import ExecutionResponse, TestRunRequest
+from app.services.audit import log_action
 from app.services.deps import get_current_user
 from app.services.nodes import registry
 from app.services.workflow_validation import WorkflowValidationError, ensure_valid_workflow_graph
@@ -57,6 +58,7 @@ def create_workflow(
     data: WorkflowCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    request: Request = None,
 ):
     wf = Workflow(
         company_id=current_user.company_id,
@@ -70,6 +72,10 @@ def create_workflow(
     db.add(wf)
     db.commit()
     db.refresh(wf)
+
+    log_action(db, current_user.company_id, current_user.id, "workflow.create",
+               entity="workflow", entity_id=wf.id, request=request)
+
     return wf
 
 
@@ -88,6 +94,7 @@ def update_workflow(
     data: WorkflowUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    request: Request = None,
 ):
     wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
     updates = data.model_dump(exclude_unset=True)
@@ -122,6 +129,10 @@ def update_workflow(
         setattr(wf, field, value)
     db.commit()
     db.refresh(wf)
+
+    log_action(db, current_user.company_id, current_user.id, "workflow.update",
+               entity="workflow", entity_id=workflow_id, request=request)
+
     return wf
 
 
@@ -130,6 +141,7 @@ def delete_workflow(
     workflow_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    request: Request = None,
 ):
     wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
     # Remove execucoes vinculadas antes de apagar o fluxo (evita violacao de FK).
@@ -137,6 +149,10 @@ def delete_workflow(
     db.query(Execution).filter(Execution.workflow_id == wf.id).delete(synchronize_session=False)
     db.delete(wf)
     db.commit()
+
+    log_action(db, current_user.company_id, current_user.id, "workflow.delete",
+               entity="workflow", entity_id=workflow_id, request=request)
+
     return {"message": "Workflow deleted"}
 
 
@@ -169,6 +185,7 @@ async def run_workflow(
     body: TestRunRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    request: Request = None,
 ):
     """Executa teste em modo seguro por padrao e retorna o resultado."""
     wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
@@ -179,6 +196,9 @@ async def run_workflow(
         execution = await execute_workflow(db, workflow=wf, payload=body.payload, config=config, dry_run=body.dry_run)
     except WorkflowEngineError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+    log_action(db, current_user.company_id, current_user.id, "workflow.run",
+               entity="workflow", entity_id=workflow_id, request=request)
 
     return execution
 
