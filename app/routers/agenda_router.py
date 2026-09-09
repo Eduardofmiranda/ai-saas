@@ -3,11 +3,12 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.models.appointment import Appointment
 from app.models.user import User
 from app.services import agenda as agenda_service
 from app.services.agenda import AgendaError, DAY_KEYS
 from app.services.business_hours import _valid_time
-from app.services.deps import get_current_user, require_company_manager
+from app.services.deps import COMPANY_MANAGER_ROLES, get_current_user, require_company_manager
 
 router = APIRouter(prefix="/agenda", tags=["Agenda"])
 
@@ -20,6 +21,24 @@ def _http_error(exc: AgendaError) -> HTTPException:
         "min_advance": 409,
     }
     return HTTPException(status_code=codes.get(exc.code, 400), detail=exc.message)
+
+
+def _ensure_can_mutate_appointment(user: User, appt: Appointment) -> None:
+    """Papel + propriedade para alterar/cancelar um compromisso.
+
+    Gestores (owner/admin) operam qualquer compromisso da empresa. Atendentes
+    (agent) apenas os que eles proprios criaram; compromissos originados no
+    WhatsApp nao tem criador e ficam restritos a gestao. Leitura e criacao
+    continuam abertas a qualquer papel autenticado da empresa.
+    """
+    if user.role in COMPANY_MANAGER_ROLES:
+        return
+    if appt.created_by_user_id is not None and appt.created_by_user_id == user.id:
+        return
+    raise HTTPException(
+        status_code=403,
+        detail="Apenas gestores ou o criador do compromisso podem altera-lo ou cancela-lo",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +305,11 @@ def update_appointment(
     db: Session = Depends(get_db),
 ):
     try:
+        appt = agenda_service.get_appointment(db, current_user.company_id, appointment_id)
+    except AgendaError as exc:
+        raise _http_error(exc)
+    _ensure_can_mutate_appointment(current_user, appt)
+    try:
         appt = agenda_service.update_appointment(
             db,
             current_user.company_id,
@@ -308,6 +332,11 @@ def cancel_appointment(
     db: Session = Depends(get_db),
 ):
     """Cancela (soft delete) o compromisso e registra o historico."""
+    try:
+        appt = agenda_service.get_appointment(db, current_user.company_id, appointment_id)
+    except AgendaError as exc:
+        raise _http_error(exc)
+    _ensure_can_mutate_appointment(current_user, appt)
     try:
         appt = agenda_service.cancel_appointment(
             db,

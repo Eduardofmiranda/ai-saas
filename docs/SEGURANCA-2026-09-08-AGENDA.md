@@ -151,6 +151,14 @@ Producao continua usando Supabase para o banco do app; nao foi acessada.
    (17 testes, incluindo pipeline sem LLM e slot tomado entre pedido e confirmacao).
 4. Definir permissoes granulares dos operadores. CRUD autenticado da empresa e
    comportamento documentado; nao foi mudado unilateralmente para manager-only.
+   **CONCLUIDO 08/09/2026** (modelo "papel + propriedade", decisao do produto):
+   ler (config/disponibilidade/lista/detalhe) e criar permanecem abertos a
+   qualquer papel autenticado da empresa; **alterar/cancelar** exigem gestor
+   (owner/admin) OU ser o proprio criador do compromisso (`created_by_user_id`);
+   compromissos de WhatsApp (sem criador) ficam restritos a gestao; config da
+   agenda segue gestor-only. Agente tenta mutar alheio -> 403; outra empresa ->
+   404. Frontend oculta o botao Cancelar sem permissao. Validacao:
+   `tests/test_agenda_permissions.py` (14 testes HTTP com papéis).
 5. Limites de tamanho/frequencia e orcamento por cliente/empresa. Limite 16 tools
    por resposta nao impede flood de mensagens, reservas ou consumo acumulado.
 6. Auditar isolamentos de conversation_id em historico/persistencia dos nodes;

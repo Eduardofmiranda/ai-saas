@@ -71,6 +71,9 @@
 - **Agenda:** criar/remarcar/cancelar via WhatsApp com `confirmation_required`
   exigem consentimento do cliente (`pending_appointment_actions`, migration
   `0016`; resposta CONFIRMAR/CANCELAR processada antes da IA).
+- **Agenda (permissoes):** ler/criar abertos a qualquer papel; alterar/cancelar
+  exigem gestor OU criador do compromisso; WhatsApp-origin so gestao
+  (`tests/test_agenda_permissions.py`).
 
 ## 5.1 Politica de IA por usuario (Fase 9.1 — Planejado)
 

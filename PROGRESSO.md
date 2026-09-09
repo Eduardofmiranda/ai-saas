@@ -31,7 +31,11 @@
       ao cliente, resposta CONFIRMAR/CANCELAR processada de forma deterministica
       antes da IA; escopo por telefone, expiracao e teste de slot tomado.
       `tests/test_agenda_pending_actions.py` (17 testes). Suite: 317 passed.
-- [ ] Limites de abuso (orcamento por cliente/empresa) e permissoes granulares dos operadores.
+- [x] Permissoes granulares dos operadores da agenda (08/09/2026, modelo papel +
+      propriedade): ler/criar abertos; alterar/cancelar exigem gestor OU criador;
+      WhatsApp-origin so gestao; config gestor-only. 403 sem permissao.
+      `tests/test_agenda_permissions.py` (14 testes HTTP).
+- [ ] Limites de abuso (orcamento por cliente/empresa).
 - [ ] Concluir auditoria ampliada de sessoes, uploads, historico/segredos e infraestrutura.
 
 Detalhes e resultados: [revisao de seguranca](docs/SEGURANCA-2026-09-08-AGENDA.md).

@@ -84,6 +84,15 @@ Todos os routers que manipulam dados sao protegidos por `Depends(get_current_use
   via `TEST_POSTGRES_URL`, CI-only).
 - Veja `docs/SEGURANCA-2026-09-08-AGENDA.md` (item #2 concluido).
 
+### Permissoes Granulares da Agenda (papel + propriedade)
+- **Implementado:** ler (config/availability/lista/detalhe) e criar permanecem
+  abertos a qualquer papel autenticado da empresa; **alterar/cancelar** exigem
+  gestor (owner/admin) OU ser o proprio criador do compromisso
+  (`created_by_user_id`); compromissos de WhatsApp (sem criador) ficam restritos
+  a gestao. Sem permissao: **403**; outra empresa: **404**.
+- `PUT /agenda/config` continua exclusivo de gestores (`require_company_manager`).
+- Frontend `/agenda` oculta o botao Cancelar quando o usuario nao tem permissao.
+
 ### Confirmacao Server-side (Agenda)
 - **Implementado (criacao, 8.6b):** criacao provisoria (`awaiting_confirmation`)
   + resposta `CONFIRMAR`/`CANCELAR` processada de forma deterministica no webhook
@@ -129,10 +138,11 @@ Todos os routers que manipulam dados sao protegidos por `Depends(get_current_use
 4. **XSS** — React escapa por padrao. Nao usa dangerouslySetInnerHTML.
 
 > Confirmacao server-side da agenda (criar/remarcar/cancelar com consentimento
-> real do cliente) e garantia transacional contra dupla reserva estao
-> **implementadas** — veja as secoes acima e `docs/SEGURANCA-2026-09-08-AGENDA.md`.
-> Pendentes na agenda: limites de abuso por empresa/cliente e permissoes
-> granulares dos operadores.
+> real do cliente), garantia transacional contra dupla reserva e permissoes
+> granulares (papel + propriedade) estao **implementadas** — veja as secoes
+> acima e `docs/SEGURANCA-2026-09-08-AGENDA.md`.
+> Pendentes na agenda: limites de abuso por empresa/cliente (orcamento de IA) e
+> auditoria de isolamento de conversation_id nos nodes.
 
 ## Checklist Antes de Producao
 

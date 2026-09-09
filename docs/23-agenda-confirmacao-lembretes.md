@@ -14,7 +14,9 @@
   `config_payload`. Estados: `scheduled`, `awaiting_confirmation`, `confirmed`,
   `completed`, `canceled`.
 - Rotas `/agenda/*` (config, availability, appointments CRUD) — apenas autenticadas
-  (`app/routers/agenda_router.py`).
+  (`app/routers/agenda_router.py`). Permissoes: ler/criar qualquer papel;
+  alterar/cancelar gestor OU criador do compromisso; WhatsApp-origin so gestao;
+  config gestor-only (403 sem permissao).
 - Function calling da IA no pipeline de atendimento (`conversation_service` +
   `app/services/agenda_tools.py`) e no nó **ai** do Workflow Engine
   (`app/services/nodes/context.py:ask_ai`): as 5 tools são ativadas quando

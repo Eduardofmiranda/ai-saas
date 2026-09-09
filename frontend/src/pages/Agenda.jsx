@@ -329,7 +329,7 @@ export default function Agenda() {
                       </td>
                       <td className="muted">{ORIGIN_LABEL[a.origin] || a.origin}</td>
                       <td>
-                        {a.status !== "canceled" && (
+                        {a.status !== "canceled" && (isManager || a.created_by_user_id === user?.id) && (
                           <div className="row-actions">
                             <button
                               className="btn ghost small danger"
