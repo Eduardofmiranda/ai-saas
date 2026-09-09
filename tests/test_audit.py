@@ -119,6 +119,18 @@ class TestGetAuditLogs:
         result = get_audit_logs(db, company.id, user_id=u1.id)
         assert result["total"] == 1
 
+    def test_includes_user_name(self, db, company):
+        user = _user(db, company.id, "admin@test.com", "admin")
+        log_action(db, company.id, user.id, "user.create", entity="user")
+        result = get_audit_logs(db, company.id)
+        assert result["total"] == 1
+        assert result["items"][0]["user_name"] == "admin"
+
+    def test_anonymous_has_no_user_name(self, db, company):
+        log_action(db, company.id, None, "auth.login")
+        result = get_audit_logs(db, company.id)
+        assert result["items"][0]["user_name"] is None
+
     def test_pagination(self, db, company):
         for i in range(5):
             log_action(db, company.id, None, f"action.{i}")

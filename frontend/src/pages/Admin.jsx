@@ -11,6 +11,7 @@ import Skeleton from "../components/ui/Skeleton";
 import Pagination from "../components/ui/Pagination";
 
 const PAGE_SIZE = 50;
+const LOGS_PAGE_SIZE = 25;
 
 const ROLE_LABELS = {
   owner: "Dono",
@@ -23,6 +24,60 @@ const ROLE_OPTIONS = [
   ["admin", "Administrador"],
   ["owner", "Dono"],
 ];
+
+const AUDIT_ACTIONS = [
+  "auth.register",
+  "auth.login",
+  "auth.forgot_password",
+  "auth.reset_password",
+  "auth.change_password",
+  "user.create",
+  "user.update",
+  "user.delete",
+  "config.update",
+  "config.update_business_hours",
+  "workflow.create",
+  "workflow.update",
+  "workflow.delete",
+  "workflow.run",
+  "platform.clear_errors",
+  "platform.reset_password",
+  "platform.update_provider",
+  "platform.update_user_ai_config",
+];
+
+const AUDIT_ENTITIES = [
+  "auth",
+  "company",
+  "config",
+  "platform",
+  "user",
+  "workflow",
+];
+
+function formatTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function detailSummary(raw) {
+  if (!raw) return "—";
+  let text = raw;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      text = Object.entries(parsed)
+        .map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
+        .join(", ");
+    }
+  } catch {}
+  return text.length > 100 ? text.slice(0, 100) + "…" : text;
+}
 
 export default function Admin() {
   const { user } = useAuth();
@@ -40,6 +95,13 @@ export default function Admin() {
   const [removing, setRemoving] = useState(false);
   const [roleChange, setRoleChange] = useState(null);
   const [changingRole, setChangingRole] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [logsTotal, setLogsTotal] = useState(0);
+  const [logPage, setLogPage] = useState(0);
+  const [logAction, setLogAction] = useState("");
+  const [logEntity, setLogEntity] = useState("");
+  const [logUser, setLogUser] = useState("");
+  const [logsLoading, setLogsLoading] = useState(false);
 
   const isManager = user?.role === "owner" || user?.role === "admin";
 
@@ -57,6 +119,40 @@ export default function Admin() {
   }
 
   useEffect(() => { load(); }, [q, page]);
+
+  async function loadLogs() {
+    setLogsLoading(true);
+    try {
+      const res = await api.getAuditLogs({
+        action: logAction || undefined,
+        entity: logEntity || undefined,
+        user_id: logUser || undefined,
+        limit: LOGS_PAGE_SIZE,
+        offset: logPage * LOGS_PAGE_SIZE,
+      });
+      setLogs(res.items || []);
+      setLogsTotal(res.total || 0);
+      setError("");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLogsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (isManager) loadLogs();
+  }, [logAction, logEntity, logUser, logPage]);
+
+  function userNameFor(entry) {
+    if (entry.user_name) return entry.user_name;
+    if (entry.user_id) {
+      const found = users.find((u) => u.id === entry.user_id);
+      if (found) return found.name;
+      return `Usuário #${entry.user_id}`;
+    }
+    return "—";
+  }
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -251,6 +347,114 @@ export default function Admin() {
 
         {!loading && total > PAGE_SIZE && (
           <Pagination total={total} page={page} pageSize={PAGE_SIZE} onChange={setPage} itemLabel="membro(s)" />
+        )}
+
+        {isManager && (
+          <div className="card" style={{ marginTop: 32 }}>
+            <h3>Auditoria</h3>
+            <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
+              Registro das ações críticas realizadas na empresa (logins, alterações de configuração,
+              membros e workflows).
+            </p>
+
+            <div className="audit-filters">
+              <select
+                aria-label="Filtrar por impressão"
+                value={logAction}
+                onChange={(e) => { setLogAction(e.target.value); setLogPage(0); }}
+              >
+                <option value="">Todas as ações</option>
+                {AUDIT_ACTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+              <select
+                aria-label="Filtrar por entidade"
+                value={logEntity}
+                onChange={(e) => { setLogEntity(e.target.value); setLogPage(0); }}
+              >
+                <option value="">Todas as entidades</option>
+                {AUDIT_ENTITIES.map((en) => <option key={en} value={en}>{en}</option>)}
+              </select>
+              <select
+                aria-label="Filtrar por usuário"
+                value={logUser}
+                onChange={(e) => { setLogUser(e.target.value); setLogPage(0); }}
+              >
+                <option value="">Todos os usuários</option>
+                {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+              {(logAction || logEntity || logUser) && (
+                <button
+                  className="btn ghost small"
+                  onClick={() => {
+                    setLogAction("");
+                    setLogEntity("");
+                    setLogUser("");
+                    setLogPage(0);
+                  }}
+                >
+                  Limpar filtros
+                </button>
+              )}
+            </div>
+
+            {logsLoading ? (
+              <Skeleton variant="cards" cards={3} />
+            ) : logs.length === 0 ? (
+              <EmptyState
+                icon={<Icon name="file-text" />}
+                title="Nenhum registro de auditoria"
+              >
+                Ações críticas realizadas na empresa aparecerão aqui.
+              </EmptyState>
+            ) : (
+              <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 170 }}>Quando</th>
+                      <th style={{ width: 190 }}>Usuário</th>
+                      <th style={{ width: 220 }}>Ação</th>
+                      <th style={{ width: 120 }}>Entidade</th>
+                      <th>Detalhes</th>
+                      <th style={{ width: 130 }}>IP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logs.map((entry) => (
+                      <tr key={entry.id}>
+                        <td className="muted">{formatTime(entry.created_at)}</td>
+                        <td>{userNameFor(entry)}</td>
+                        <td><code className="audit-code">{entry.action}</code></td>
+                        <td className="muted">
+                          {entry.entity || "—"}
+                          {entry.entity_id != null ? ` #${entry.entity_id}` : ""}
+                        </td>
+                        <td>
+                          <span
+                            className="audit-detail"
+                            title={entry.details ? `User-Agent: ${entry.user_agent || "n/d"}` : undefined}
+                          >
+                            {detailSummary(entry.details)}
+                          </span>
+                        </td>
+                        <td className="muted">{entry.ip_address || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {!logsLoading && logsTotal > LOGS_PAGE_SIZE && (
+              <Pagination
+                total={logsTotal}
+                page={logPage}
+                pageSize={LOGS_PAGE_SIZE}
+                onChange={setLogPage}
+                itemLabel="registro(s)"
+              />
+            )}
+          </div>
         )}
 
         {confirmTarget && (

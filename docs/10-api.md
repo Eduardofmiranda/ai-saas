@@ -323,6 +323,25 @@ auth.reset_password, user.create/update/delete, config.update, config.update_bus
 workflow.create/update/delete/run, platform.clear_errors, platform.reset_password,
 platform.update_provider, platform.update_user_ai_config.
 
+Itens retornados:
+```json
+{
+  "id": 1,
+  "company_id": 1,
+  "user_id": 5,
+  "user_name": "Administrador",
+  "action": "user.create",
+  "entity": "user",
+  "entity_id": 7,
+  "details": "{\"email\": \"contato@empresa.com\"}",
+  "ip_address": "177.50.0.1",
+  "user_agent": "Mozilla/5.0 ...",
+  "created_at": "2026-09-08T18:30:00"
+}
+```
+`user_name` vem do join com a tabela de usuarios (`null` para acoes anonimas,
+ex.: `auth.login` sem sessao).
+
 ## Autenticacao
 
 Todos os endpoints protegidos exigem header:

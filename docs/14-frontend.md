@@ -183,12 +183,20 @@ src/
     ├── AI.jsx               # Configuracao/manage de IA
     ├── Knowledge.jsx        # Base de conhecimento (RAG)
     ├── Departments.jsx      # Setores da empresa
-    ├── Admin.jsx            # Administracao / usuarios
+    ├── Admin.jsx            # Administracao / usuarios + auditoria
     ├── PlatformAdmin.jsx    # Admin de plataforma (providers/usuarios/erros)
     ├── Account.jsx          # Minha conta (alterar senha)
     ├── Agenda.jsx           # Agenda / Secretaria IA
     └── WhatsApp.jsx         # Conexao WhatsApp/Evolution
 ```
+
+### `/admin` — Membros + Auditoria
+- **Membros**: lista paginada (50/pagina) com busca por nome/email, criacao de membro,
+  alteracao de papel e remocao — somente gestores (owner/admin).
+- **Auditoria** (somente gestor, Fase 9.4): secao abaixo da lista de membros com a tabela
+  de acoes criticas (`GET /audit-logs/`), filtros por **acao**, **entidade** e **usuario**,
+  paginacao (25/pagina) e colunas: Quando, Usuario, Acao, Entidade, Detalhes (sumario do JSON
+  de detalhes) e IP. Utiliza o componente `ui/Pagination`.
 
 ## API Client (`api.js`)
 

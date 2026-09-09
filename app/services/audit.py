@@ -13,6 +13,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.models.audit_log import AuditLog
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +99,9 @@ def get_audit_logs(
     offset: int = 0,
 ) -> dict:
     """Lista registros de auditoria com filtros."""
-    q = db.query(AuditLog).filter(AuditLog.company_id == company_id)
+    q = db.query(AuditLog, User.name.label("user_name")).outerjoin(
+        User, User.id == AuditLog.user_id
+    ).filter(AuditLog.company_id == company_id)
 
     if user_id is not None:
         q = q.filter(AuditLog.user_id == user_id)
@@ -117,15 +120,16 @@ def get_audit_logs(
 
     return {
         "total": total,
-        "items": [_log_to_dict(log) for log in logs],
+        "items": [_log_to_dict(log, user_name=user_name) for log, user_name in logs],
     }
 
 
-def _log_to_dict(log: AuditLog) -> dict:
+def _log_to_dict(log: AuditLog, user_name: str | None = None) -> dict:
     return {
         "id": log.id,
         "company_id": log.company_id,
         "user_id": log.user_id,
+        "user_name": user_name,
         "action": log.action,
         "entity": log.entity,
         "entity_id": log.entity_id,

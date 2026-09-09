@@ -90,7 +90,9 @@
 - `app/services/audit.py`: `log_action` (registra), `get_audit_logs` (lista com filtros).
 - Integrado em: auth, config, users, workflows, platform_admin (24 endpoints).
 - Endpoint `GET /audit-logs/` (somente gestores, filtros user/action/entity, paginacao).
-- `tests/test_audit.py` (13 testes).
+- Response inclui `user_name` (join com a tabela de usuarios) para exibicao na UI.
+- UI na pagina `/admin` (somente gestor): tabela com filtros por acao/entidade/usuario e paginacao.
+- `tests/test_audit.py` (15 testes).
 
 ## 5.3 Politica de IA por usuario (Fase 9.1 — Implementado)
 

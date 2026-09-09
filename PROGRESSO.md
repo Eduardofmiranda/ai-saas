@@ -413,8 +413,8 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [x] Migration `0018_audit_log`
 - [x] Integrado em: auth (register/login/password), config, users, workflows, platform_admin
 - [x] Endpoint `GET /audit-logs/` (somente gestores, filtros user/action/entity, paginacao)
-- [x] Testes: `tests/test_audit.py` (13 testes)
-- [ ] Visao no frontend (pagina Admin) — melhoria futura
+- [x] Testes: `tests/test_audit.py` (15 testes)
+- [x] Visao no frontend (pagina Admin): tabela com filtros por acao/entidade/usuario + paginacao (somente gestor)
 
 ### 9.5 — Teste e Simulacao
 - [ ] Modo "simular" no editor de workflows (inserir mensagem fake)
@@ -500,7 +500,7 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 | 6 | ✅ Completa | QR na tela |
 | 7 | ✅ Completa | Seguranca critica |
 | 8 | 🔄 Parcial | Funcionalidades core (8.5 Templates pendente; 8.6 Agenda concluída até 8.6b — faltam 8.6c calendários externos) |
-| 9 | 🔄 Parcial | Politica IA (✅), Erros (✅), Dashboard (pendente) |
+| 9 | 🔄 Parcial | Politica IA (✅), Erros (✅), Auditoria (✅ backend+UI), Dashboard (pendente) |
 | 10 | ⏳ Pendente | Escala & multi-canal |
 
 ### Gaps Criticos (por prioridade)
@@ -509,10 +509,10 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 2. ~~**Midia ignorada**~~ ✅ resposta automatica implementada
 3. ~~**Knowledge sem upload**~~ ✅ upload de PDF, DOCX, TXT, CSV, MD concluido
 4. ~~**Sem handoff humano**~~ ✅ concluido (Fase 8.3)
-5. **Filtros e botoes de paginacao no frontend** — paginacao server-side ja existe em todas as listas (Fase 8.7); falta a UX de filtro (nome/status/data) e navegacao por paginas
+5. ~~**Filtros e botoes de paginacao no frontend**~~ ✅ concluido (Fase 8.7) — todos os list endpoints tem `q`/`status` e paginacao server-side; paginas com busca, navegacao e componente `Pagination`
 6. **Sem HTTPS** — necessario configurar Caddy/nginx/Tunnel
 7. ~~**Sem business hours**~~ ✅ concluido (horario de atendimento por empresa, marco 8.4) — atendimento 24h configurável
-8. **Sem audit log** — nao registra quem fez o que
+8. ~~**Sem audit log**~~ ✅ concluido (Fase 9.4) — backend integrarado em 24 endpoints + UI na pagina Admin (filtros e paginacao)
 9. **pgvector ausente** — busca vetorial em memoria (O(N))
 10. **Sem WebSocket** — sem atualizacao em tempo real
 11. **Sem canais extras** — so WhatsApp disponivel

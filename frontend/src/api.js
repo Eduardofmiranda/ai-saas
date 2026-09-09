@@ -111,6 +111,8 @@ export const api = {
   createUser: (body) => request("POST", "/users/", body),
   updateUser: (id, body) => request("PATCH", `/users/${id}`, body),
   deleteUser: (id) => request("DELETE", `/users/${id}`),
+  // Auditoria
+  getAuditLogs: (params = {}) => request("GET", `/audit-logs/${qs(params)}`),
   // Administração global da plataforma (somente operador autorizado)
   getPlatformOverview: () => request("GET", "/platform-admin/overview"),
   getPlatformUsers: () => request("GET", "/platform-admin/users"),
