@@ -194,11 +194,12 @@ src/
 ### `/admin` — Membros + Auditoria
 - **Membros**: lista paginada (50/pagina) com busca por nome/email, criacao de membro,
   alteracao de papel e remocao — somente gestores (owner/admin).
-- **Setor + nível (Fase 8.9)**: no criar membro e no modal **Editar**, um painel
-  "Setores" usa o padrão **vincular setores**: dois seletores (setor + nível
-  `view`/`attend`/`manage`) + botão **Vincular**; os vínculos aparecem como linhas
-  editáveis (troca o nível no `select` e remove com `×`). A linha do membro na
-  tabela exibe **badges** `Setor · Nível`.
+- **Setor + nível (Fase 8.9)**: o modal **Editar** cuida apenas de papel e nova
+  senha. O vínculo com setores fica num **modal próprio "Setores"** (botão "Setores"
+  em cada membro e também no criar membro, como seção do formulário): seletor em
+  **duas colunas** — "Setores da empresa" (com `+` e `select` de nível para vincular)
+  e "Setores do membro" (remove com `×` e troca o nível direto). A linha do membro
+  exibe **badges** `Setor · Nível`.
 - **Auditoria** (somente gestor, Fase 9.4): secao abaixo da lista de membros com a tabela
   de acoes criticas (`GET /audit-logs/`), filtros por **acao**, **entidade** e **usuario**,
   paginacao (25/pagina) e colunas: Quando, Usuario, Acao, Entidade, Detalhes (sumario do JSON

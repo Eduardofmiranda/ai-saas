@@ -92,90 +92,105 @@ function detailSummary(raw) {
   return text.length > 100 ? text.slice(0, 100) + "…" : text;
 }
 
-function setSectorLevel(sectors, deptId, level) {
-  return { ...(sectors || {}), [deptId]: level };
-}
-
-function SectorLinks({ departments, sectors, onChange }) {
-  const [pickId, setPickId] = useState("");
-  const [pickLevel, setPickLevel] = useState("attend");
+function SectorPicker({ departments, sectors, onChange }) {
+  const [pendingLevels, setPendingLevels] = useState({});
   const linked = sectors || {};
   const linkedIds = Object.keys(linked).map(Number);
   const available = departments.filter((d) => !linkedIds.includes(d.id));
 
   if (!departments || departments.length === 0) {
     return (
-      <div className="member-sectors">
-        <span className="member-sectors-label">Setores</span>
-        <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-          Crie setores na página <strong>/setores</strong> para vincular membros a eles.
-        </p>
-      </div>
+      <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+        Ainda não há setores cadastrados. Crie-os na página <strong>/setores</strong> para
+        vincular membros.
+      </p>
     );
   }
 
-  function handleLink(e) {
-    e.preventDefault();
-    if (!pickId) return;
-    onChange({ ...linked, [Number(pickId)]: pickLevel });
-    setPickId("");
-    setPickLevel("attend");
+  function setPending(id, level) {
+    setPendingLevels((prev) => ({ ...prev, [id]: level }));
   }
 
-  function handleRemove(id) {
+  function add(id) {
+    onChange({ ...linked, [id]: pendingLevels[id] || "attend" });
+  }
+
+  function remove(id) {
     const next = { ...linked };
     delete next[id];
     onChange(next);
   }
 
   return (
-    <div className="member-sectors">
-      <span className="member-sectors-label">Setores</span>
-      <p className="muted" style={{ fontSize: 12, margin: "0 0 10px" }}>
-        Vincule o membro aos setores que ele atende. Sem setor, ele continua vendo todas as conversas.
-      </p>
-      <div className="member-sector-add">
-        <select value={pickId} onChange={(e) => setPickId(e.target.value)} aria-label="Setor a vincular">
-          <option value="">Selecionar setor…</option>
-          {available.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-        </select>
-        <select value={pickLevel} onChange={(e) => setPickLevel(e.target.value)} aria-label="Nível de acesso">
-          {LEVEL_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-        </select>
-        <button type="button" className="btn primary small" onClick={handleLink} disabled={!pickId}>
-          Vincular
-        </button>
-      </div>
-      {linkedIds.length > 0 ? (
-        <div className="member-sector-links">
-          {linkedIds.map((id) => {
-            const dept = departments.find((d) => d.id === id);
-            return (
-              <div key={id} className="member-sector-link">
-                <span className="member-sector-name">{dept ? dept.name : `Setor #${id}`}</span>
+    <div className="sector-picker">
+      <section className="sector-pane">
+        <h4>Setores da empresa</h4>
+        {available.length === 0 ? (
+          <p className="muted" style={{ fontSize: 12 }}>Todos os setores já estão vinculados.</p>
+        ) : (
+          <ul>
+            {available.map((d) => (
+              <li key={d.id} className="sector-pick-row">
+                <button
+                  type="button"
+                  className="sector-pick-add"
+                  onClick={() => add(d.id)}
+                  aria-label={`Vincular setor ${d.name}`}
+                  title="Vincular setor"
+                >
+                  +
+                </button>
+                <span className="member-sector-name">{d.name}</span>
                 <select
-                  value={linked[id]}
-                  onChange={(e) => onChange(setSectorLevel(linked, id, e.target.value))}
-                  aria-label={`Nível no setor ${dept ? dept.name : id}`}
+                  value={pendingLevels[d.id] || "attend"}
+                  onChange={(e) => setPending(d.id, e.target.value)}
+                  aria-label={`Nível para ${d.name}`}
                 >
                   {LEVEL_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
-                <button
-                  type="button"
-                  className="member-sector-remove"
-                  onClick={() => handleRemove(id)}
-                  aria-label={`Remover setor ${dept ? dept.name : id}`}
-                  title="Remover setor"
-                >
-                  ×
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>Nenhum setor vinculado.</p>
-      )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="sector-pane sector-pane-linked">
+        <h4>Setores do membro</h4>
+        {linkedIds.length === 0 ? (
+          <p className="muted" style={{ fontSize: 12 }}>
+            Nenhum setor vinculado. O membro enxerga todas as conversas.
+          </p>
+        ) : (
+          <ul>
+            {linkedIds.map((id) => {
+              const dept = departments.find((d) => d.id === id);
+              return (
+                <li key={id} className="sector-pick-row">
+                  <span className="member-sector-name">
+                    {dept ? dept.name : `Setor #${id}`}
+                  </span>
+                  <select
+                    value={linked[id]}
+                    onChange={(e) => onChange({ ...linked, [id]: e.target.value })}
+                    aria-label={`Nível no setor ${dept ? dept.name : id}`}
+                  >
+                    {LEVEL_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                  <button
+                    type="button"
+                    className="sector-pick-remove"
+                    onClick={() => remove(id)}
+                    aria-label={`Desvincular setor ${dept ? dept.name : id}`}
+                    title="Desvincular setor"
+                  >
+                    ×
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
@@ -199,9 +214,11 @@ export default function Admin() {
   const [departments, setDepartments] = useState([]);
   const [editTarget, setEditTarget] = useState(null);
   const [editRole, setEditRole] = useState("agent");
-  const [editSectors, setEditSectors] = useState({});
   const [editPassword, setEditPassword] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+  const [sectorTarget, setSectorTarget] = useState(null);
+  const [sectorForm, setSectorForm] = useState({});
+  const [sectorSaving, setSectorSaving] = useState(false);
   const [logs, setLogs] = useState([]);
   const [logsTotal, setLogsTotal] = useState(0);
   const [logPage, setLogPage] = useState(0);
@@ -307,11 +324,8 @@ export default function Admin() {
   }
 
   function openEdit(member) {
-    const sectors = {};
-    (member.departments || []).forEach((d) => { sectors[d.department_id] = d.level; });
     setEditTarget(member);
     setEditRole(member.role);
-    setEditSectors(sectors);
     setEditPassword("");
   }
 
@@ -323,7 +337,6 @@ export default function Admin() {
       await api.updateUser(editTarget.id, {
         role: editRole,
         password: editPassword || undefined,
-        departments: departmentsPayload(editSectors),
       });
       setSuccess(`Membro ${editTarget.name} atualizado.`);
       setEditTarget(null);
@@ -333,6 +346,31 @@ export default function Admin() {
       setError("Erro ao atualizar: " + e.message);
     } finally {
       setEditSaving(false);
+    }
+  }
+
+  function openSectors(member) {
+    const sectors = {};
+    (member.departments || []).forEach((d) => { sectors[d.department_id] = d.level; });
+    setSectorForm(sectors);
+    setSectorTarget(member);
+  }
+
+  async function saveSectors() {
+    if (!sectorTarget) return;
+    setSectorSaving(true);
+    setError("");
+    try {
+      await api.updateUser(sectorTarget.id, {
+        departments: departmentsPayload(sectorForm),
+      });
+      setSuccess(`Setores de ${sectorTarget.name} atualizados.`);
+      setSectorTarget(null);
+      load();
+    } catch (e) {
+      setError("Erro ao atualizar setores: " + e.message);
+    } finally {
+      setSectorSaving(false);
     }
   }
 
@@ -436,7 +474,7 @@ export default function Admin() {
                 {ROLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </label>
-            <SectorLinks departments={departments} sectors={form.sectors} onChange={(s) => set("sectors", s)} />
+            <SectorPicker departments={departments} sectors={form.sectors} onChange={(s) => set("sectors", s)} />
             <button className="btn primary" type="submit" disabled={saving}>
               {saving ? "Salvando..." : "Adicionar"}
             </button>
@@ -511,6 +549,7 @@ export default function Admin() {
 
               {isManager && u.id !== user?.id && u.role !== "owner" && (
                 <>
+                  <button className="btn ghost small" onClick={() => openSectors(u)}>Setores</button>
                   <button className="btn ghost small" onClick={() => openEdit(u)}>Editar</button>
                   <button className="btn ghost small danger" onClick={() => setConfirmTarget(u)}>Remover</button>
                 </>
@@ -690,8 +729,29 @@ export default function Admin() {
                   autoComplete="new-password"
                 />
               </label>
-              <SectorLinks departments={departments} sectors={editSectors} onChange={setEditSectors} />
             </div>
+          </Modal>
+        )}
+
+        {sectorTarget && (
+          <Modal
+            title={`Setores · ${sectorTarget.name}`}
+            icon={<Icon name="users" />}
+            onClose={() => setSectorTarget(null)}
+            footer={
+              <>
+                <button className="btn ghost" onClick={() => setSectorTarget(null)}>Cancelar</button>
+                <button className="btn primary" onClick={saveSectors} disabled={sectorSaving}>
+                  {sectorSaving ? "Salvando..." : "Salvar"}
+                </button>
+              </>
+            }
+          >
+            <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
+              Vincule setores com o botão <strong>+</strong> (defina o nível de acesso antes).
+              O membro só enxerga conversas dos setores vinculados; sem vínculo, vê tudo.
+            </p>
+            <SectorPicker departments={departments} sectors={sectorForm} onChange={setSectorForm} />
           </Modal>
         )}
       </main>
