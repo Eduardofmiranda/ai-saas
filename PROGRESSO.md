@@ -490,11 +490,15 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [ ] Rate limiting por API key (planejado)
 - [ ] SDKs para integracao (planejado)
 
-### 10.7 — WebSocket
-- [ ] Endpoint WebSocket para atualizacao em tempo real
-- [ ] Push de novas mensagens para o frontend
-- [ ] Status de conexao em tempo real
-- [ ] Notificacoes push no browser
+### 10.7 — WebSocket ✅
+- [x] Endpoint `/ws` com autenticacao via query param (token JWT)
+- [x] ConnectionManager com gerenciamento de conexoes por empresa
+- [x] Broadcast automatico: `message.new` (webhook) e `message.reply` (resposta)
+- [x] Hook `useWebSocket` no frontend (reconnect automatico, ping/pong)
+- [x] Conversations.jsx: polling reduzido (30s) + WebSocket para updates instantaneos
+- [x] Nginx: proxy WebSocket com `proxy_read_timeout 86400s`
+- [ ] Status de conexao em tempo real (planejado)
+- [ ] Notificacoes push no browser (planejado)
 
 ### 10.8 — Campanhas
 - [ ] Enviar mensagens em massa (broadcast)
