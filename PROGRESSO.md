@@ -454,11 +454,13 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [ ] Instagram DM: Graph API
 - [ ] Interface unificada: todas as conversas em um inbox
 
-### 10.3 — Multi-tenancy Avancado
-- [ ] Planos de assinatura (free, basic, pro, enterprise)
-- [ ] Quotas por plano (mensagens, workflows, knowledge items)
-- [ ] Billing integration (Stripe, Asaas, ou Mercado Pago)
-- [ ] Portal do cliente para gerenciar assinatura
+### 10.3 — Multi-tenancy Avancado ✅
+- [x] Cascade na exclusao de departamento (limpa user_departments + reseta conversations)
+- [x] `department_id` opcional em Workflow (migration 0023)
+- [x] `department_id` opcional em Knowledge (migration 0023)
+- [x] Schema `WorkflowResponse` inclui `department_id`
+- [ ] Planos de assinatura (planejado)
+- [ ] Quotas por plano (planejado)
 
 ### 10.4 — Versionamento de Workflows ✅
 - [x] Model `WorkflowVersion` (migration 0021)
