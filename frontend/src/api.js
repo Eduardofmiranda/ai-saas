@@ -121,6 +121,12 @@ export const api = {
   createApiKey: (body) => request("POST", "/api-keys/", body),
   updateApiKey: (id, body) => request("PATCH", `/api-keys/${id}`, body),
   deleteApiKey: (id) => request("DELETE", `/api-keys/${id}`),
+  // Campanhas
+  getCampaigns: () => request("GET", "/campaigns/"),
+  createCampaign: (body) => request("POST", "/campaigns/", body),
+  startCampaign: (id) => request("POST", `/campaigns/${id}/start`),
+  deleteCampaign: (id) => request("DELETE", `/campaigns/${id}`),
+  getCampaignLogs: (id) => request("GET", `/campaigns/${id}/logs`),
   // Usuarios / Administracao
   getUsers: (params = {}) => request("GET", `/users/${qs(params)}`),
   createUser: (body) => request("POST", "/users/", body),

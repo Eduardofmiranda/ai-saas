@@ -24,3 +24,4 @@ from app.models.audit_log import AuditLog
 from app.models.outbound_webhook import OutboundWebhook, OutboundWebhookLog
 from app.models.workflow_version import WorkflowVersion
 from app.models.api_key import ApiKey
+from app.models.campaign import Campaign, CampaignLog

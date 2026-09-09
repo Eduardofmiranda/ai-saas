@@ -453,6 +453,137 @@ function ApiKeysSection() {
   );
 }
 
+function CampaignsSection() {
+  const [campaigns, setCampaigns] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ name: "", message: "", send_all: true });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  async function load() {
+    try {
+      setCampaigns(await api.getCampaigns());
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function create() {
+    setSaving(true);
+    try {
+      await api.createCampaign(form);
+      setShowForm(false);
+      setForm({ name: "", message: "", send_all: true });
+      load();
+    } catch (e) {
+      setError("Erro ao criar campanha: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function start(id) {
+    try {
+      await api.startCampaign(id);
+      load();
+    } catch (e) {
+      setError("Erro ao iniciar: " + e.message);
+    }
+  }
+
+  async function remove(id) {
+    try {
+      await api.deleteCampaign(id);
+      setConfirmDelete(null);
+      load();
+    } catch (e) {
+      setError("Erro ao excluir: " + e.message);
+    }
+  }
+
+  const STATUS_LABEL = { draft: "Rascunho", pending: "Na fila", sending: "Enviando", completed: "Concluida", error: "Erro" };
+
+  return (
+    <div className="card" style={{ marginTop: 32 }}>
+      <h3>Campanhas</h3>
+      <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
+        Envie mensagens em massa para seus contatos via WhatsApp.
+      </p>
+
+      {error && <Alert variant="error" onDismiss={() => setError("")}>{error}</Alert>}
+
+      {loading ? <Skeleton variant="lines" /> : (
+        <>
+          {campaigns.length === 0 && !showForm && (
+            <EmptyState icon={<Icon name="workflow" size={32} />} title="Nenhuma campanha">
+              <button className="btn primary" onClick={() => setShowForm(true)}>+ Criar campanha</button>
+            </EmptyState>
+          )}
+
+          {campaigns.length > 0 && (
+            <div className="dash-list">
+              {campaigns.map((c) => (
+                <div key={c.id} className="dash-list-row">
+                  <span className={`badge ${c.status === "completed" ? "on" : c.status === "sending" ? "on" : "off"}`} style={{ fontSize: 11 }}>
+                    {STATUS_LABEL[c.status] || c.status}
+                  </span>
+                  <span className="dash-name" style={{ fontSize: 12 }}>{c.name}</span>
+                  <span className="dash-meta" style={{ fontSize: 11 }}>
+                    {c.sent_count}/{c.total_recipients} enviados{c.error_count > 0 ? ` · ${c.error_count} erros` : ""}
+                  </span>
+                  {c.status === "draft" && (
+                    <button className="btn ghost small" onClick={() => start(c.id)}>Iniciar</button>
+                  )}
+                  {c.status !== "sending" && (
+                    <button className="btn ghost small danger" onClick={() => setConfirmDelete(c)}>Excluir</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!showForm && campaigns.length > 0 && (
+            <button className="btn secondary" style={{ marginTop: 12 }} onClick={() => setShowForm(true)}>+ Criar campanha</button>
+          )}
+
+          {showForm && (
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+              <input className="input" placeholder="Nome da campanha" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <textarea className="input" rows={4} placeholder="Mensagem a ser enviada..." value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
+              <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                <input type="checkbox" checked={form.send_all} onChange={(e) => setForm({ ...form, send_all: e.target.checked })} />
+                Enviar para todos os contatos
+              </label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn ghost" onClick={() => setShowForm(false)}>Cancelar</button>
+                <button className="btn primary" onClick={create} disabled={saving || !form.name.trim() || !form.message.trim()}>
+                  {saving ? "Criando..." : "Criar"}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Excluir campanha"
+          message={`Excluir a campanha "${confirmDelete.name}"?`}
+          confirmLabel="Excluir"
+          onConfirm={() => remove(confirmDelete.id)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function Admin() {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
@@ -933,6 +1064,10 @@ export default function Admin() {
 
         {isManager && (
           <ApiKeysSection />
+        )}
+
+        {isManager && (
+          <CampaignsSection />
         )}
 
         {confirmTarget && (
