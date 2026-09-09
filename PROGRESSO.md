@@ -320,7 +320,7 @@ Itens marcados acima sao locais: nao houve commit, push ou deploy nesta revisao.
 - [x] Inbox: atendente **sem setor** vê tudo (compatibilidade); com setores vê conversas dos seus setores + as sem setor (`department_id IS NULL`); `view` lê mas recebe 403 ao responder/alterar/assumir
 - [x] Enforce em: `conversation_router` (listagem/detalhe/update/assume/pause) e `message_router` (reply/update/delete mensagens)
 - [x] `Conversation` response: `department_id` + `department_name` (badge no inbox)
-- [x] Frontend (`Admin.jsx`): grid de setores no criar membro, modal "Editar membro" (papel + senha opcional + setores), badges de setor/nível na tabela
+- [x] Frontend (`Admin.jsx`): painel "vincular setores" (seletor setor+nível, adicionar/remover) no criar membro e no modal "Editar membro" (papel + senha opcional + setores), badges de setor/nível na tabela
 - [x] Frontend (`Conversations.jsx`): badge de setor no item e no contexto da conversa
 - [x] Testes: `tests/test_user_departments.py` (15 testes: criar/editar/limpar setores, setor externo 400, nível inválido 422, visibilidade por setor, view-only 403, attend responde)
 - [x] Docs: `docs/10-api.md`, `docs/06-banco-de-dados.md`, `docs/14-frontend.md`, `docs/16-seguranca.md`, `docs/FATOS-CHAVE.md`

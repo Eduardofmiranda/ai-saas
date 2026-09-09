@@ -102,7 +102,7 @@
 - Atendente com setores vê conversas dos seus setores + as sem setor (`department_id IS NULL`); sem setor vê tudo; Dono/Admin vê tudo.
 - `view` só lê (403 ao responder/alterar/assumir); `attend` (padrão) responde/assume/altera; `manage` hoje = `attend` (reservado p/ gestão).
 - Enforce em conversations (listagem/detalhe/update/assume/pause) e messages (reply/update/delete). Conversas expõem `department_id`/`department_name`.
-- Admin.jsx: grid de setores no criar + modal Editar membro (papel/senha/setores) + badges; Conversations.jsx: badge de setor.
+- Admin.jsx: painel "vincular setores" (adicionar/remover) no criar + modal Editar membro (papel/senha/setores) + badges; Conversations.jsx: badge de setor.
 - `tests/test_user_departments.py` (15 testes).
 
 ## 5.3 Politica de IA por usuario (Fase 9.1 — Implementado)

@@ -774,17 +774,30 @@ body.sb-collapsed .layout { padding-left: var(--sidebar-w-collapsed); }
 }
 .member-sectors { margin-top: 12px; }
 .member-sectors-label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
-.member-sector-row {
-  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
-  background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
-  margin-bottom: 6px; font-size: 13px;
+.member-sector-add {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px; background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 8px; margin-bottom: 8px;
 }
-.member-sector-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.member-sector-row select {
-  padding: 6px 8px; background: var(--panel); border: 1px solid var(--border);
+.member-sector-add select {
+  flex: 1; min-width: 120px; padding: 7px 8px; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px;
+}
+.member-sector-links { display: flex; flex-direction: column; gap: 6px; }
+.member-sector-link {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; font-size: 13px;
+}
+.member-sector-link select {
+  padding: 5px 8px; background: var(--panel); border: 1px solid var(--border);
   border-radius: 8px; color: var(--text); font-size: 12px;
 }
-.member-sector-row select:disabled { opacity: .5; }
+.member-sector-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.member-sector-remove {
+  width: 22px; height: 22px; flex-shrink: 0; border: none; border-radius: 6px;
+  background: transparent; color: var(--muted); font-size: 15px; line-height: 1; cursor: pointer;
+}
+.member-sector-remove:hover { background: rgba(244,63,94,.15); color: #f87171; }
 .notice {
   background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3);
   color: #fbbf24; padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 13px;
