@@ -124,20 +124,20 @@ export default function Dashboard() {
                   onClick={() => navigate(to)}
                 >
                   <span className="kpi-icon"><Icon name={icon} size={21} /></span>
-                  <span className="kpi-body">
-                    <span className="kpi-value">{value}</span>
-                    <span className="kpi-label">{label}</span>
-                    <span className="kpi-sub">{sub}</span>
-                  </span>
+                  <div className="kpi-body">
+                    <div className="kpi-value">{value}</div>
+                    <div className="kpi-label">{label}</div>
+                    <div className="kpi-sub">{sub}</div>
+                  </div>
                 </button>
               ) : (
                 <div key={label} className={`kpi-card ${tone || ""}`}>
                   <span className="kpi-icon"><Icon name={icon} size={21} /></span>
-                  <span className="kpi-body">
-                    <span className="kpi-value">{value}</span>
-                    <span className="kpi-label">{label}</span>
-                    <span className="kpi-sub">{sub}</span>
-                  </span>
+                  <div className="kpi-body">
+                    <div className="kpi-value">{value}</div>
+                    <div className="kpi-label">{label}</div>
+                    <div className="kpi-sub">{sub}</div>
+                  </div>
                 </div>
               )
             )}
