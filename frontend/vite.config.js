@@ -26,6 +26,21 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/docs': {
+        target: BACKEND_TARGET,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/redoc': {
+        target: BACKEND_TARGET,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/openapi.json': {
+        target: BACKEND_TARGET,
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 })
