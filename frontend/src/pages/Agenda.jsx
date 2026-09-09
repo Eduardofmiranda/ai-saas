@@ -8,6 +8,7 @@ import EmptyState from "../components/ui/EmptyState";
 import Icon from "../components/ui/Icon";
 import Modal from "../components/ui/Modal";
 import PageHeader from "../components/ui/PageHeader";
+import Skeleton from "../components/ui/Skeleton";
 import { DAYS, TIMEZONES } from "../utils/constants";
 
 const STATUS_META = {
@@ -270,7 +271,7 @@ export default function Agenda() {
 
         {loading ? (
           <div className="card">
-            <p className="muted">Carregando agenda...</p>
+            <Skeleton />
           </div>
         ) : appts.length === 0 ? (
           <EmptyState

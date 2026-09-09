@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import Header from "../components/Header";
-import { PageHeader, Alert, Icon, EmptyState, ConfirmDialog } from "../components/ui";
+import { PageHeader, Alert, Icon, EmptyState, ConfirmDialog, Skeleton } from "../components/ui";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -123,7 +123,7 @@ export default function Home() {
           </div>
         )}
 
-        {loading && <p className="muted">Carregando fluxos...</p>}
+        {loading && <Skeleton variant="cards" />}
 
         {!loading && !error && workflows.length === 0 && !showTemplates && (
           <EmptyState

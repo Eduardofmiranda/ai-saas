@@ -6,6 +6,7 @@ import ConfirmDialog from "../components/ui/ConfirmDialog";
 import PageHeader from "../components/ui/PageHeader";
 import EmptyState from "../components/ui/EmptyState";
 import Icon from "../components/ui/Icon";
+import Skeleton from "../components/ui/Skeleton";
 
 export default function Knowledge() {
   const [items, setItems] = useState([]);
@@ -281,7 +282,7 @@ export default function Knowledge() {
           </div>
         )}
 
-        {loading && <p className="muted">Carregando...</p>}
+        {loading && <Skeleton variant="cards" />}
 
         {/* Lista de documentos */}
         {!loading && items.length === 0 && !showForm && !searchResults && (

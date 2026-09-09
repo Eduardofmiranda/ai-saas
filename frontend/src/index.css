@@ -940,6 +940,22 @@ body.sb-collapsed .layout { padding-left: var(--sidebar-w-collapsed); }
   .editor-layout .react-flow__minimap { display: none; }
 }
 
+/* ---------- Skeletons ---------- */
+.skeleton-lines { display: flex; flex-direction: column; gap: 14px; padding: 4px; }
+.skeleton-card { display: flex; flex-direction: column; gap: 10px; }
+.skeleton-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.skeleton { position: relative; overflow: hidden; background: var(--panel2); border-radius: 6px; }
+.skeleton::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer { to { transform: translateX(100%); } }
+.skeleton-title { width: 40%; height: 22px; margin-bottom: 4px; }
+.skeleton-line { height: 14px; width: 100%; }
+.skeleton-line.short { width: 70%; }
+.skeleton-avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; }
+
 /* ---------- Role chip ---------- */
 .role-chip {
   display: inline-flex; align-items: center; margin-left: 8px; padding: 3px 8px;
@@ -1213,6 +1229,21 @@ body.sb-collapsed .layout { padding-left: var(--sidebar-w-collapsed); }
 @media (max-width: 900px) {
   .inbox-layout { grid-template-columns: 260px 1fr; }
   .inbox-context { display: none; }
+}
+
+@media (max-width: 767px) {
+  .content.inbox-content { padding: 8px; }
+  .inbox-layout {
+    grid-template-columns: 1fr;
+    height: calc(100vh - 76px); min-height: 0;
+    border-radius: 8px;
+  }
+  .inbox-list { border-right: none; border-bottom: 1px solid var(--border); max-height: 44vh; }
+  .inbox-thread { min-height: 56vh; }
+  .inbox-toolbar { padding: 8px; }
+  .inbox-msg-search { margin-top: 8px; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .leads-grid { grid-template-columns: 1fr; }
 }
 
 /* ---------- Leads ---------- */

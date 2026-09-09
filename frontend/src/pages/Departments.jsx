@@ -7,6 +7,7 @@ import EmptyState from "../components/ui/EmptyState";
 import Icon from "../components/ui/Icon";
 import Modal from "../components/ui/Modal";
 import PageHeader from "../components/ui/PageHeader";
+import Skeleton from "../components/ui/Skeleton";
 import { avatarColor } from "../utils/format";
 
 export default function Departments() {
@@ -144,7 +145,7 @@ export default function Departments() {
 
         {loading ? (
           <div className="card">
-            <p className="muted">Carregando setores...</p>
+            <Skeleton />
           </div>
         ) : departments.length === 0 ? (
           <EmptyState

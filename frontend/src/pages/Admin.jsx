@@ -7,6 +7,7 @@ import ConfirmDialog from "../components/ui/ConfirmDialog";
 import EmptyState from "../components/ui/EmptyState";
 import Icon from "../components/ui/Icon";
 import PageHeader from "../components/ui/PageHeader";
+import Skeleton from "../components/ui/Skeleton";
 
 const ROLE_LABELS = {
   owner: "Dono",
@@ -180,7 +181,7 @@ export default function Admin() {
           </form>
         )}
 
-        {loading && <p className="muted">Carregando equipe...</p>}
+        {loading && <Skeleton variant="cards" cards={4} />}
 
         {!loading && users.length === 0 && (
           <EmptyState

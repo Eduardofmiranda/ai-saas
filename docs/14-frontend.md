@@ -162,6 +162,7 @@ src/
 │       ├── ConfirmDialog.jsx # Confirmacao destrutiva (substitui confirm())
 │       ├── PageHeader.jsx    # h1 + subtitulo + acoes
 │       ├── EmptyState.jsx    # Estado vazio (icone + titulo + acao)
+│       ├── Skeleton.jsx      # Placeholder de loading (variant="cards"/"lines")
 │       └── index.js          # Re-export (importar de "../components/ui")
 ├── context/
 │   └── AuthContext.jsx  # Context de autenticacao
@@ -253,6 +254,9 @@ os glifos de categoria dos nodes (▶ ✦ ➜ ⇄ ✆ ◆ ★) e o atalho Delete
   `danger=false` → `btn primary` (reversivel).
 - **PageHeader** (`title`, `subtitle`, acoes via children): `<h1>` unico por pagina.
 - **EmptyState** (`icon={<Icon size={40}/>}`, `title`, `action`): substitui `.empty`.
+- **Skeleton** (`<Skeleton variant="cards" />` para grids, `variant="lines"` para listas;
+  `rows`/`cards` para numero de blocos): substitui textos "Carregando ..." no loading
+  de paginas. Classes `.skeleton*` + keyframes `shimmer` em `index.css`.
 - **Utils**: `formatPhone`, `avatarColor` (`utils/format.js`) e `DAYS`/`TIMEZONES`
   (`utils/constants.js`) — nao duplicar localmente nas paginas.
 - **Botoes de perigo**: reversivel = `btn ghost small danger` (inline no card);
@@ -280,3 +284,9 @@ os glifos de categoria dos nodes (▶ ✦ ➜ ⇄ ✆ ◆ ★) e o atalho Delete
 - Login: card centralizado
 - Home: grade de cards de fluxos
 - Editor: paleta + canvas + inspector
+- **Responsividade (breakpoints)**: sidebar vira rail de icones (<1100px) e drawer
+  mobile (<768px); editor empilha colunas (<900px); inbox: 3 paineis -> lista+thread
+  (<900px, contexto oculto) -> painel unico em pilha (<768px); tabelas ganham
+  scroll horizontal; `grid-2`/`leads-grid` colapsam para 1 coluna (<768px);
+  `.page-header-row`/`.toolbar` empilham (<560px). Skeletons substituem textos de
+  carregamento nas paginas.

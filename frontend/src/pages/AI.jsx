@@ -5,6 +5,7 @@ import KnowledgeSummaryCard from "../components/KnowledgeSummaryCard";
 import Alert from "../components/ui/Alert";
 import Icon from "../components/ui/Icon";
 import PageHeader from "../components/ui/PageHeader";
+import Skeleton from "../components/ui/Skeleton";
 
 const PROVIDER_LABELS = { groq: "Groq", openai: "OpenAI", deepseek: "DeepSeek", mistral: "Mistral", ollama: "Ollama" };
 
@@ -137,7 +138,7 @@ export default function AI() {
     return (
       <div className="layout">
         <Header />
-        <main className="content"><p className="muted">Carregando configurações da IA...</p></main>
+        <main className="content"><Skeleton variant="cards" /></main>
       </div>
     );
   }

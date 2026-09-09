@@ -7,6 +7,7 @@ import ConfirmDialog from "../components/ui/ConfirmDialog";
 import PageHeader from "../components/ui/PageHeader";
 import EmptyState from "../components/ui/EmptyState";
 import Icon from "../components/ui/Icon";
+import Skeleton from "../components/ui/Skeleton";
 import { avatarColor } from "../utils/format";
 
 const PROVIDERS = [
@@ -294,7 +295,7 @@ export default function PlatformAdmin() {
         {tab === "overview" && (
           <>
             {!overview ? (
-              <div className="card"><p className="muted">Carregando visão geral...</p></div>
+              <div className="card"><Skeleton /></div>
             ) : (
               <>
                 <div className="stat-grid">
@@ -322,7 +323,7 @@ export default function PlatformAdmin() {
                 possuírem uma chave própria legada. A chave fica cifrada no banco e não pode ser lida pela tela.
               </p>
               <div className="platform-provider-grid">
-                {providerCards || <p className="muted">Carregando provedores...</p>}
+                {providerCards || <Skeleton />}
               </div>
             </section>
 
@@ -382,7 +383,7 @@ export default function PlatformAdmin() {
               )}
 
               <div className="platform-user-list">
-                {users.length === 0 && <p className="muted">Carregando usuários...</p>}
+                {users.length === 0 && <Skeleton variant="cards" cards={3} />}
                 {users.map((user) => {
                   const cfg = getUserConfig(user);
                   return (
