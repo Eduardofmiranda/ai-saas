@@ -246,5 +246,19 @@ def reply_in_conversation(
             customer.phone,
             content,
         )
+        background_tasks.add_task(
+            _broadcast_reply,
+            current_user.company_id,
+            conversation_id,
+            content,
+        )
 
     return message
+
+
+async def _broadcast_reply(company_id: int, conversation_id: int, content: str):
+    from app.services.websocket_manager import manager
+    await manager.broadcast(company_id, "message.reply", {
+        "conversation_id": conversation_id,
+        "content": content[:200],
+    })

@@ -4,8 +4,9 @@ import Header from "../components/Header";
 import Alert from "../components/ui/Alert";
 import Pagination from "../components/ui/Pagination";
 import { formatPhone, avatarColor } from "../utils/format";
+import { useWebSocket } from "../hooks/useWebSocket";
 
-const POLL_MS = 5000;
+const POLL_MS = 30000;
 const PAGE_SIZE = 50;
 
 const TAB_STATUS = {
@@ -81,46 +82,62 @@ export default function Conversations() {
 
   const selectedConv = conversations.find((c) => c.id === selected) || null;
 
-  // Polling: lista de conversas (sempre)
-  useEffect(() => {
-    let active = true;
-    async function tick() {
-      try {
-        const res = await api.getConversations({
-          status: TAB_STATUS[tab],
-          q,
-          limit: PAGE_SIZE,
-          offset: page * PAGE_SIZE,
-        });
-        if (!active) return;
-        setConversations(res.items || []);
-        setTotal(res.total || 0);
-        setError("");
-      } catch (e) {
-        if (active) setError(e.message || "Erro ao carregar conversas");
-      }
+  const refreshConversations = useCallback(async () => {
+    try {
+      const res = await api.getConversations({
+        status: TAB_STATUS[tab],
+        q,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+      });
+      setConversations(res.items || []);
+      setTotal(res.total || 0);
+      setError("");
+    } catch (e) {
+      setError(e.message || "Erro ao carregar conversas");
     }
-    tick();
-    const id = setInterval(tick, POLL_MS);
-    return () => { active = false; clearInterval(id); };
   }, [tab, q, page]);
 
-  // Polling: mensagens da conversa selecionada
+  const refreshMessages = useCallback(async () => {
+    if (!selected) { setMessages(null); return; }
+    try {
+      const msgRes = await api.getConversationMessages(selected);
+      setMessages(msgRes.items || []);
+    } catch (e) {
+      setError(e.message || "Erro ao carregar mensagens");
+    }
+  }, [selected]);
+
+  useWebSocket(null, useCallback((event, data) => {
+    if (event === "message.new" || event === "message.reply") {
+      refreshConversations();
+      if (selected && data.conversation_id === selected) {
+        refreshMessages();
+      }
+    }
+  }, [refreshConversations, refreshMessages, selected]));
+
+  // Polling reduzido (fallback para WebSocket)
+  useEffect(() => {
+    let active = true;
+    const id = setInterval(() => { if (active) refreshConversations(); }, POLL_MS);
+    return () => { active = false; clearInterval(id); };
+  }, [refreshConversations]);
+
   useEffect(() => {
     if (!selected) { setMessages(null); return; }
     let active = true;
-    async function tick() {
-      try {
-        const msgRes = await api.getConversationMessages(selected);
-        if (!active) return;
-        setMessages(msgRes.items || []);
-      } catch (e) {
-        if (active) setError(e.message || "Erro ao carregar mensagens");
-      }
-    }
-    tick();
-    const id = setInterval(tick, POLL_MS);
+    const id = setInterval(() => { if (active) refreshMessages(); }, POLL_MS);
     return () => { active = false; clearInterval(id); };
+  }, [refreshMessages, selected]);
+
+  // Carregamento inicial
+  useEffect(() => {
+    refreshConversations();
+  }, []);
+
+  useEffect(() => {
+    if (selected) refreshMessages();
   }, [selected]);
 
   useEffect(() => {

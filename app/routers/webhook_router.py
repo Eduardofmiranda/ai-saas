@@ -30,8 +30,17 @@ def _run_pipeline(company_id: int, phone: str, text: str, wa_message_id: str, pu
                 push_name=push_name,
             )
         )
+        asyncio.run(_broadcast_new_message(company_id, phone, text))
     finally:
         db.close()
+
+
+async def _broadcast_new_message(company_id: int, phone: str, text: str):
+    from app.services.websocket_manager import manager
+    await manager.broadcast(company_id, "message.new", {
+        "phone": phone,
+        "text": text[:200],
+    })
 
 
 def _reply_media_not_supported(company_id: int, phone: str) -> None:
