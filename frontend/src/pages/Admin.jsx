@@ -206,7 +206,7 @@ export default function Admin() {
   const [success, setSuccess] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "agent", sectors: {} });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "agent" });
   const [confirmTarget, setConfirmTarget] = useState(null);
   const [removing, setRemoving] = useState(false);
   const [roleChange, setRoleChange] = useState(null);
@@ -310,11 +310,10 @@ export default function Admin() {
         email: form.email.trim(),
         password: form.password,
         role: form.role,
-        departments: departmentsPayload(form.sectors),
       });
-      setForm({ name: "", email: "", password: "", role: "agent", sectors: {} });
+      setForm({ name: "", email: "", password: "", role: "agent" });
       setShowForm(false);
-      setSuccess("Membro adicionado com sucesso.");
+      setSuccess("Membro adicionado. Use o botão \"Setores\" na linha dele para vincular setores.");
       load();
     } catch (e) {
       setError("Erro ao adicionar: " + e.message);
@@ -474,7 +473,6 @@ export default function Admin() {
                 {ROLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </label>
-            <SectorPicker departments={departments} sectors={form.sectors} onChange={(s) => set("sectors", s)} />
             <button className="btn primary" type="submit" disabled={saving}>
               {saving ? "Salvando..." : "Adicionar"}
             </button>
