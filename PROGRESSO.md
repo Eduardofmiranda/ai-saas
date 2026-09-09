@@ -291,8 +291,8 @@ Itens marcados acima sao locais: nao houve commit, push ou deploy nesta revisao.
 - [x] Workflows: `skip`/`limit` com paginação server-side
 - [x] Users: `skip`/`limit` com paginação server-side
 - [x] Frontend: todas as paginas consomem `{total, items}`
-- [ ] Filtros por nome/status/data (melhoria futura)
-- [ ] Botoes de paginacao no frontend (melhoria futura)
+- [x] Filtros server-side por nome/palavra (`q`) em customers, knowledge, workflows, users e conversas (`q` + `status`)
+- [x] Botoes de paginacao no frontend (componente `Pagination`; paginas: Leads, Fluxos, Conhecimento, Membros, Conversas)
 
 ### 8.8 — Senha e Sessao ✅
 - [x] Endpoint `POST /auth/change-password` (senha atual + nova senha)

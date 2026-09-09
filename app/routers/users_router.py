@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from app.database.session import get_db
 from app.models.user import User
@@ -22,13 +24,17 @@ def _require_manager(current_user: User) -> None:
 def list_users(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    q: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
 ):
     """Lista os membros (users) da empresa do usuario atual."""
-    q = db.query(User).filter(User.company_id == current_user.company_id)
-    total = q.count()
-    users = q.order_by(User.id).offset(offset).limit(limit).all()
+    query = db.query(User).filter(User.company_id == current_user.company_id)
+    if q and q.strip():
+        ql = f"%{q.strip()}%"
+        query = query.filter(or_(User.name.ilike(ql), User.email.ilike(ql)))
+    total = query.count()
+    users = query.order_by(User.id).offset(offset).limit(limit).all()
     return {"total": total, "items": users}
 
 

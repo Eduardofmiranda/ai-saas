@@ -56,6 +56,15 @@ async function request(method, path, body, form) {
   return res.json();
 }
 
+function qs(params = {}) {
+  const q = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") q.set(k, v);
+  });
+  const s = q.toString();
+  return s ? `?${s}` : "";
+}
+
 export const api = {
   login: (username, password) =>
     request("POST", "/auth/login", undefined, { username, password }),
@@ -67,7 +76,7 @@ export const api = {
   forgotPassword: (email) => request("POST", "/auth/forgot-password", { email }),
   resetPassword: (token, newPassword) =>
     request("POST", "/auth/reset-password", { token, new_password: newPassword }),
-  getWorkflows: () => request("GET", "/workflows/"),
+  getWorkflows: (params = {}) => request("GET", `/workflows/${qs(params)}`),
   getWorkflow: (id) => request("GET", `/workflows/${id}`),
   createWorkflow: (body) => request("POST", "/workflows/", body),
   updateWorkflow: (id, body) => request("PATCH", `/workflows/${id}`, body),
@@ -80,7 +89,7 @@ export const api = {
   updateConfig: (body) => request("PATCH", "/config/", body),
   testAI: (body = {}) => request("POST", "/config/ai/test", body),
   getDashboard: () => request("GET", "/dashboard/"),
-  getKnowledge: () => request("GET", "/knowledge/"),
+  getKnowledge: (params = {}) => request("GET", `/knowledge/${qs(params)}`),
   getKnowledgeDetail: (id) => request("GET", `/knowledge/${id}`),
   createKnowledge: (body) => request("POST", "/knowledge/", body),
   uploadKnowledge: (file, name = "", description = "") => {
@@ -98,7 +107,7 @@ export const api = {
   useTemplate: (id) => request("POST", `/templates/${id}/use`),
   duplicateWorkflow: (id) => request("POST", `/workflows/${id}/duplicate`),
   // Usuarios / Administracao
-  getUsers: () => request("GET", "/users/"),
+  getUsers: (params = {}) => request("GET", `/users/${qs(params)}`),
   createUser: (body) => request("POST", "/users/", body),
   updateUser: (id, body) => request("PATCH", `/users/${id}`, body),
   deleteUser: (id) => request("DELETE", `/users/${id}`),
@@ -136,7 +145,7 @@ export const api = {
   getBusinessHours: () => request("GET", "/config/business-hours"),
   updateBusinessHours: (body) => request("PUT", "/config/business-hours", body),
   // Inbox / Conversas
-  getConversations: () => request("GET", "/conversations/"),
+  getConversations: (params = {}) => request("GET", `/conversations/${qs(params)}`),
   getConversation: (id) => request("GET", `/conversations/${id}`),
   updateConversation: (id, body) => request("PATCH", `/conversations/${id}`, body),
   getConversationMessages: (id) => request("GET", `/messages/conversation/${id}`),
@@ -147,12 +156,7 @@ export const api = {
   pauseConversationWorkflow: (conversationId) =>
     request("POST", `/conversations/${conversationId}/pause-workflow`),
   // Leads / Clientes
-  getCustomers: (params = {}) => {
-    const qs = new URLSearchParams();
-    if (params.limit) qs.set("limit", params.limit);
-    if (params.offset) qs.set("offset", params.offset);
-    return request("GET", `/customers/?${qs.toString()}`);
-  },
+  getCustomers: (params = {}) => request("GET", `/customers/${qs(params)}`),
   deleteCustomer: (id) => request("DELETE", `/customers/${id}`),
   exportCustomersJson: () => {
     const token = localStorage.getItem("token");

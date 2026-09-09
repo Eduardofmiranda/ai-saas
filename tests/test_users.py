@@ -79,6 +79,20 @@ class TestUsers:
             assert "owner@test.com" in emails
             assert "outro@test.com" not in emails
 
+    def test_list_users_filters_by_name_or_email(self, db_session, owner, agent):
+        for c in _make(db_session, owner):
+            res = c.get("/users/?q=dono")
+            assert res.status_code == 200
+            assert {u["email"] for u in res.json()["items"]} == {"owner@test.com"}
+
+            res = c.get("/users/?q=agent@")
+            assert res.status_code == 200
+            assert {u["email"] for u in res.json()["items"]} == {"agent@test.com"}
+
+            res = c.get("/users/?q=nao-existe")
+            assert res.status_code == 200
+            assert res.json()["items"] == []
+
     def test_create_user(self, db_session, owner):
         for c in _make(db_session, owner):
             res = c.post("/users/", json={

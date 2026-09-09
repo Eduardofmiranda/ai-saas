@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, or_
 from app.models.pending_flow import PendingFlow
 
 from app.database.session import get_db, SessionLocal
@@ -127,6 +127,8 @@ def create_conversation(
 def get_conversations(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    status: Optional[str] = None,
+    q: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
 ):
@@ -150,7 +152,7 @@ def get_conversations(
         .subquery()
     )
 
-    q = (
+    qry = (
         db.query(Conversation, Message)
         .outerjoin(last_msg_sq, Conversation.id == last_msg_sq.c.conversation_id)
         .outerjoin(Message, last_msg_sq.c.last_msg_id == Message.id)
@@ -161,9 +163,16 @@ def get_conversations(
         )
         .filter(Conversation.company_id == current_user.company_id)
     )
+    if status:
+        qry = qry.filter(Conversation.status == status)
+    if q and q.strip():
+        ql = f"%{q.strip()}%"
+        qry = qry.outerjoin(Customer, Conversation.customer_id == Customer.id).filter(
+            or_(Customer.name.ilike(ql), Customer.phone.ilike(ql))
+        )
 
-    total = db.query(Conversation).filter(Conversation.company_id == current_user.company_id).count()
-    rows = q.order_by(desc(Conversation.updated_at)).offset(offset).limit(limit).all()
+    total = qry.count()
+    rows = qry.order_by(desc(Conversation.updated_at)).offset(offset).limit(limit).all()
 
     # Pega phones com pending_flow ativo
     pending_phones = set(

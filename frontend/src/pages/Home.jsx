@@ -2,11 +2,16 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import Header from "../components/Header";
-import { PageHeader, Alert, Icon, EmptyState, ConfirmDialog, Skeleton } from "../components/ui";
+import { PageHeader, Alert, Icon, EmptyState, ConfirmDialog, Skeleton, Pagination } from "../components/ui";
+
+const PAGE_SIZE = 100;
 
 export default function Home() {
   const navigate = useNavigate();
   const [workflows, setWorkflows] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [q, setQ] = useState("");
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -17,10 +22,11 @@ export default function Home() {
   async function load() {
     try {
       const [wfRes, tplData] = await Promise.all([
-        api.getWorkflows(),
+        api.getWorkflows({ q, limit: PAGE_SIZE, offset: page * PAGE_SIZE }),
         api.getTemplates(),
       ]);
       setWorkflows(wfRes.items || []);
+      setTotal(wfRes.total || 0);
       setTemplates(tplData);
       setError("");
     } catch (e) {
@@ -30,7 +36,7 @@ export default function Home() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [q, page]);
 
   async function createNew() {
     try {
@@ -125,18 +131,36 @@ export default function Home() {
 
         {loading && <Skeleton variant="cards" />}
 
+        {!loading && !showTemplates && (
+          <div className="list-toolbar">
+            <input
+              className="list-search"
+              placeholder="Filtrar fluxos por nome..."
+              aria-label="Filtrar fluxos por nome"
+              value={q}
+              onChange={(e) => { setQ(e.target.value); setPage(0); }}
+            />
+          </div>
+        )}
+
         {!loading && !error && workflows.length === 0 && !showTemplates && (
           <EmptyState
             icon={<Icon name="workflow" size={40} />}
-            title="Nenhum fluxo ainda"
+            title={q ? "Nenhum fluxo encontrado" : "Nenhum fluxo ainda"}
             action={
-              <div className="btn-group">
-                <button className="btn secondary" onClick={() => setShowTemplates(true)}>Templates</button>
-                <button className="btn primary" onClick={createNew}>+ Criar fluxo</button>
-              </div>
+              q ? (
+                <button className="btn ghost" onClick={() => { setQ(""); setPage(0); }}>
+                  Limpar filtro
+                </button>
+              ) : (
+                <div className="btn-group">
+                  <button className="btn secondary" onClick={() => setShowTemplates(true)}>Templates</button>
+                  <button className="btn primary" onClick={createNew}>+ Criar fluxo</button>
+                </div>
+              )
             }
           >
-            Crie o primeiro ou escolha um template.
+            {q ? "Nenhum fluxo corresponde ao filtro informado." : "Crie o primeiro ou escolha um template."}
           </EmptyState>
         )}
 
@@ -165,6 +189,10 @@ export default function Home() {
               </button>
             ))}
           </div>
+        )}
+
+        {!showTemplates && total > PAGE_SIZE && (
+          <Pagination total={total} page={page} pageSize={PAGE_SIZE} onChange={setPage} itemLabel="fluxo(s)" />
         )}
 
         {confirmDelete && (

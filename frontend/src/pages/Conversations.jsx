@@ -2,9 +2,19 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { api } from "../api";
 import Header from "../components/Header";
 import Alert from "../components/ui/Alert";
+import Pagination from "../components/ui/Pagination";
 import { formatPhone, avatarColor } from "../utils/format";
 
 const POLL_MS = 5000;
+const PAGE_SIZE = 50;
+
+const TAB_STATUS = {
+  all: undefined,
+  open: "open",
+  pending: "pending_agent",
+  agent: "agent",
+  closed: "closed",
+};
 
 function relativeTime(iso) {
   if (!iso) return "";
@@ -53,6 +63,8 @@ const STATUS_ACTIONS = {
 
 export default function Conversations() {
   const [conversations, setConversations] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
   const [selected, setSelected] = useState(null);
   const [messages, setMessages] = useState(null);
   const [tab, setTab] = useState("all");
@@ -74,9 +86,15 @@ export default function Conversations() {
     let active = true;
     async function tick() {
       try {
-        const res = await api.getConversations();
+        const res = await api.getConversations({
+          status: TAB_STATUS[tab],
+          q,
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+        });
         if (!active) return;
         setConversations(res.items || []);
+        setTotal(res.total || 0);
         setError("");
       } catch (e) {
         if (active) setError(e.message || "Erro ao carregar conversas");
@@ -85,7 +103,7 @@ export default function Conversations() {
     tick();
     const id = setInterval(tick, POLL_MS);
     return () => { active = false; clearInterval(id); };
-  }, []);
+  }, [tab, q, page]);
 
   // Polling: mensagens da conversa selecionada
   useEffect(() => {
@@ -172,27 +190,6 @@ export default function Conversations() {
     finally { setActionLoading(false); }
   }
 
-  const ql = q.trim().toLowerCase();
-  const filtered = conversations.filter((c) => {
-    if (tab === "open" && c.status !== "open") return false;
-    if (tab === "pending" && c.status !== "pending_agent") return false;
-    if (tab === "agent" && c.status !== "agent") return false;
-    if (tab === "closed" && c.status !== "closed") return false;
-    if (ql) {
-      const hay = `${c.customer?.name || ""} ${c.customer?.phone || ""}`.toLowerCase();
-      if (!hay.includes(ql)) return false;
-    }
-    return true;
-  });
-
-  const counts = {
-    all: conversations.length,
-    open: conversations.filter((c) => c.status === "open").length,
-    pending: conversations.filter((c) => c.status === "pending_agent").length,
-    agent: conversations.filter((c) => c.status === "agent").length,
-    closed: conversations.filter((c) => c.status === "closed").length,
-  };
-
   return (
     <div className="layout">
       <Header />
@@ -204,20 +201,19 @@ export default function Conversations() {
             <div className="inbox-toolbar">
               <input
                 className="inbox-search"
-                placeholder="Buscar conversas..."
+                placeholder="Buscar por cliente ou telefone..."
                 aria-label="Buscar conversas"
                 value={q}
-                onChange={(e) => setQ(e.target.value)}
+                onChange={(e) => { setQ(e.target.value); setPage(0); }}
               />
               <div className="inbox-filters">
                 {[["all", "Todas"], ["open", "Abertas"], ["pending", "Aguardando"], ["agent", "Atendendo"], ["closed", "Fechadas"]].map(([key, label]) => (
                   <button
                     key={key}
                     className={`inbox-filter ${tab === key ? "active" : ""}`}
-                    onClick={() => setTab(key)}
+                    onClick={() => { setTab(key); setPage(0); }}
                   >
                     {label}
-                    {counts[key] > 0 && <span className="inbox-filter-count">{counts[key]}</span>}
                   </button>
                 ))}
               </div>
@@ -226,12 +222,10 @@ export default function Conversations() {
               {conversations.length === 0 ? (
                 <div className="empty-inbox">
                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                  <p>Nenhuma conversa ainda</p>
+                  <p>{q || tab !== "all" ? "Nenhuma conversa para este filtro." : "Nenhuma conversa ainda"}</p>
                 </div>
-              ) : filtered.length === 0 ? (
-                <div className="empty-inbox"><p>Nenhuma conversa para este filtro.</p></div>
               ) : (
-                filtered.map((c) => {
+                conversations.map((c) => {
                   const name = c.customer?.name || c.customer?.phone || `#${c.id}`;
                   return (
                     <button key={c.id} type="button" className={`inbox-item ${selected === c.id ? "selected" : ""}`} onClick={() => select(c.id)}>
@@ -252,6 +246,9 @@ export default function Conversations() {
                 })
               )}
             </div>
+            {total > PAGE_SIZE && (
+              <Pagination total={total} page={page} pageSize={PAGE_SIZE} onChange={setPage} itemLabel="conversa(s)" />
+            )}
           </aside>
 
           <section className="inbox-thread">

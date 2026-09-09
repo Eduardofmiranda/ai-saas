@@ -7,9 +7,15 @@ import PageHeader from "../components/ui/PageHeader";
 import EmptyState from "../components/ui/EmptyState";
 import Icon from "../components/ui/Icon";
 import Skeleton from "../components/ui/Skeleton";
+import Pagination from "../components/ui/Pagination";
+
+const PAGE_SIZE = 12;
 
 export default function Knowledge() {
   const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -30,8 +36,9 @@ export default function Knowledge() {
 
   async function load() {
     try {
-      const res = await api.getKnowledge();
+      const res = await api.getKnowledge({ q, limit: PAGE_SIZE, offset: page * PAGE_SIZE });
       setItems(res.items || []);
+      setTotal(res.total || 0);
       setError("");
     } catch (e) {
       setError(e.message);
@@ -40,7 +47,7 @@ export default function Knowledge() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [q, page]);
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -284,18 +291,38 @@ export default function Knowledge() {
 
         {loading && <Skeleton variant="cards" />}
 
+        {!searchResults && !showForm && !loading && (
+          <div className="list-toolbar">
+            <input
+              className="list-search"
+              placeholder="Filtrar por nome..."
+              aria-label="Filtrar documentos por nome"
+              value={q}
+              onChange={(e) => { setQ(e.target.value); setPage(0); }}
+            />
+          </div>
+        )}
+
         {/* Lista de documentos */}
         {!loading && items.length === 0 && !showForm && !searchResults && (
           <EmptyState
             icon={<Icon name="book-open" size={40} />}
-            title="Nenhum documento ainda"
+            title={q ? "Nenhum documento encontrado" : "Nenhum documento ainda"}
             action={
-              <button className="btn primary" onClick={() => setShowForm(true)}>
-                Adicionar primeiro documento
-              </button>
+              q ? (
+                <button className="btn ghost" onClick={() => { setQ(""); setPage(0); }}>
+                  Limpar filtro
+                </button>
+              ) : (
+                <button className="btn primary" onClick={() => setShowForm(true)}>
+                  Adicionar primeiro documento
+                </button>
+              )
             }
           >
-            Adicione documentos (PDF, Word, texto) ou cole conteudo para sua IA usar como referencia.
+            {q
+              ? "Nenhum documento corresponde ao filtro informado."
+              : "Adicione documentos (PDF, Word, texto) ou cole conteudo para sua IA usar como referencia."}
           </EmptyState>
         )}
 
@@ -324,6 +351,10 @@ export default function Knowledge() {
               </button>
             ))}
           </div>
+        )}
+
+        {!searchResults && !showForm && total > PAGE_SIZE && (
+          <Pagination total={total} page={page} pageSize={PAGE_SIZE} onChange={setPage} itemLabel="documento(s)" />
         )}
 
         {/* Detalhe do documento */}

@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from app.database.session import get_db
 from app.models.knowledge import Knowledge
@@ -31,12 +33,21 @@ router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 def list_knowledge(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    q: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
 ) -> dict:
-    q = db.query(Knowledge).filter(Knowledge.company_id == current_user.company_id)
-    total = q.count()
-    items = q.order_by(Knowledge.created_at.desc()).offset(offset).limit(limit).all()
+    query = db.query(Knowledge).filter(Knowledge.company_id == current_user.company_id)
+    if q and q.strip():
+        ql = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                Knowledge.name.ilike(ql),
+                Knowledge.description.ilike(ql),
+            )
+        )
+    total = query.count()
+    items = query.order_by(Knowledge.created_at.desc()).offset(offset).limit(limit).all()
     result = []
     for item in items:
         chunks = get_chunks_by_knowledge(db, item.id)

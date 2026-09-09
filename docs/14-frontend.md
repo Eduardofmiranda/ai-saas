@@ -165,6 +165,7 @@ src/
 │       ├── PageHeader.jsx    # h1 + subtitulo + acoes
 │       ├── EmptyState.jsx    # Estado vazio (icone + titulo + acao)
 │       ├── Skeleton.jsx      # Placeholder de loading (variant="cards"/"lines")
+│       ├── Pagination.jsx    # Navegacao anterior/proxima + total (Fase 8.7)
 │       └── index.js          # Re-export (importar de "../components/ui")
 ├── context/
 │   └── AuthContext.jsx  # Context de autenticacao
@@ -259,6 +260,9 @@ os glifos de categoria dos nodes (▶ ✦ ➜ ⇄ ✆ ◆ ★) e o atalho Delete
 - **Skeleton** (`<Skeleton variant="cards" />` para grids, `variant="lines"` para listas;
   `rows`/`cards` para numero de blocos): substitui textos "Carregando ..." no loading
   de paginas. Classes `.skeleton*` + keyframes `shimmer` em `index.css`.
+- **Pagination** (`<Pagination total page pageSize onChange itemLabel>`): botoes
+  Anterior/Proxima + "Página X de Y" + total. Filtro de busca em listas usa a classe
+  `.list-toolbar`/`.list-search` (mesmo visual do `.leads-search`).
 - **Graficos** (`components/charts.jsx`): SVG/CSS proprios, sem lib de chart —
   `DonutChart` (segmentos com stroke-dasharray), `BarChart` e `StackedBarChart`
   (barras por coluna), `ChartLegend`, `DAY_LABEL`. Usados no painel (`/`):

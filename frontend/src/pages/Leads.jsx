@@ -7,11 +7,15 @@ import PageHeader from "../components/ui/PageHeader";
 import EmptyState from "../components/ui/EmptyState";
 import Modal from "../components/ui/Modal";
 import Icon from "../components/ui/Icon";
+import Pagination from "../components/ui/Pagination";
 import { formatPhone, avatarColor } from "../utils/format";
+
+const PAGE_SIZE = 50;
 
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -51,7 +55,7 @@ export default function Leads() {
     let active = true;
     async function load() {
       try {
-        const res = await api.getCustomers({ limit: 500 });
+        const res = await api.getCustomers({ q, limit: PAGE_SIZE, offset: page * PAGE_SIZE });
         if (!active) return;
         setLeads(res.items || []);
         setTotal(res.total || 0);
@@ -64,14 +68,9 @@ export default function Leads() {
     }
     load();
     return () => { active = false; };
-  }, []);
+  }, [q, page]);
 
   const ql = q.trim().toLowerCase();
-  const filtered = leads.filter((c) => {
-    if (!ql) return true;
-    const hay = `${c.name || ""} ${c.phone || ""}`.toLowerCase();
-    return hay.includes(ql);
-  });
 
   function toggleSelect(id) {
     setSelected((prev) => {
@@ -83,10 +82,10 @@ export default function Leads() {
   }
 
   function selectAll() {
-    if (selected.size === filtered.length) {
+    if (selected.size === leads.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(filtered.map((c) => c.id)));
+      setSelected(new Set(leads.map((c) => c.id)));
     }
   }
 
@@ -190,19 +189,19 @@ export default function Leads() {
         <div className="leads-search-row">
           <input
             className="leads-search"
-            placeholder="Buscar por nome ou telefone..."
+            placeholder="Buscar por nome, telefone ou email..."
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => { setQ(e.target.value); setPage(0); }}
             aria-label="Buscar leads"
           />
-          {filtered.length > 0 && (
+          {leads.length > 0 && (
             <label className="leads-select-all">
               <input
                 type="checkbox"
-                checked={selected.size === filtered.length && filtered.length > 0}
+                checked={selected.size === leads.length && leads.length > 0}
                 onChange={selectAll}
               />
-              {selected.size > 0 ? `${selected.size} selecionados` : `Todos (${filtered.length})`}
+              {selected.size > 0 ? `${selected.size} selecionados` : `Todos desta página (${leads.length})`}
             </label>
           )}
         </div>
@@ -212,16 +211,23 @@ export default function Leads() {
             <div className="inbox-spinner" />
             <span className="sr-only">Carregando...</span>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : leads.length === 0 ? (
           <EmptyState
             icon={<Icon name="users" size={40} />}
             title={ql ? "Nenhum lead encontrado para esta busca." : "Nenhum lead ainda."}
+            action={
+              ql && (
+                <button className="btn ghost" onClick={() => { setQ(""); setPage(0); }}>
+                  Limpar filtro
+                </button>
+              )
+            }
           >
             {!ql && "Leads sao salvos automaticamente quando enviam mensagem pelo WhatsApp."}
           </EmptyState>
         ) : (
           <div className="leads-grid">
-            {filtered.map((c) => (
+            {leads.map((c) => (
               <div key={c.id} className={`lead-card ${selected.has(c.id) ? "lead-card-selected" : ""}`}>
                 <div className="lead-card-top">
                   <input
@@ -273,6 +279,12 @@ export default function Leads() {
             ))}
           </div>
         )}
+
+        {loading
+          ? null
+          : total > PAGE_SIZE && (
+              <Pagination total={total} page={page} pageSize={PAGE_SIZE} onChange={setPage} itemLabel="contato(s)" />
+            )}
       </main>
 
       {confirmDelete && (
@@ -310,13 +322,13 @@ export default function Leads() {
             <span>
               {selected.size > 0
                 ? `${selected.size} lead${selected.size > 1 ? "s" : ""} selecionado${selected.size > 1 ? "s" : ""}`
-                : `Todos os ${leads.length} leads`}
+                : `Todos os ${total} leads`}
             </span>
           </div>
 
           {confirmAll && selected.size === 0 && (
             <Alert variant="error">
-              A mensagem sera enviada para <strong>TODOS os {leads.length} contatos</strong>.
+              A mensagem sera enviada para <strong>TODOS os {total} contatos</strong>.
               Esta acao e irreversivel.
             </Alert>
           )}

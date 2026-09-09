@@ -117,6 +117,54 @@ class TestInboxList:
             assert c.get(f"/conversations/{other.id}").status_code == 404
 
 
+class TestInboxListFilters:
+    def test_list_filters_by_status(self, db_session, owner):
+        _seed_conversation(db_session, status="open", phone="5511111111111")
+        _seed_conversation(db_session, status="closed", phone="5511222222222")
+
+        for c in _make(db_session, owner):
+            res = c.get("/conversations/?status=closed")
+            assert res.status_code == 200
+            data = res.json()
+            assert data["total"] == 1
+            assert data["items"][0]["status"] == "closed"
+
+    def test_list_searches_by_customer_name(self, db_session, owner):
+        _seed_conversation(db_session, name="Maria Silva", phone="5511111111111")
+        _seed_conversation(db_session, name="Joao Souza", phone="5511222222222")
+
+        for c in _make(db_session, owner):
+            res = c.get("/conversations/?q=maria")
+            assert res.status_code == 200
+            data = res.json()
+            assert data["total"] == 1
+            assert data["items"][0]["customer"]["name"] == "Maria Silva"
+
+    def test_list_searches_by_customer_phone(self, db_session, owner):
+        _seed_conversation(db_session, name="Maria Silva", phone="5511111111111")
+        _seed_conversation(db_session, name="Joao Souza", phone="5511222222222")
+
+        for c in _make(db_session, owner):
+            res = c.get("/conversations/?q=22222")
+            assert res.status_code == 200
+            data = res.json()
+            assert data["total"] == 1
+            assert data["items"][0]["customer"]["phone"] == "5511222222222"
+
+    def test_list_pagination(self, db_session, owner):
+        for i in range(5):
+            _seed_conversation(db_session, name=f"Cliente {i}", phone=f"551199999990{i}")
+
+        for c in _make(db_session, owner):
+            first = c.get("/conversations/?limit=2&offset=0").json()
+            assert first["total"] == 5
+            assert len(first["items"]) == 2
+            second = c.get("/conversations/?limit=2&offset=2").json()
+            assert len(second["items"]) == 2
+            ids = [i["id"] for i in first["items"]] + [i["id"] for i in second["items"]]
+            assert len(set(ids)) == 4
+
+
 class TestReply:
     def _seed_evo_config(self, db_session, company_id):
         from app.services.config_service import get_or_create_config
@@ -201,3 +249,35 @@ class TestBuildHistory:
         history = build_history(msgs)
         roles = [m["role"] for m in history]
         assert roles == ["user", "assistant", "assistant", "user"]
+
+
+class TestCustomerListFilters:
+    def test_customers_filter_by_name_phone_email(self, db_session, owner):
+        db_session.add(Customer(company_id=1, name="Maria Silva", phone="5511111111111", email="maria@test.com"))
+        db_session.add(Customer(company_id=1, name="Joao Souza", phone="5511222222222", email="joao@test.com"))
+        db_session.commit()
+
+        for c in _make(db_session, owner):
+            res = c.get("/customers/?q=maria")
+            assert res.status_code == 200
+            data = res.json()
+            assert data["total"] == 1
+            assert data["items"][0]["name"] == "Maria Silva"
+
+            res = c.get("/customers/?q=22222")
+            assert data["total"] == 1
+            assert res.json()["items"][0]["phone"] == "5511222222222"
+
+            res = c.get("/customers/?q=joao@")
+            assert res.json()["items"][0]["email"] == "joao@test.com"
+
+    def test_customers_pagination(self, db_session, owner):
+        for i in range(4):
+            db_session.add(Customer(company_id=1, name=f"Lead {i}", phone=f"5511999000{i}"))
+        db_session.commit()
+
+        for c in _make(db_session, owner):
+            res = c.get("/customers/?limit=2&offset=0")
+            assert res.status_code == 200
+            assert res.json()["total"] == 4
+            assert len(res.json()["items"]) == 2

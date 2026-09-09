@@ -1269,6 +1269,17 @@ body.sb-collapsed .layout { padding-left: var(--sidebar-w-collapsed); }
 
 /* ---------- Leads ---------- */
 .leads-search-row { margin-bottom: 16px; }
+
+/* ---------- Toolbar de lista (filtro + paginacao) ---------- */
+.list-toolbar { margin-bottom: 16px; }
+.list-search {
+  width: 100%; padding: 10px 14px; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 13px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%238b93a3' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242.656a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 14px center;
+}
+.list-search:focus { border-color: var(--accent); outline: none; }
 .leads-search {
   width: 100%; padding: 10px 14px; background: var(--panel);
   border: 1px solid var(--border); border-radius: 8px;

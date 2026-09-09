@@ -8,6 +8,9 @@ import EmptyState from "../components/ui/EmptyState";
 import Icon from "../components/ui/Icon";
 import PageHeader from "../components/ui/PageHeader";
 import Skeleton from "../components/ui/Skeleton";
+import Pagination from "../components/ui/Pagination";
+
+const PAGE_SIZE = 50;
 
 const ROLE_LABELS = {
   owner: "Dono",
@@ -24,6 +27,9 @@ const ROLE_OPTIONS = [
 export default function Admin() {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -39,8 +45,9 @@ export default function Admin() {
 
   async function load() {
     try {
-      const res = await api.getUsers();
+      const res = await api.getUsers({ q, limit: PAGE_SIZE, offset: page * PAGE_SIZE });
       setUsers(res.items || []);
+      setTotal(res.total || 0);
       setError("");
     } catch (e) {
       setError(e.message);
@@ -49,7 +56,7 @@ export default function Admin() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [q, page]);
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -183,12 +190,33 @@ export default function Admin() {
 
         {loading && <Skeleton variant="cards" cards={4} />}
 
+        {!loading && (
+          <div className="list-toolbar">
+            <input
+              className="list-search"
+              placeholder="Filtrar por nome ou email..."
+              aria-label="Filtrar membros"
+              value={q}
+              onChange={(e) => { setQ(e.target.value); setPage(0); }}
+            />
+          </div>
+        )}
+
         {!loading && users.length === 0 && (
           <EmptyState
             icon={<Icon name="users" />}
-            title="Nenhum membro na equipe"
+            title={q ? "Nenhum membro encontrado" : "Nenhum membro na equipe"}
+            action={
+              q && (
+                <button className="btn ghost" onClick={() => { setQ(""); setPage(0); }}>
+                  Limpar filtro
+                </button>
+              )
+            }
           >
-            Adicione membros para que outras pessoas da empresa possam acessar a plataforma.
+            {q
+              ? "Nenhum membro corresponde ao filtro informado."
+              : "Adicione membros para que outras pessoas da empresa possam acessar a plataforma."}
           </EmptyState>
         )}
 
@@ -220,6 +248,10 @@ export default function Admin() {
             </div>
           ))}
         </div>
+
+        {!loading && total > PAGE_SIZE && (
+          <Pagination total={total} page={page} pageSize={PAGE_SIZE} onChange={setPage} itemLabel="membro(s)" />
+        )}
 
         {confirmTarget && (
           <ConfirmDialog

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from app.database.session import get_db
 from app.models.execution import Execution
@@ -44,12 +45,15 @@ def list_node_types():
 def list_workflows(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    q: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
 ):
-    q = db.query(Workflow).filter(Workflow.company_id == current_user.company_id)
-    total = q.count()
-    items = q.order_by(Workflow.id.desc()).offset(offset).limit(limit).all()
+    query = db.query(Workflow).filter(Workflow.company_id == current_user.company_id)
+    if q and q.strip():
+        query = query.filter(Workflow.name.ilike(f"%{q.strip()}%"))
+    total = query.count()
+    items = query.order_by(Workflow.id.desc()).offset(offset).limit(limit).all()
     return {"total": total, "items": items}
 
 

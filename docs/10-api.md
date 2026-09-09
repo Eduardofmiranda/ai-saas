@@ -92,7 +92,7 @@ segredos. Pelo nginx de producao, use o prefixo `/api`, por exemplo
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
 | POST | `/customers/` | Cria cliente (lead) | JWT |
-| GET | `/customers/` | Lista clientes com paginacao e contagem de conversas | JWT |
+| GET | `/customers/` | Lista clientes com paginacao, contagem de conversas e busca (`q`, `limit`, `offset`) | JWT |
 | GET | `/customers/export` | Exporta leads como JSON | JWT |
 | GET | `/customers/export/xlsx` | Exporta leads como planilha Excel (.xlsx) | JWT |
 | POST | `/customers/bulk-message` | Envia mensagem WhatsApp em massa para leads | JWT |
@@ -105,7 +105,7 @@ segredos. Pelo nginx de producao, use o prefixo `/api`, por exemplo
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
 | POST | `/conversations/` | Cria conversa para um cliente da mesma empresa (`{ "customer_id": 1 }`) | JWT |
-| GET | `/conversations/` | Lista conversas da empresa (cliente, ultima mensagem, contagem, ordenado por `updated_at` desc) | JWT |
+| GET | `/conversations/` | Lista conversas da empresa (cliente, ultima mensagem, contagem, ordenado por `updated_at` desc). Filtros: `status` (`open`, `pending_agent`, `agent`, `closed`), `q` (nome/telefone do cliente), `limit`, `offset` | JWT |
 | GET | `/conversations/filter/?status=open` | Filtra por status (`open`, `pending_agent`, `closed`) | JWT |
 | GET | `/conversations/{id}` | Busca conversa (dados enriquecidos) | JWT |
 | PATCH | `/conversations/{id}` | Atualiza status da conversa (`{ "status": "closed" }`) | JWT |
@@ -154,7 +154,7 @@ A atualizacao de status (`PATCH`) registra automaticamente um `ConversationTrans
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
-| GET | `/workflows/` | Lista workflows | JWT |
+| GET | `/workflows/` | Lista workflows (busca por nome `q`, `limit`, `offset`) | JWT |
 | POST | `/workflows/` | Cria workflow | JWT |
 | GET | `/workflows/{id}` | Busca workflow | JWT |
 | PATCH | `/workflows/{id}` | Atualiza workflow | JWT |
@@ -191,7 +191,7 @@ clientes autenticados e permite os efeitos normais do workflow.
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
-| GET | `/knowledge/` | Lista documentos | JWT |
+| GET | `/knowledge/` | Lista documentos (busca por nome/descricao `q`, `limit`, `offset`) | JWT |
 | GET | `/knowledge/{id}` | Busca documento com chunks | JWT |
 | POST | `/knowledge/` | Cria e indexa documento | JWT |
 | POST | `/knowledge/upload` | Upload de arquivo (PDF, DOCX, TXT, CSV, MD, etc.) para knowledge | JWT |
@@ -211,7 +211,7 @@ clientes autenticados e permite os efeitos normais do workflow.
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
-| GET | `/users/` | Lista membros da equipe | JWT |
+| GET | `/users/` | Lista membros da equipe (busca `q`, `limit`, `offset`) | JWT |
 | POST | `/users/` | Cria membro da equipe | JWT (gestor+) |
 | PATCH | `/users/{id}` | Atualiza papel/senha | JWT (gestor+) |
 | DELETE | `/users/{id}` | Remove membro da equipe | JWT (gestor+) |

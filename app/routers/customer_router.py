@@ -2,12 +2,13 @@ import io
 import json
 import asyncio
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import HTTPException, BackgroundTasks
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from app.database.session import get_db, SessionLocal
 from app.models.conversation import Conversation
@@ -55,12 +56,22 @@ def create_customer(
 def get_customers(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    q: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
 ):
-    q = db.query(Customer).filter(Customer.company_id == current_user.company_id)
-    total = q.count()
-    customers = q.order_by(Customer.id.desc()).offset(offset).limit(limit).all()
+    query = db.query(Customer).filter(Customer.company_id == current_user.company_id)
+    if q and q.strip():
+        ql = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                Customer.name.ilike(ql),
+                Customer.phone.ilike(ql),
+                Customer.email.ilike(ql),
+            )
+        )
+    total = query.count()
+    customers = query.order_by(Customer.id.desc()).offset(offset).limit(limit).all()
 
     customer_ids = [c.id for c in customers]
     conv_counts = (
