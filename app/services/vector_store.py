@@ -13,20 +13,28 @@ from app.services.embedding import (
 
 logger = logging.getLogger(__name__)
 
+# Cache para _has_pgvector: o resultado nao muda durante a vida do processo.
+_pgvector_cache: bool | None = None
+
 
 def _has_pgvector(db: Session) -> bool:
     """Confirma pgvector somente no Postgres que recebeu a migration 0006."""
+    global _pgvector_cache
+    if _pgvector_cache is not None:
+        return _pgvector_cache
     if db.bind is None or db.bind.dialect.name != "postgresql":
+        _pgvector_cache = False
         return False
     try:
-        return bool(db.execute(text("""
+        _pgvector_cache = bool(db.execute(text("""
             SELECT EXISTS (
                 SELECT 1 FROM information_schema.columns
                 WHERE table_name = 'knowledge_chunks' AND column_name = 'embedding_vector'
             )
         """)).scalar())
     except Exception:
-        return False
+        _pgvector_cache = False
+    return _pgvector_cache
 
 
 def _vector_literal(values: list[float]) -> str:

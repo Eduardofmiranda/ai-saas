@@ -438,12 +438,14 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 
 ## FASE 10 — Escala & Multi-canal ⏳
 
-### 10.1 — pgvector
-- [ ] Instalar extensao pgvector no Postgres
-- [ ] Migrar embeddings de JSON para tipo `vector(384)` (ou dimensao do modelo)
-- [ ] Criar indice `ivfflat` ou `hnsw` para busca por similaridade
-- [ ] Substituir busca em memoria por query SQL `cosine_distance`
-- [ ] Benchmark: comparar performance antes/depois
+### 10.1 — pgvector ✅ (codigo pronto, pendente ativacao em producao)
+- [x] Migration `0006_pgvector_knowledge.py`: extensao vector, coluna `embedding_vector`, indice HNSW
+- [x] `vector_store.py`: dual-path (pgvector SQL + fallback in-memory JSON)
+- [x] `embedding.py`: chunk_text (500 chars, overlap 100), generate_embeddings, cosine_similarity
+- [x] Cache em `_has_pgvector()` para evitar query information_schema a cada busca
+- [x] RAG node (`rag_node.py`) usa search_similar para contexto
+- [ ] **Producao (VPS):** habilitar `ENABLE_PGVECTOR=true` no `.env` e rodar migration no Supabase
+- [ ] Benchmark: comparar performance pgvector vs fallback in-memory
 
 ### 10.2 — Canais Extras
 - [ ] Telegram: webhook + envio de mensagens
