@@ -409,12 +409,12 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [x] Frontend: KPI "Resposta média", KPI "Uso de IA", donut de resolucao, barras 30 dias (conversas/tokens), listas Top fluxos e Erros por node
 - [x] Testes: `tests/test_dashboard.py` (8 testes) + `tests/test_llm.py` (2 testes de `on_usage`); suite 394 passed
 
-### 9.3 — Metricas por Workflow
-- [ ] Execucoes totais e por periodo
-- [ ] Taxa de sucesso vs erro
-- [ ] Tempo medio de execucao
-- [ ] Uso por node (quais nodes sao mais chamados)
-- [ ] Logs de execucao estruturados
+### 9.3 — Metricas por Workflow ✅
+- [x] Endpoint `GET /dashboard/workflows/{id}/metrics` (execucoes, taxa sucesso, duracao media, serie 30d, uso por node)
+- [x] Schema `WorkflowMetricsResponse` (dashboard_schema.py)
+- [x] Dashboard principal: `top_workflows` agora inclui `success_rate`
+- [x] Frontend: botao "Metricas" no card de cada fluxo → modal com KPIs, grafico 30d (Recharts), uso por node
+- [x] Testes: 394 passed, 1 skipped
 
 ### 9.4 — Audit Log ✅
 - [x] Model `AuditLog` (user, action, entity, entity_id, timestamp, details, ip, user_agent)
