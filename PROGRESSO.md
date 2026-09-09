@@ -460,11 +460,14 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [ ] Billing integration (Stripe, Asaas, ou Mercado Pago)
 - [ ] Portal do cliente para gerenciar assinatura
 
-### 10.4 — Versionamento de Workflows
-- [ ] Historico de versoes (snapshot a cada save)
-- [ ] Rollback para versao anterior
-- [ ] Diff visual entre versoes
-- [ ] Publicacao de versao (producao vs staging)
+### 10.4 — Versionamento de Workflows ✅
+- [x] Model `WorkflowVersion` (migration 0021)
+- [x] Snapshot automatico no update (salva versao anterior antes de sobrescrever)
+- [x] Endpoints: `GET /workflows/{id}/versions` + `POST /workflows/{id}/versions/{id}/rollback`
+- [x] Rollback cria snapshot do estado atual antes de restaurar
+- [x] Frontend: botao "Versoes" no Editor, lista de versoes, botao Restaurar
+- [ ] Diff visual entre versoes (planejado)
+- [ ] Publicacao de versao (producao vs staging, planejado)
 
 ### 10.5 — Webhooks Outbound ✅
 - [x] Model `OutboundWebhook` + `OutboundWebhookLog` (migration 0020)
