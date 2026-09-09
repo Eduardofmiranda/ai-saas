@@ -195,6 +195,129 @@ function SectorPicker({ departments, sectors, onChange }) {
   );
 }
 
+function WebhooksSection() {
+  const [webhooks, setWebhooks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ url: "", secret: "", events: "workflow.completed,workflow.error", description: "" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  async function load() {
+    try {
+      setWebhooks(await api.getOutboundWebhooks());
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function create() {
+    setSaving(true);
+    try {
+      await api.createOutboundWebhook(form);
+      setShowForm(false);
+      setForm({ url: "", secret: "", events: "workflow.completed,workflow.error", description: "" });
+      load();
+    } catch (e) {
+      setError("Erro ao criar webhook: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove(id) {
+    try {
+      await api.deleteOutboundWebhook(id);
+      setConfirmDelete(null);
+      load();
+    } catch (e) {
+      setError("Erro ao excluir: " + e.message);
+    }
+  }
+
+  async function toggle(wh) {
+    try {
+      await api.updateOutboundWebhook(wh.id, { active: !wh.active });
+      load();
+    } catch (e) {
+      setError("Erro ao alterar status: " + e.message);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 32 }}>
+      <h3>Webhooks Outbound</h3>
+      <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
+        Envie notificacoes HTTP para sistemas externos quando eventos acontecem (workflow concluido, erro, etc).
+      </p>
+
+      {error && <Alert variant="error" onDismiss={() => setError("")}>{error}</Alert>}
+
+      {loading ? <Skeleton variant="lines" /> : (
+        <>
+          {webhooks.length === 0 && !showForm && (
+            <EmptyState icon={<Icon name="workflow" size={32} />} title="Nenhum webhook configurado">
+              <button className="btn primary" onClick={() => setShowForm(true)}>+ Adicionar webhook</button>
+            </EmptyState>
+          )}
+
+          {webhooks.length > 0 && (
+            <div className="dash-list">
+              {webhooks.map((wh) => (
+                <div key={wh.id} className="dash-list-row">
+                  <span className={`badge ${wh.active ? "on" : "off"}`} style={{ fontSize: 11 }}>
+                    {wh.active ? "Ativo" : "Inativo"}
+                  </span>
+                  <span className="dash-name" style={{ fontSize: 12 }}>{wh.url}</span>
+                  <span className="dash-meta" style={{ fontSize: 11 }}>{wh.events}</span>
+                  <button className="btn ghost small" onClick={() => toggle(wh)}>
+                    {wh.active ? "Desativar" : "Ativar"}
+                  </button>
+                  <button className="btn ghost small danger" onClick={() => setConfirmDelete(wh)}>Excluir</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!showForm && webhooks.length > 0 && (
+            <button className="btn secondary" style={{ marginTop: 12 }} onClick={() => setShowForm(true)}>+ Adicionar</button>
+          )}
+
+          {showForm && (
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+              <input className="input" placeholder="https://seu-sistema.com/webhook" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
+              <input className="input" placeholder="Secret (para assinatura HMAC, opcional)" value={form.secret} onChange={(e) => setForm({ ...form, secret: e.target.value })} />
+              <input className="input" placeholder="Eventos: workflow.completed,workflow.error" value={form.events} onChange={(e) => setForm({ ...form, events: e.target.value })} />
+              <input className="input" placeholder="Descricao (opcional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn ghost" onClick={() => setShowForm(false)}>Cancelar</button>
+                <button className="btn primary" onClick={create} disabled={saving || !form.url.trim()}>
+                  {saving ? "Salvando..." : "Salvar"}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Excluir webhook"
+          message={`Excluir o webhook ${confirmDelete.url}?`}
+          confirmLabel="Excluir"
+          onConfirm={() => remove(confirmDelete.id)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function Admin() {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
@@ -667,6 +790,10 @@ export default function Admin() {
               />
             )}
           </div>
+        )}
+
+        {isManager && (
+          <WebhooksSection />
         )}
 
         {confirmTarget && (

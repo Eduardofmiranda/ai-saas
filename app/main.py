@@ -28,6 +28,7 @@ from app.routers.template_router import router as template_router
 from app.routers.users_router import router as users_router
 from app.routers.platform_admin_router import router as platform_admin_router
 from app.routers.department_router import router as department_router
+from app.routers.outbound_webhook_router import router as outbound_webhook_router
 from app.routers.agenda_router import router as agenda_router
 from app.routers.audit_router import router as audit_router
 
@@ -112,6 +113,7 @@ app.include_router(platform_admin_router)
 app.include_router(department_router)
 app.include_router(agenda_router)
 app.include_router(audit_router)
+app.include_router(outbound_webhook_router)
 
 
 @app.get("/")

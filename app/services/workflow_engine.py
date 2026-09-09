@@ -154,6 +154,28 @@ async def execute_workflow(
     execution.context = {"trigger": payload, "logs": ctx.logs, "dry_run": dry_run}
     db.commit()
     db.refresh(execution)
+
+    if not dry_run and execution.status in ("success", "error"):
+        try:
+            from app.services.outbound_webhook import dispatch_webhook
+            await dispatch_webhook(
+                db,
+                company_id=workflow.company_id,
+                event=f"workflow.{execution.status}",
+                payload={
+                    "event": f"workflow.{execution.status}",
+                    "workflow_id": workflow.id,
+                    "workflow_name": workflow.name,
+                    "execution_id": execution.id,
+                    "status": execution.status,
+                    "error": execution.error or None,
+                    "node_results": execution.node_results,
+                    "finished_at": execution.finished_at.isoformat() if execution.finished_at else None,
+                },
+            )
+        except Exception:
+            logger.exception("Falha ao disparar outbound webhook")
+
     return execution
 
 

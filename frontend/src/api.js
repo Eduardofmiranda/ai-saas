@@ -107,6 +107,12 @@ export const api = {
   getTemplate: (id) => request("GET", `/templates/${id}`),
   useTemplate: (id) => request("POST", `/templates/${id}/use`),
   duplicateWorkflow: (id) => request("POST", `/workflows/${id}/duplicate`),
+  // Webhooks outbound
+  getOutboundWebhooks: () => request("GET", "/outbound-webhooks/"),
+  createOutboundWebhook: (body) => request("POST", "/outbound-webhooks/", body),
+  updateOutboundWebhook: (id, body) => request("PATCH", `/outbound-webhooks/${id}`, body),
+  deleteOutboundWebhook: (id) => request("DELETE", `/outbound-webhooks/${id}`),
+  getOutboundWebhookLogs: (id) => request("GET", `/outbound-webhooks/${id}/logs`),
   // Usuarios / Administracao
   getUsers: (params = {}) => request("GET", `/users/${qs(params)}`),
   createUser: (body) => request("POST", "/users/", body),
