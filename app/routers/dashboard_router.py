@@ -1,7 +1,7 @@
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -17,7 +17,7 @@ from app.models.workflow import Workflow
 from app.models.user import User
 from app.services.ai_limits import CompanyAIUsage
 from app.services.deps import get_current_user
-from app.schemas.dashboard_schema import DashboardResponse
+from app.schemas.dashboard_schema import DashboardResponse, WorkflowMetricsResponse
 
 
 router = APIRouter(
@@ -28,6 +28,10 @@ router = APIRouter(
 # Custo estimado por 1k tokens (USD). Estimativa conservadora de mistura
 # entre modelos/provedores; ajustar aqui conforme o provedor em uso.
 AI_ESTIMATED_COST_PER_1K_TOKENS = 0.00075
+
+
+def _day_key(value) -> str:
+    return value.isoformat() if hasattr(value, "isoformat") else str(value)
 
 
 @router.get(
@@ -119,9 +123,6 @@ def get_dashboard(
     last_7_days = [(start + timedelta(days=i)).date().isoformat() for i in range(7)]
     start_30 = datetime.combine(today - timedelta(days=29), datetime.min.time(), tzinfo=timezone.utc)
     last_30_days = [(start_30 + timedelta(days=i)).date().isoformat() for i in range(30)]
-
-    def _day_key(value) -> str:
-        return value.isoformat() if hasattr(value, "isoformat") else str(value)
 
     messages_by_day = {
         _day_key(day): count
@@ -266,7 +267,7 @@ def get_dashboard(
         ai_tokens_total * AI_ESTIMATED_COST_PER_1K_TOKENS / 1000, 2
     )
 
-    # Top workflows por numero de execucoes (com contagem de erros).
+    # Top workflows por numero de execucoes (com contagem de erros e taxa de sucesso).
     execution_counts = dict(
         db.query(Execution.workflow_id, func.count(Execution.id))
         .filter(Execution.company_id == company_id)
@@ -279,18 +280,30 @@ def get_dashboard(
         .group_by(Execution.workflow_id)
         .all()
     )
+    success_counts = dict(
+        db.query(Execution.workflow_id, func.count(Execution.id))
+        .filter(Execution.company_id == company_id, Execution.status == "success")
+        .group_by(Execution.workflow_id)
+        .all()
+    )
     workflow_rows = db.query(Workflow.id, Workflow.name).filter(Workflow.company_id == company_id).all()
     top_rows = sorted(
         (
-            (wf_id, name, execution_counts.get(wf_id, 0), error_counts.get(wf_id, 0))
+            (wf_id, name, execution_counts.get(wf_id, 0), error_counts.get(wf_id, 0), success_counts.get(wf_id, 0))
             for wf_id, name in workflow_rows
         ),
         key=lambda row: row[2],
         reverse=True,
     )[:5]
     top_workflows = [
-        {"workflow_id": wf_id, "name": name, "executions": executions, "errors": errors}
-        for wf_id, name, executions, errors in top_rows
+        {
+            "workflow_id": wf_id,
+            "name": name,
+            "executions": executions,
+            "errors": errors,
+            "success_rate": round(success / executions * 100, 1) if executions else 0.0,
+        }
+        for wf_id, name, executions, errors, success in top_rows
         if executions > 0
     ]
 
@@ -336,4 +349,105 @@ def get_dashboard(
         "ai_usage_last_30_days": ai_usage_last_30_days,
         "top_workflows": top_workflows,
         "errors_by_node": errors_by_node,
+    }
+
+
+@router.get(
+    "/workflows/{workflow_id}/metrics",
+    response_model=WorkflowMetricsResponse,
+)
+def get_workflow_metrics(
+    workflow_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Metricas detalhadas de um workflow especifico da empresa do usuario."""
+    company_id = current_user.company_id
+
+    workflow = (
+        db.query(Workflow)
+        .filter(Workflow.id == workflow_id, Workflow.company_id == company_id)
+        .first()
+    )
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow nao encontrado")
+
+    execs = (
+        db.query(Execution)
+        .filter(Execution.workflow_id == workflow_id, Execution.company_id == company_id)
+        .all()
+    )
+
+    total = len(execs)
+    success = sum(1 for e in execs if e.status == "success")
+    error = sum(1 for e in execs if e.status == "error")
+    waiting = sum(1 for e in execs if e.status == "waiting")
+    success_rate = round(success / total * 100, 1) if total else 0.0
+
+    durations: list[float] = []
+    for e in execs:
+        if e.started_at and e.finished_at and e.status in ("success", "error"):
+            d = (e.finished_at - e.started_at).total_seconds()
+            if d >= 0:
+                durations.append(d)
+    avg_duration = round(sum(durations) / len(durations), 1) if durations else 0.0
+
+    today = datetime.now(timezone.utc).date()
+    start_30 = datetime.combine(today - timedelta(days=29), datetime.min.time(), tzinfo=timezone.utc)
+    last_30_days = [(start_30 + timedelta(days=i)).date().isoformat() for i in range(30)]
+
+    exec_by_day: dict[str, dict[str, int]] = {}
+    for e in execs:
+        if e.created_at and e.created_at >= start_30:
+            day = e.created_at.date().isoformat()
+            bucket = exec_by_day.setdefault(day, {"success": 0, "error": 0})
+            if e.status in bucket:
+                bucket[e.status] += 1
+
+    node_counter: Counter = Counter()
+    node_error_counter: Counter = Counter()
+    for e in execs:
+        nodes_in_exec = set()
+        if e.context and isinstance(e.context, dict):
+            for log_entry in e.context.get("logs", []):
+                if isinstance(log_entry, str) and ":" in log_entry:
+                    nid = log_entry.split(":", 1)[0].strip()
+                    if nid:
+                        nodes_in_exec.add(nid)
+        for nid in nodes_in_exec:
+            node_counter[nid] += 1
+        if e.status == "error" and e.error:
+            nid = str(e.error).split(":", 1)[0].strip()
+            if nid:
+                node_error_counter[nid] += 1
+
+    all_node_ids = set(node_counter.keys()) | set(node_error_counter.keys())
+    node_usage = [
+        {
+            "node_id": nid,
+            "executions": node_counter.get(nid, 0),
+            "errors": node_error_counter.get(nid, 0),
+        }
+        for nid in sorted(all_node_ids, key=lambda x: node_counter.get(x, 0), reverse=True)
+    ]
+
+    return {
+        "workflow_id": workflow.id,
+        "workflow_name": workflow.name,
+        "trigger_type": workflow.trigger_type,
+        "executions_total": total,
+        "executions_success": success,
+        "executions_error": error,
+        "executions_waiting": waiting,
+        "success_rate": success_rate,
+        "avg_duration_seconds": avg_duration,
+        "executions_last_30_days": [
+            {
+                "date": d,
+                "success": exec_by_day.get(d, {}).get("success", 0),
+                "error": exec_by_day.get(d, {}).get("error", 0),
+            }
+            for d in last_30_days
+        ],
+        "node_usage": node_usage,
     }

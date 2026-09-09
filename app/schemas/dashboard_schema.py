@@ -25,11 +25,33 @@ class TopWorkflow(BaseModel):
     name: str
     executions: int
     errors: int
+    success_rate: float = 0.0
+    avg_duration_seconds: float = 0.0
+
+
+class NodeUsageCount(BaseModel):
+    node_id: str
+    executions: int
+    errors: int
 
 
 class NodeErrorCount(BaseModel):
     node_id: str
     count: int
+
+
+class WorkflowMetricsResponse(BaseModel):
+    workflow_id: int
+    workflow_name: str
+    trigger_type: str
+    executions_total: int
+    executions_success: int
+    executions_error: int
+    executions_waiting: int
+    success_rate: float
+    avg_duration_seconds: float
+    executions_last_30_days: List[DailyExecutions]
+    node_usage: List[NodeUsageCount]
 
 
 class DashboardResponse(BaseModel):

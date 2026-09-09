@@ -1010,6 +1010,8 @@ body.sb-collapsed .layout { padding-left: var(--sidebar-w-collapsed); }
 .dash-rank { width: 22px; height: 22px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: var(--panel2); border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 700; }
 .dash-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .dash-meta { font-size: 12px; white-space: nowrap; }
+.wf-metrics { display: flex; flex-direction: column; gap: 20px; }
+.wf-metrics h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); }
 .chart-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .rtip { background: var(--panel2); border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px; font-size: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); }
 .rtip-title { display: flex; align-items: baseline; gap: 8px; font-weight: 600; margin-bottom: 6px; }

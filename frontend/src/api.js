@@ -89,6 +89,7 @@ export const api = {
   updateConfig: (body) => request("PATCH", "/config/", body),
   testAI: (body = {}) => request("POST", "/config/ai/test", body),
   getDashboard: () => request("GET", "/dashboard/"),
+  getWorkflowMetrics: (id) => request("GET", `/dashboard/workflows/${id}/metrics`),
   getKnowledge: (params = {}) => request("GET", `/knowledge/${qs(params)}`),
   getKnowledgeDetail: (id) => request("GET", `/knowledge/${id}`),
   createKnowledge: (body) => request("POST", "/knowledge/", body),

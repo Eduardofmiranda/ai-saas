@@ -282,7 +282,7 @@ export default function Dashboard() {
                     <div key={w.workflow_id} className="dash-list-row">
                       <span className="dash-rank">{i + 1}</span>
                       <span className="dash-name">{w.name}</span>
-                      <span className="muted dash-meta">{w.executions} exec · {w.errors} erros</span>
+                      <span className="muted dash-meta">{w.executions} exec · {w.success_rate ?? 0}% ok</span>
                     </div>
                   ))}
                   {(data.top_workflows || []).length === 0 && <p className="muted">Sem execuções ainda.</p>}
