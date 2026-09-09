@@ -9,6 +9,7 @@ from app.models.message import Message
 from app.models.pending_flow import PendingFlow
 from app.models.workflow import Workflow
 from app.services import evolution, llm
+from app.services.ai_limits import LimitExceeded, check_ai_limits, record_ai_usage
 from app.services.config_service import get_or_create_config, resolve_ai_config
 from app.services.field_crypto import decrypt_field
 
@@ -230,6 +231,35 @@ async def handle_incoming_message(
     # 6) Gera resposta com IA (se habilitada e configuravel)
     reply_text: str | None = None
     if config.ai_on:
+        # Verifica limites de abuso antes de chamar a IA
+        try:
+            check_ai_limits(db, company_id, config)
+        except LimitExceeded as exc:
+            logger.warning(
+                "Limite de IA atingido",
+                extra={"company_id": company_id, "limit_type": exc.limit_type},
+            )
+            reply_text = exc.message or config.ai_fallback_message or None
+            if reply_text:
+                bot_msg = Message(
+                    conversation_id=conversation.id,
+                    sender_type="bot",
+                    content=reply_text,
+                )
+                db.add(bot_msg)
+                db.commit()
+                try:
+                    await evolution.send_text(
+                        to_phone=phone,
+                        text=reply_text,
+                        base_url=evolution_base,
+                        api_key=evolution_key,
+                        instance=evolution_inst,
+                    )
+                except Exception:
+                    pass
+            return {"status": "limit_exceeded", "conversation_id": conversation.id}
+
         history_messages = (
             db.query(Message)
             .filter(Message.conversation_id == conversation.id)
@@ -262,6 +292,7 @@ async def handle_incoming_message(
                         db, company_id, name, args, phone=phone,
                     ),
                 )
+                record_ai_usage(db, company_id, messages=1)
             else:
                 reply_text = await llm.generate_reply(
                     system_prompt=config.system_prompt,
@@ -271,6 +302,7 @@ async def handle_incoming_message(
                     api_key=ai_api_key,
                     base_url=ai_base_url,
                 )
+                record_ai_usage(db, company_id, messages=1)
         except llm.LLMError:
             # IA indisponivel: nao quebra o fluxo. O diagnostico preserva
             # apenas metadados operacionais, nunca prompt, chave ou resposta.

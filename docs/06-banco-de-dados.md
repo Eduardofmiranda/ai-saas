@@ -12,7 +12,7 @@
 ### Ciclo de schema
 
 **Implementado:** a migration `0001_initial_schema` descreve o schema base de
-forma idempotente; `0002` a `0016` evoluem as tabelas. Bancos existentes que
+forma idempotente; `0002` a `0017` evoluem as tabelas. Bancos existentes que
 ja estavam em `0005_password_reset_tokens` avancam normalmente para `0006` sem
 recriar nem apagar tabelas.
 
@@ -78,6 +78,24 @@ extensao no Supabase e nao marque a revisao como aplicada manualmente.
 | evolution_api_key | String | (criptografado com Fernet) |
 | evolution_instance | String | default "" |
 | ai_on | Boolean | default True |
+| ai_daily_message_limit | Integer | default 0 (ilimitado) |
+| ai_daily_token_limit | Integer | default 0 (ilimitado) |
+| ai_timeout_seconds | Integer | default 40 |
+| ai_max_retries | Integer | default 2 |
+| ai_fallback_message | Text | default "" (usa texto padrao) |
+
+### company_ai_usage
+| Coluna | Tipo | Constraints |
+|--------|------|------------|
+| id | Integer | PK, autoincrement |
+| company_id | Integer | FK -> companies.id, NOT NULL, index |
+| usage_date | Date | NOT NULL, index |
+| message_count | Integer | NOT NULL, default 0 |
+| token_count | Integer | NOT NULL, default 0 |
+| created_at | DateTime(tz) | |
+
+**Implementado (migration `0017_ai_limits`).** Limites de abuso de IA por empresa.
+Valores 0 = ilimitado. Tabela `company_ai_usage` rastreia uso diario (mensagens/tokens).
 
 ### customers
 | Coluna | Tipo | Constraints |
@@ -353,6 +371,7 @@ Company 1──N User
 Company 1──1 CompanyConfig
 Company 1──1 BusinessHours
 Company 1──1 AgendaConfig
+Company 1──1 CompanyAIUsage (uso diario)
 Company 1──N Customer
 Company 1──N Department
 Company 1──N Workflow
@@ -374,7 +393,7 @@ User 1──1 UserAIConfig
 ## Migrations
 
 **Implementado:** Alembic controla todo schema de producao. Em bancos novos,
-`0001_initial_schema` cria a base; `0002` a `0016` aplicam as evolucoes. As
+`0001_initial_schema` cria a base; `0002` a `0017` aplicam as evolucoes. As
 migrations sao idempotentes para permitir adocao de bancos legados que antes
 foram criados pelo ORM.
 

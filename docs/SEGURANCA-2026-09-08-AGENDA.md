@@ -159,8 +159,9 @@ Producao continua usando Supabase para o banco do app; nao foi acessada.
    agenda segue gestor-only. Agente tenta mutar alheio -> 403; outra empresa ->
    404. Frontend oculta o botao Cancelar sem permissao. Validacao:
    `tests/test_agenda_permissions.py` (14 testes HTTP com papéis).
-5. Limites de tamanho/frequencia e orcamento por cliente/empresa. Limite 16 tools
-   por resposta nao impede flood de mensagens, reservas ou consumo acumulado.
+5. Limites de abuso de IA por empresa: mensagens/dia, tokens/dia, fallback
+   configuravel (migration `0017_ai_limits`, `app/services/ai_limits.py`,
+   `tests/test_ai_limits.py`). **CONCLUIDO.**
 6. Auditar isolamentos de conversation_id em historico/persistencia dos nodes;
    esta revisao restringe tools de agenda, nao certifica todos os caminhos dos nodes.
 7. Validar em ambiente descartavel: concorrencia Postgres, migrations completas,

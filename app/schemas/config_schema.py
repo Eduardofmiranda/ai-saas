@@ -23,6 +23,11 @@ class ConfigUpdate(BaseModel):
     evolution_api_key: str | None = None
     evolution_instance: str | None = None
     ai_on: bool | None = None
+    ai_daily_message_limit: int | None = None
+    ai_daily_token_limit: int | None = None
+    ai_timeout_seconds: int | None = None
+    ai_max_retries: int | None = None
+    ai_fallback_message: str | None = None
 
 
 class ConfigResponse(BaseModel):
@@ -35,6 +40,12 @@ class ConfigResponse(BaseModel):
     evolution_instance: str | None
     has_evolution_key: bool
     ai_on: bool
+    # Limites de abuso
+    ai_daily_message_limit: int
+    ai_daily_token_limit: int
+    ai_timeout_seconds: int
+    ai_max_retries: int
+    ai_fallback_message: str
     # Valores efetivos para a interface; a chave nunca e exposta.
     resolved_ai_provider: str
     resolved_ai_model: str

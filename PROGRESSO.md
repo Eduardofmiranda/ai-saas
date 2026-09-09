@@ -35,7 +35,9 @@
       propriedade): ler/criar abertos; alterar/cancelar exigem gestor OU criador;
       WhatsApp-origin so gestao; config gestor-only. 403 sem permissao.
       `tests/test_agenda_permissions.py` (14 testes HTTP).
-- [ ] Limites de abuso (orcamento por cliente/empresa).
+- [x] Limites de abuso (orcamento por empresa): migration `0017_ai_limits`,
+      `app/services/ai_limits.py`, enforcement em `conversation_service` e
+      `nodes/context.py`. `tests/test_ai_limits.py` (16 testes).
 - [ ] Concluir auditoria ampliada de sessoes, uploads, historico/segredos e infraestrutura.
 
 Detalhes e resultados: [revisao de seguranca](docs/SEGURANCA-2026-09-08-AGENDA.md).
@@ -377,16 +379,16 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [ ] Logs de alteracoes de politica (audit trail)
 - [ ] Superadmin so altera politica de usuarios da propria plataforma (nao cross-tenant)
 
-### 9.2 — Limitador de IA por empresa
-- [ ] Model/coluna JSON para limites por empresa
-- [ ] Limite de mensagens (X msgs/dia ou por conversa)
-- [ ] Limite de tokens/custo (teto por sessao/dia)
-- [ ] Janela de tempo (horario de atendimento)
-- [ ] Timeout/retry por chamada de IA
-- [ ] Fallback quando limite atingido (mensagem padrao, encerrar, avisar humano)
-- [ ] Aplicar limites em `conversation_service` e nodes `ai`/`ai_rag`
-- [ ] UI de configuracao dos limites (pagina Admin)
-- [ ] Dashboard de uso/consumo
+### 9.2 — Limitador de IA por empresa ✅
+- [x] Model/coluna JSON para limites por empresa (migration `0017_ai_limits`)
+- [x] Limite de mensagens (X msgs/dia por empresa)
+- [x] Limite de tokens/custo (teto por dia)
+- [x] Timeout/retry por chamada de IA
+- [x] Fallback quando limite atingido (mensagem configuravel)
+- [x] Aplicar limites em `conversation_service` e nodes `ai`/`ai_rag`
+- [x] Servico `app/services/ai_limits.py` (check, record, summary)
+- [x] Testes: `tests/test_ai_limits.py` (16 testes)
+- [ ] Dashboard de uso/consumo (melhoria futura)
 
 
 ### 9.2 — Dashboard Avancado

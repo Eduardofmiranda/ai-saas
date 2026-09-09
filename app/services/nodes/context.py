@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models.user import User
 from app.services import evolution, llm
+from app.services.ai_limits import LimitExceeded, check_ai_limits, record_ai_usage
 from app.services.config_service import resolve_ai_config
 from app.models.company_config import CompanyConfig
 from app.models.message import Message
@@ -113,6 +114,12 @@ class NodeContext:
         system_prompt: str | None = None,
     ) -> str:
         """Chama o LLM usando a config da empresa (provedor/modelo/chave)."""
+        # Verifica limites de abuso antes de chamar a IA
+        try:
+            check_ai_limits(self.db, self.company_id, self.config)
+        except LimitExceeded:
+            return self.config.ai_fallback_message or "Limite de uso de IA atingido."
+
         resolved_ai = resolve_ai_config(self.config, self.db, user_id=self.user_id)
         provider = resolved_ai["provider"]
         model = resolved_ai["model"]
@@ -121,6 +128,7 @@ class NodeContext:
         sys_prompt = system_prompt or self.config.system_prompt or "Voce e um assistente."
 
         if provider == "mock":
+            record_ai_usage(self.db, self.company_id, messages=1)
             return f"[mock] {prompt[:120]}"
 
         history = (history or []) + [{"role": "user", "content": prompt}]
@@ -137,7 +145,7 @@ class NodeContext:
             agenda_cfg = get_agenda_for_company(self.db, self.company_id)
             if (agenda_cfg and agenda_cfg.enabled and not self.dry_run
                     and isinstance(self._agenda_phone, str) and self._agenda_phone.strip()):
-                return await llm.generate_reply_with_tools(
+                result = await llm.generate_reply_with_tools(
                     system_prompt=sys_prompt + AGENDA_TOOLS_INSTRUCTION,
                     history=history,
                     provider=provider,
@@ -149,12 +157,14 @@ class NodeContext:
                         self.db, self.company_id, name, args, phone=self._agenda_phone,
                     ),
                 )
+                record_ai_usage(self.db, self.company_id, messages=1)
+                return result
         except Exception:
             # Provedor/ferramentas indisponiveis: segue sem tools em vez de
             # quebrar a execucao do workflow.
             pass
 
-        return await llm.generate_reply(
+        result = await llm.generate_reply(
             system_prompt=sys_prompt,
             history=history,
             provider=provider,
@@ -162,6 +172,8 @@ class NodeContext:
             api_key=api_key,
             base_url=base_url,
         )
+        record_ai_usage(self.db, self.company_id, messages=1)
+        return result
 
     async def extract_structured(
         self,

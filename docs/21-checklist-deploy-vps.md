@@ -67,7 +67,7 @@ Apos o deploy, confirme que todas as migrations foram aplicadas:
 
     docker compose exec backend alembic current
 
-O resultado deve estar em `0016_pending_appointment_actions` (head). Se estiver
+O resultado deve estar em `0017_ai_limits` (head). Se estiver
 atrasado, o backend aplicou automaticamente no startup; verifique os logs.
 
 ## Resultado esperado

@@ -47,6 +47,13 @@ class CompanyConfig(Base):
     # --- Comportamento ---
     ai_on = Column(Boolean, nullable=False, default=True)
 
+    # --- Limites de abuso de IA ---
+    ai_daily_message_limit = Column(Integer, nullable=False, default=0)
+    ai_daily_token_limit = Column(Integer, nullable=False, default=0)
+    ai_timeout_seconds = Column(Integer, nullable=False, default=40)
+    ai_max_retries = Column(Integer, nullable=False, default=2)
+    ai_fallback_message = Column(Text, default="")
+
     company = relationship("Company")
 
     # Ajusta a chave API para nao vazar em respostas publicas ao omitir
@@ -61,4 +68,9 @@ class CompanyConfig(Base):
             "evolution_base_url": self.evolution_base_url,
             "evolution_instance": self.evolution_instance,
             "ai_on": self.ai_on,
+            "ai_daily_message_limit": self.ai_daily_message_limit,
+            "ai_daily_token_limit": self.ai_daily_token_limit,
+            "ai_timeout_seconds": self.ai_timeout_seconds,
+            "ai_max_retries": self.ai_max_retries,
+            "ai_fallback_message": self.ai_fallback_message,
         }

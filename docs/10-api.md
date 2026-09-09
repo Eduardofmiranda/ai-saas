@@ -54,10 +54,17 @@ segredos. Pelo nginx de producao, use o prefixo `/api`, por exemplo
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
 | GET | `/config/` | Busca configuracoes da empresa | JWT |
-| PATCH | `/config/` | Atualiza configuracoes | JWT |
+| PATCH | `/config/` | Atualiza configuracoes (inclui limites de IA) | JWT |
 | POST | `/config/ai/test` | Testa a config de IA (chama o provedor; nao persiste) | JWT |
 | GET | `/config/business-hours` | Horario de atendimento da empresa | JWT |
 | PUT | `/config/business-hours` | Cria/atualiza horario de atendimento | JWT (gestor+) |
+
+**Limites de abuso (campos em PATCH /config/):**
+- `ai_daily_message_limit` (0 = ilimitado)
+- `ai_daily_token_limit` (0 = ilimitado)
+- `ai_timeout_seconds` (timeout por chamada)
+- `ai_max_retries` (retries em falha)
+- `ai_fallback_message` (mensagem quando limite atingido)
 
 ### Agenda da Secretaria IA
 

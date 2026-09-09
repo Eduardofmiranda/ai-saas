@@ -93,6 +93,14 @@ Todos os routers que manipulam dados sao protegidos por `Depends(get_current_use
 - `PUT /agenda/config` continua exclusivo de gestores (`require_company_manager`).
 - Frontend `/agenda` oculta o botao Cancelar quando o usuario nao tem permissao.
 
+### Limites de Abuso de IA (Fase 9.2)
+- **Implementado:** limites por empresa (mensagens/dia, tokens/dia) configuraveis
+  via `PATCH /config/`. Valores 0 = ilimitado.
+- Enforcement em `conversation_service` (chamada direta) e `nodes/context.py`
+  (workflows). Quando limite atingido: retorna `ai_fallback_message`.
+- Tabela `company_ai_usage` rastreia uso diario (migration `0017_ai_limits`).
+- `app/services/ai_limits.py`: `check_ai_limits`, `record_ai_usage`.
+
 ### Confirmacao Server-side (Agenda)
 - **Implementado (criacao, 8.6b):** criacao provisoria (`awaiting_confirmation`)
   + resposta `CONFIRMAR`/`CANCELAR` processada de forma deterministica no webhook
@@ -138,11 +146,10 @@ Todos os routers que manipulam dados sao protegidos por `Depends(get_current_use
 4. **XSS** — React escapa por padrao. Nao usa dangerouslySetInnerHTML.
 
 > Confirmacao server-side da agenda (criar/remarcar/cancelar com consentimento
-> real do cliente), garantia transacional contra dupla reserva e permissoes
-> granulares (papel + propriedade) estao **implementadas** — veja as secoes
-> acima e `docs/SEGURANCA-2026-09-08-AGENDA.md`.
-> Pendentes na agenda: limites de abuso por empresa/cliente (orcamento de IA) e
-> auditoria de isolamento de conversation_id nos nodes.
+> real do cliente), garantia transacional contra dupla reserva, permissoes
+> granulares (papel + propriedade) e limites de abuso de IA estao
+> **implementadas** — veja as secoes acima e `docs/SEGURANCA-2026-09-08-AGENDA.md`.
+> Pendentes na agenda: auditoria de isolamento de conversation_id nos nodes.
 
 ## Checklist Antes de Producao
 

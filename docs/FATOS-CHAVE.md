@@ -75,7 +75,16 @@
   exigem gestor OU criador do compromisso; WhatsApp-origin so gestao
   (`tests/test_agenda_permissions.py`).
 
-## 5.1 Politica de IA por usuario (Fase 9.1 — Planejado)
+## 5.1 Limites de abuso de IA (Fase 9.2 — Implementado)
+
+- Limites por empresa: mensagens/dia, tokens/dia (0 = ilimitado).
+- `app/services/ai_limits.py`: `check_ai_limits`, `record_ai_usage`, `get_usage_summary`.
+- Enforcement em `conversation_service` (chamada direta) e `nodes/context.py` (workflows).
+- Quando limite atingido: retorna `ai_fallback_message` (configuravel por empresa).
+- Tabela `company_ai_usage` rastreia uso diario (migration `0017_ai_limits`).
+- `tests/test_ai_limits.py` (16 testes).
+
+## 5.2 Politica de IA por usuario (Fase 9.1 — Implementado)
 
 - Superadmin controla provedores/chaves/modelos por usuario.
 - Prioridade: **usuario → empresa → plataforma → .env**.
@@ -88,6 +97,8 @@
 |----------|-------|
 | `DATABASE_URL` | Supabase (pooler IPv4) |
 | `SECRET_KEY` | `openssl rand -hex 32` |
+| `DEFAULT_AI_PROVIDER` | Provedor padrao (fallback global) |
+| `DEFAULT_AI_MODEL` | Modelo padrao |
 | `SECRET_ENCRYPTION_KEY` | `openssl rand -hex 32` (distinto) |
 | `DEFAULT_AI_PROVIDER` / `DEFAULT_AI_MODEL` / `DEFAULT_AI_API_KEY` | configuracao inicial da IA; `company_configs` so sobrepoe quando os campos nao estao vazios |
 | `EVOLUTION_BASE_URL` | `http://evolution:8080` |

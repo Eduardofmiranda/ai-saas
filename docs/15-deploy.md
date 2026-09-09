@@ -73,7 +73,7 @@ A Agenda 8.6b (confirmação 2 passos + lembretes) introduz a migration
 duas tarefas periodicas novas.
 
 ```bash
-# O alembic current deve estar em 0016_pending_appointment_actions (head) apos o deploy
+# O alembic current deve estar em 0017_ai_limits (head) apos o deploy
 docker compose exec backend alembic current
 
 # Colunas novas existentes (confirma + lembrete)
@@ -102,6 +102,13 @@ A migration `0016_pending_appointment_actions` cria a tabela de consentimento
 server-side da Secretaria IA: remarcacoes/cancelamentos via WhatsApp ficam
 pendentes ate o cliente responder CONFIRMAR (ver `docs/16-seguranca.md` e
 `docs/23-agenda-confirmacao-lembretes.md`). Aplicada automaticamente no startup.
+
+### Migration 0017 — limites de abuso de IA
+
+A migration `0017_ai_limits` adiciona colunas de limites em `company_configs`
+(ai_daily_message_limit, ai_daily_token_limit, ai_timeout_seconds,
+ai_max_retries, ai_fallback_message) e cria a tabela `company_ai_usage`
+(company_id, usage_date, message_count, token_count).
 
 ## Portas
 
