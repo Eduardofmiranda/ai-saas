@@ -67,7 +67,7 @@ Apos o deploy, confirme que todas as migrations foram aplicadas:
 
     docker compose exec backend alembic current
 
-O resultado deve estar em `0018_audit_log` (head). Se estiver
+O resultado deve estar em `0019_user_departments` (head). Se estiver
 atrasado, o backend aplicou automaticamente no startup; verifique os logs.
 
 ## Resultado esperado

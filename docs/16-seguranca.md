@@ -101,6 +101,19 @@ Todos os routers que manipulam dados sao protegidos por `Depends(get_current_use
 - Tabela `company_ai_usage` rastreia uso diario (migration `0017_ai_limits`).
 - `app/services/ai_limits.py`: `check_ai_limits`, `record_ai_usage`.
 
+### Acesso a Conversas por Setor e Nível (Fase 8.9)
+- **Implementado:** `app/services/access_rules.py` centraliza as regras
+  (`has_full_access`, `_user_levels`, `visible_condition`, `can_view`, `can_attend`).
+- Dono/Admin e atendente **sem setor** acessam todas as conversas da empresa.
+- Atendente **com setores** vê apenas conversas dos seus setores + as **sem setor**
+  (`department_id IS NULL`). Atraso: visibilidade aplicada na query (não expõe
+  IDs) e checagens `can_view`/`can_attend` no detalhe, mensagens, reply, update,
+  assume e pause.
+- Níveis: `view` (somente leitura), `attend` (padrão; responde/assume/altera),
+  `manage` (hoje equivalente a `attend`, reservado p/ gestão futura).
+- Sem permissão: **403**; setor de outra empresa no cadastro de membro: **400**;
+  nível inválido: **422**.
+
 ### Confirmacao Server-side (Agenda)
 - **Implementado (criacao, 8.6b):** criacao provisoria (`awaiting_confirmation`)
   + resposta `CONFIRMAR`/`CANCELAR` processada de forma deterministica no webhook

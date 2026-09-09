@@ -32,6 +32,10 @@ class User(Base):
     is_platform_admin = Column(Boolean, nullable=False, default=False)
 
     company = relationship("Company")
+    departments = relationship(
+        "UserDepartment",
+        cascade="all, delete-orphan",
+    )
 
     def set_password(self, raw_password: str) -> None:
         from app.services.security import hash_password

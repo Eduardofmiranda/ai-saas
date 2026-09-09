@@ -17,6 +17,7 @@ from app.schemas.conversation_schema import (
     ConversationUpdate,
 )
 from app.services.deps import get_current_user
+from app.services import access_rules
 
 router = APIRouter(
     prefix="/conversations",
@@ -55,6 +56,8 @@ def _to_response(conversation: Conversation, last_message: Message | None = None
         "status": conversation.status,
         "created_at": conversation.created_at,
         "updated_at": conversation.updated_at,
+        "department_id": conversation.department_id,
+        "department_name": conversation.department.name if conversation.department else None,
         "customer": customer,
         "last_message": last_message.content if last_message else None,
         "last_message_at": last_message.created_at if last_message else None,
@@ -84,6 +87,7 @@ def _get_conversation(db: Session, conversation_id: int, company_id: int) -> Con
         db.query(Conversation)
         .options(
             selectinload(Conversation.customer),
+            selectinload(Conversation.department),
         )
         .filter(
             Conversation.id == conversation_id,
@@ -160,9 +164,13 @@ def get_conversations(
         .options(
             selectinload(Conversation.customer),
             selectinload(Conversation.transfers),
+            selectinload(Conversation.department),
         )
         .filter(Conversation.company_id == current_user.company_id)
     )
+    vis = access_rules.visible_condition(Conversation, db, current_user)
+    if vis is not None:
+        qry = qry.filter(vis)
     if status:
         qry = qry.filter(Conversation.status == status)
     if q and q.strip():
@@ -231,9 +239,13 @@ def filter_conversations(
         .options(
             selectinload(Conversation.customer),
             selectinload(Conversation.transfers),
+            selectinload(Conversation.department),
         )
         .filter(Conversation.company_id == current_user.company_id)
     )
+    vis = access_rules.visible_condition(Conversation, db, current_user)
+    if vis is not None:
+        q = q.filter(vis)
     if status:
         q = q.filter(Conversation.status == status)
 
@@ -270,6 +282,9 @@ def get_conversation(
 ):
     conversation = _get_conversation(db, conversation_id, current_user.company_id)
 
+    if not access_rules.can_view(db, current_user, conversation):
+        raise HTTPException(status_code=403, detail="Voce nao tem acesso a esta conversa")
+
     last_msg = (
         db.query(Message)
         .filter(Message.conversation_id == conversation_id)
@@ -297,6 +312,9 @@ def update_conversation(
     db: Session = Depends(get_db),
 ):
     conversation = _get_conversation(db, conversation_id, current_user.company_id)
+
+    if not access_rules.can_attend(db, current_user, conversation):
+        raise HTTPException(status_code=403, detail="Voce nao pode alterar conversas deste setor")
 
     old_status = conversation.status
     if data.status != old_status:
@@ -350,6 +368,9 @@ def assume_conversation(
     """Assume atendimento manual: desliga IA e marca como 'agent'."""
     conversation = _get_conversation(db, conversation_id, current_user.company_id)
 
+    if not access_rules.can_attend(db, current_user, conversation):
+        raise HTTPException(status_code=403, detail="Voce nao pode assumir conversas deste setor")
+
     if conversation.status == "agent":
         raise HTTPException(status_code=400, detail="Conversa ja esta em atendimento humano")
 
@@ -389,6 +410,9 @@ def pause_conversation_workflow(
 ):
     """Pausa qualquer fluxo ativo para esta conversa (cancela PendingFlow)."""
     conversation = _get_conversation(db, conversation_id, current_user.company_id)
+
+    if not access_rules.can_attend(db, current_user, conversation):
+        raise HTTPException(status_code=403, detail="Voce nao pode pausar fluxos desta conversa")
 
     if not conversation.customer:
         raise HTTPException(status_code=400, detail="Conversa sem cliente associado")

@@ -6,6 +6,7 @@ import Alert from "../components/ui/Alert";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import EmptyState from "../components/ui/EmptyState";
 import Icon from "../components/ui/Icon";
+import Modal from "../components/ui/Modal";
 import PageHeader from "../components/ui/PageHeader";
 import Skeleton from "../components/ui/Skeleton";
 import Pagination from "../components/ui/Pagination";
@@ -55,6 +56,18 @@ const AUDIT_ENTITIES = [
   "workflow",
 ];
 
+const LEVEL_LABELS = {
+  view: "Ver",
+  attend: "Atender",
+  manage: "Gerenciar",
+};
+
+const LEVEL_OPTIONS = [
+  ["view", "Ver"],
+  ["attend", "Atender"],
+  ["manage", "Gerenciar"],
+];
+
 function formatTime(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -79,6 +92,52 @@ function detailSummary(raw) {
   return text.length > 100 ? text.slice(0, 100) + "…" : text;
 }
 
+function toggleSector(sectors, deptId, checked) {
+  const next = { ...(sectors || {}) };
+  if (checked) next[deptId] = next[deptId] || "attend";
+  else delete next[deptId];
+  return next;
+}
+
+function setSectorLevel(sectors, deptId, level) {
+  return { ...(sectors || {}), [deptId]: level };
+}
+
+function SectorGrid({ departments, sectors, onChange }) {
+  if (!departments || departments.length === 0) return null;
+  return (
+    <div className="member-sectors">
+      <span className="member-sectors-label">Setores (opcional)</span>
+      <p className="muted" style={{ margin: "0 0 10px", fontSize: 12 }}>
+        Define os setores do membro e o nível de acesso em cada um. Sem setor, o membro
+        continua tendo acesso a todas as conversas.
+      </p>
+      {departments.map((d) => {
+        const checked = !!(sectors || {})[d.id];
+        return (
+          <div key={d.id} className="member-sector-row">
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={(e) => onChange(toggleSector(sectors, d.id, e.target.checked))}
+              aria-label={`Setor ${d.name}`}
+            />
+            <span className="member-sector-name">{d.name}</span>
+            <select
+              value={checked ? sectors[d.id] : "attend"}
+              disabled={!checked}
+              onChange={(e) => onChange(setSectorLevel(sectors, d.id, e.target.value))}
+              aria-label={`Nível no setor ${d.name}`}
+            >
+              {LEVEL_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Admin() {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
@@ -90,11 +149,17 @@ export default function Admin() {
   const [success, setSuccess] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "agent" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "agent", sectors: {} });
   const [confirmTarget, setConfirmTarget] = useState(null);
   const [removing, setRemoving] = useState(false);
   const [roleChange, setRoleChange] = useState(null);
   const [changingRole, setChangingRole] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [editTarget, setEditTarget] = useState(null);
+  const [editRole, setEditRole] = useState("agent");
+  const [editSectors, setEditSectors] = useState({});
+  const [editPassword, setEditPassword] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
   const [logs, setLogs] = useState([]);
   const [logsTotal, setLogsTotal] = useState(0);
   const [logPage, setLogPage] = useState(0);
@@ -119,6 +184,21 @@ export default function Admin() {
   }
 
   useEffect(() => { load(); }, [q, page]);
+
+  useEffect(() => {
+    api.getDepartments()
+      .then(setDepartments)
+      .catch(() => {});
+  }, []);
+
+  const deptById = Object.fromEntries(departments.map((d) => [d.id, d.name]));
+
+  function departmentsPayload(sectors) {
+    return Object.entries(sectors || {}).map(([id, level]) => ({
+      department_id: Number(id),
+      level,
+    }));
+  }
 
   async function loadLogs() {
     setLogsLoading(true);
@@ -166,8 +246,14 @@ export default function Admin() {
     }
     setSaving(true);
     try {
-      await api.createUser(form);
-      setForm({ name: "", email: "", password: "", role: "agent" });
+      await api.createUser({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        role: form.role,
+        departments: departmentsPayload(form.sectors),
+      });
+      setForm({ name: "", email: "", password: "", role: "agent", sectors: {} });
       setShowForm(false);
       setSuccess("Membro adicionado com sucesso.");
       load();
@@ -175,6 +261,36 @@ export default function Admin() {
       setError("Erro ao adicionar: " + e.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  function openEdit(member) {
+    const sectors = {};
+    (member.departments || []).forEach((d) => { sectors[d.department_id] = d.level; });
+    setEditTarget(member);
+    setEditRole(member.role);
+    setEditSectors(sectors);
+    setEditPassword("");
+  }
+
+  async function saveEdit() {
+    if (!editTarget) return;
+    setEditSaving(true);
+    setError("");
+    try {
+      await api.updateUser(editTarget.id, {
+        role: editRole,
+        password: editPassword || undefined,
+        departments: departmentsPayload(editSectors),
+      });
+      setSuccess(`Membro ${editTarget.name} atualizado.`);
+      setEditTarget(null);
+      setEditPassword("");
+      load();
+    } catch (e) {
+      setError("Erro ao atualizar: " + e.message);
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -278,6 +394,7 @@ export default function Admin() {
                 {ROLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </label>
+            <SectorGrid departments={departments} sectors={form.sectors} onChange={(s) => set("sectors", s)} />
             <button className="btn primary" type="submit" disabled={saving}>
               {saving ? "Salvando..." : "Adicionar"}
             </button>
@@ -322,6 +439,19 @@ export default function Admin() {
               <div className="member-info">
                 <strong>{u.name}</strong>
                 <span className="muted">{u.email}</span>
+                {u.departments && u.departments.length > 0 && (
+                  <div className="member-sector-badges">
+                    {u.departments.map((sd) => (
+                      <span
+                        key={sd.department_id}
+                        className="sector-badge"
+                        title={`Nível: ${LEVEL_LABELS[sd.level] || sd.level}`}
+                      >
+                        {deptById[sd.department_id] || `Setor #${sd.department_id}`} · {LEVEL_LABELS[sd.level] || sd.level}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {isManager && u.role !== "owner" ? (
@@ -338,7 +468,10 @@ export default function Admin() {
               )}
 
               {isManager && u.id !== user?.id && u.role !== "owner" && (
-                <button className="btn ghost small danger" onClick={() => setConfirmTarget(u)}>Remover</button>
+                <>
+                  <button className="btn ghost small" onClick={() => openEdit(u)}>Editar</button>
+                  <button className="btn ghost small danger" onClick={() => setConfirmTarget(u)}>Remover</button>
+                </>
               )}
               {u.id === user?.id && <span className="muted">(você)</span>}
             </div>
@@ -478,6 +611,46 @@ export default function Admin() {
             onConfirm={confirmRoleChange}
             onCancel={() => setRoleChange(null)}
           />
+        )}
+
+        {editTarget && (
+          <Modal
+            title={`Editar ${editTarget.name}`}
+            icon={<Icon name="pencil" />}
+            onClose={() => setEditTarget(null)}
+            footer={
+              <>
+                <button className="btn ghost" onClick={() => setEditTarget(null)}>Cancelar</button>
+                <button className="btn primary" onClick={saveEdit} disabled={editSaving}>
+                  {editSaving ? "Salvando..." : "Salvar"}
+                </button>
+              </>
+            }
+          >
+            <div className="member-form">
+              <label className="field">
+                <span>Email</span>
+                <input type="text" value={editTarget.email} disabled />
+              </label>
+              <label className="field">
+                <span>Papel</span>
+                <select value={editRole} onChange={(e) => setEditRole(e.target.value)}>
+                  {ROLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </label>
+              <label className="field">
+                <span>Nova senha (opcional)</span>
+                <input
+                  type="password"
+                  placeholder="Deixe em branco para manter"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+              </label>
+              <SectorGrid departments={departments} sectors={editSectors} onChange={setEditSectors} />
+            </div>
+          </Modal>
         )}
       </main>
     </div>

@@ -94,6 +94,17 @@
 - UI na pagina `/admin` (somente gestor): tabela com filtros por acao/entidade/usuario e paginacao.
 - `tests/test_audit.py` (15 testes).
 
+## 5.4 Membros x Setores (Fase 8.9 — Implementado)
+
+- Tabela `user_departments` (migration `0019`): user_id, department_id, level (`view`/`attend`/`manage`), UniqueConstraint (user_id, department_id).
+- **Fato corrigido:** a proposta original era `User.department_id` (1 setor/usuario); a implementação é **m2m** (`user_departments`), permitindo vários setores.
+- `app/services/access_rules.py`: `visible_condition`, `can_view`, `can_attend`, `has_full_access`.
+- Atendente com setores vê conversas dos seus setores + as sem setor (`department_id IS NULL`); sem setor vê tudo; Dono/Admin vê tudo.
+- `view` só lê (403 ao responder/alterar/assumir); `attend` (padrão) responde/assume/altera; `manage` hoje = `attend` (reservado p/ gestão).
+- Enforce em conversations (listagem/detalhe/update/assume/pause) e messages (reply/update/delete). Conversas expõem `department_id`/`department_name`.
+- Admin.jsx: grid de setores no criar + modal Editar membro (papel/senha/setores) + badges; Conversations.jsx: badge de setor.
+- `tests/test_user_departments.py` (15 testes).
+
 ## 5.3 Politica de IA por usuario (Fase 9.1 — Implementado)
 
 - Superadmin controla provedores/chaves/modelos por usuario.

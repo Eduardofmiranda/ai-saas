@@ -213,8 +213,37 @@ clientes autenticados e permite os efeitos normais do workflow.
 |--------|-----|-----------|------|
 | GET | `/users/` | Lista membros da equipe (busca `q`, `limit`, `offset`) | JWT |
 | POST | `/users/` | Cria membro da equipe | JWT (gestor+) |
-| PATCH | `/users/{id}` | Atualiza papel/senha | JWT (gestor+) |
+| PATCH | `/users/{id}` | Atualiza papel/senha/setores | JWT (gestor+) |
 | DELETE | `/users/{id}` | Remove membro da equipe | JWT (gestor+) |
+
+#### Campos de setores (Fase 8.9)
+
+`POST /users` e `PATCH /users/{id}` aceitam a lista `departments`:
+
+```json
+{
+  "name": "Maria",
+  "email": "maria@x.com",
+  "password": "x123456",
+  "role": "agent",
+  "departments": [
+    { "department_id": 1, "level": "attend" },
+    { "department_id": 2, "level": "view" }
+  ]
+}
+```
+
+- `level` aceita `view`, `attend` (padrao) ou `manage`.
+- `PATCH` sem `departments` mantém os setores atuais; `departments: []` limpa.
+- Setor de outra empresa → `400`; nível inválido → `422`.
+- `GET /users/` inclui `departments: [{department_id, level}]` em cada item.
+
+#### Nível de acesso a conversas (Fase 8.9)
+
+- Dono/Admin e atendente **sem setor** têm acesso a todas as conversas.
+- Atendente **com setores** só vê conversas dos próprios setores + as **sem setor** (`department_id IS NULL`).
+- `view`: só lê (detalhe e mensagens). `attend`+ (`attend`/`manage`): também responde, assume, altera status e edita/exclui mensagens.
+- Acesso negado a conversa de outro setor → `403`, tanto na listagem quanto no detalhe/mensagens.
 
 ### Departments (setores)
 
@@ -224,6 +253,10 @@ clientes autenticados e permite os efeitos normais do workflow.
 | POST | `/departments/` | Cria setor | JWT |
 | PATCH | `/departments/{id}` | Atualiza setor | JWT |
 | DELETE | `/departments/{id}` | Exclui setor | JWT |
+
+`GET /conversations/`, `GET /conversations/filter/` e `GET /conversations/{id}`
+retornam também `department_id` e `department_name` (null quando a conversa não
+tem setor).
 
 ### Config AI (resolucao por usuario)
 

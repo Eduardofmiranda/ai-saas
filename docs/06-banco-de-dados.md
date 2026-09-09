@@ -12,7 +12,7 @@
 ### Ciclo de schema
 
 **Implementado:** a migration `0001_initial_schema` descreve o schema base de
-forma idempotente; `0002` a `0018` evoluem as tabelas. Bancos existentes que
+forma idempotente; `0002` a `0019` evoluem as tabelas. Bancos existentes que
 ja estavam em `0005_password_reset_tokens` avancam normalmente para `0006` sem
 recriar nem apagar tabelas.
 
@@ -338,6 +338,20 @@ expiram em `confirmation_expiry_hours` (tarefa `expire_unconfirmed_appointments`
 **Implementado (migration `0010_departments`).** Setores da empresa para
 encaminhamento de conversas.
 
+### user_departments
+| Coluna | Tipo | Constraints |
+|--------|------|------------|
+| id | Integer | PK, index |
+| user_id | Integer | FK -> users.id, NOT NULL, ondelete=CASCADE |
+| department_id | Integer | FK -> departments.id, NOT NULL, ondelete=CASCADE |
+| level | String | `view` / `attend` / `manage` (default `attend`) |
+| created_at | DateTime(timezone) | |
+
+**Implementado (migration `0019_user_departments`).** Associação m2m entre
+membros e setores com **nível de acesso por setor**. UniqueConstraint
+`uq_user_department` (user_id, department_id). Excluir usuário ou setor remove
+as linhas automaticamente.
+
 ### platform_ai_providers
 | Coluna | Tipo | Constraints |
 |--------|------|------------|
@@ -393,7 +407,7 @@ User 1──1 UserAIConfig
 ## Migrations
 
 **Implementado:** Alembic controla todo schema de producao. Em bancos novos,
-`0001_initial_schema` cria a base; `0002` a `0018` aplicam as evolucoes. As
+`0001_initial_schema` cria a base; `0002` a `0019` aplicam as evolucoes. As
 migrations sao idempotentes para permitir adocao de bancos legados que antes
 foram criados pelo ORM.
 

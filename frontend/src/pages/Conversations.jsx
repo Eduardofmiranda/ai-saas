@@ -236,6 +236,7 @@ export default function Conversations() {
                           <span className="inbox-item-time">{relativeTime(c.last_message_at || c.updated_at)}</span>
                         </div>
                         <div className="inbox-item-bottom">
+                          {c.department_name && <span className="inbox-sector-badge">{c.department_name}</span>}
                           <span className="inbox-item-preview">{c.last_message || "Sem mensagens"}</span>
                           <span className={`inbox-status-dot inbox-status-dot-${c.status}`} />
                           <span className="sr-only">{STATUS_LABEL[c.status] || c.status}</span>
@@ -360,6 +361,7 @@ export default function Conversations() {
                     </span>
                   </div>
                   <div className="inbox-ctx-row"><span className="inbox-ctx-label">Mensagens</span><span className="inbox-ctx-value">{selectedConv.message_count}</span></div>
+                  <div className="inbox-ctx-row"><span className="inbox-ctx-label">Setor</span><span className="inbox-ctx-value">{selectedConv.department_name || "—"}</span></div>
                   <div className="inbox-ctx-row"><span className="inbox-ctx-label">Início</span><span className="inbox-ctx-value">{dateLabel(selectedConv.created_at)} {timeHM(selectedConv.created_at)}</span></div>
                 </div>
                 {(selectedConv.transfers || []).length > 0 && (

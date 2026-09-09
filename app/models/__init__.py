@@ -13,6 +13,7 @@ from app.models.password_reset_token import PasswordResetToken
 from app.models.platform_ai_provider import PlatformAIProvider
 from app.models.user_ai_config import UserAIConfig
 from app.models.department import Department
+from app.models.user_department import UserDepartment
 from app.models.business_hours import BusinessHours
 from app.models.agenda_config import AgendaConfig
 from app.models.appointment import Appointment

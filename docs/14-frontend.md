@@ -121,6 +121,7 @@ Pagina: `frontend/src/pages/PlatformAdmin.jsx`. Rota `/plataforma` em `App.jsx`.
 - Layout em 3 paineis (padrao do mercado: lista | thread | contexto do cliente).
 - **Painel 1 — Lista:** busca por nome/telefone, abas (Todas/Abertas/Aguardando/Fechadas),
   avatar, status (`open`/`pending_agent`/`closed`), preview + horario da ultima mensagem.
+  Conversas com setor exibem **badge do setor**.
   Ordena por `updated_at` (mais recente primeiro). Dados de
   `GET /conversations/`.
 - **Painel 2 — Thread + resposta:** historico de mensagens com bolhas distintas
@@ -129,7 +130,7 @@ Pagina: `frontend/src/pages/PlatformAdmin.jsx`. Rota `/plataforma` em `App.jsx`.
   `conversations/{id}` com `{status}`): `open`→Fechar (closed);
   `pending_agent`→Assumir (agent) + Fechar (closed); `agent`→Liberar (open) +
   Fechar (closed); `closed`→Reabrir (open).
-- **Painel 3 — Contexto:** nome, telefone, status, inicio e total de mensagens do
+- **Painel 3 — Contexto:** nome, telefone, status, **setor**, inicio e total de mensagens do
   cliente + **Histórico de transferências** (action, quem agiu, quando).
 - **Polling:** atualiza a lista e as mensagens da conversa selecionada a cada 5s.
 
@@ -193,6 +194,10 @@ src/
 ### `/admin` — Membros + Auditoria
 - **Membros**: lista paginada (50/pagina) com busca por nome/email, criacao de membro,
   alteracao de papel e remocao — somente gestores (owner/admin).
+- **Setor + nível (Fase 8.9)**: no criar membro, grid de **setores da empresa** com
+  checkbox por setor e `select` de nível (`view`/`attend`/`manage`). Botao **Editar**
+  por membro abre **modal** com email (somente leitura), papel, **nova senha opcional**
+  e o mesmo grid de setores. A linha do membro exibe **badges** `Setor · Nível`.
 - **Auditoria** (somente gestor, Fase 9.4): secao abaixo da lista de membros com a tabela
   de acoes criticas (`GET /audit-logs/`), filtros por **acao**, **entidade** e **usuario**,
   paginacao (25/pagina) e colunas: Quando, Usuario, Acao, Entidade, Detalhes (sumario do JSON

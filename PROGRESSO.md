@@ -301,22 +301,29 @@ Itens marcados acima sao locais: nao houve commit, push ou deploy nesta revisao.
 - [x] Endpoint `POST /auth/refresh` (renovar access token com refresh token rotacionado)
 - [x] Infraestrutura de email (SMTP: Host/Port/User/Password/From) + token de reset com uso unico
 
-### 8.9 — Gestão de membros: setor + nível de acesso (Planejado)
-> **Objetivo:** ao criar/editar um funcionário, o administrador define o **setor** da
-> pessoa e o **nível de acesso** dela. Hoje `POST /users` grava apenas name/email/
-> password/role e `User` não tem `department_id` (a tabela `departments` existe,
-> mas é usada só no encaminhamento de conversas).
+### 8.9 — Gestão de membros: setor + nível de acesso ✅
+> **Objetivo (original):** ao criar/editar um funcionário, o administrador define o **setor**
+> da pessoa e o **nível de acesso** dela.
+>
+> **Fato corrigido (implementação, 09/09/2026):** a proposta original era `User.department_id`
+> (um único setor por usuário). A implementação foi **m2m**: tabela `user_departments`
+> (user_id, department_id, level) permitindo **vários setores** por membro. Aviso: a regra
+> §2 (código é a fonte de verdade) se aplica — a forma real é o m2m, não a coluna única.
 
-- [ ] Backend: coluna `User.department_id` (FK → `departments`, nullable) + migration Alembic
-- [ ] `UserCreate`/`UserUpdate`: aceitar `department_id` (validar setor = mesma empresa e ativo)
-- [ ] `UserResponse`: expor `department_id` e nome do setor na listagem de membros
-- [ ] Nível de acesso: revisar/ampliar os papéis atuais (`owner`/`admin`/`agent`) — ex. permissões
-      por módulo (workflows, conhecimento, agenda, setores) ou flag por área
-- [ ] Frontend (`Admin.jsx`): no formulário de criar/editar membro, seletores de
-      **setor** e **nível de acesso**; exibir setor na tabela de membros
-- [ ] Validar: admin cria membro com setor/nível; agente não gerencia membros (403 já existe);
-      setor de outra empresa é rejeitado
-- [ ] Docs: `docs/10-api.md`, `docs/06-banco-de-dados.md`, `docs/14-frontend.md`, `docs/FATOS-CHAVE.md`
+- [x] Model `UserDepartment` (user_id, department_id, level, UniqueConstraint uq_user_department, FKs ondelete=CASCADE)
+- [x] Relação `User.departments` (cascade all, delete-orphan) + export em `app/models/__init__.py`
+- [x] Migration Alembic `0019_user_departments`
+- [x] `UserCreate`/`UserUpdate`: aceitar lista `departments` `[{department_id, level}]` (level: `view`/`attend`/`manage`); validar setor = mesma empresa (400 se externo) e nível válido (422)
+- [x] `UserResponse`: expor `departments` na listagem de membros (batch, sem N+1)
+- [x] Service `app/services/access_rules.py`: `has_full_access`, `_user_levels`, `visible_condition`, `can_view`, `can_attend`
+- [x] Níveis: `view` (só lê) < `attend` (padrão; lê, responde, assume, altera status) < `manage` (hoje = `attend`; reservado p/ gestão futura). Dono/Admin = acesso irrestrito
+- [x] Inbox: atendente **sem setor** vê tudo (compatibilidade); com setores vê conversas dos seus setores + as sem setor (`department_id IS NULL`); `view` lê mas recebe 403 ao responder/alterar/assumir
+- [x] Enforce em: `conversation_router` (listagem/detalhe/update/assume/pause) e `message_router` (reply/update/delete mensagens)
+- [x] `Conversation` response: `department_id` + `department_name` (badge no inbox)
+- [x] Frontend (`Admin.jsx`): grid de setores no criar membro, modal "Editar membro" (papel + senha opcional + setores), badges de setor/nível na tabela
+- [x] Frontend (`Conversations.jsx`): badge de setor no item e no contexto da conversa
+- [x] Testes: `tests/test_user_departments.py` (15 testes: criar/editar/limpar setores, setor externo 400, nível inválido 422, visibilidade por setor, view-only 403, attend responde)
+- [x] Docs: `docs/10-api.md`, `docs/06-banco-de-dados.md`, `docs/14-frontend.md`, `docs/16-seguranca.md`, `docs/FATOS-CHAVE.md`
 
 ---
 

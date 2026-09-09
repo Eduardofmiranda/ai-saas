@@ -73,7 +73,7 @@ A Agenda 8.6b (confirmação 2 passos + lembretes) introduz a migration
 duas tarefas periodicas novas.
 
 ```bash
-# O alembic current deve estar em 0018_audit_log (head) apos o deploy
+# O alembic current deve estar em 0019_user_departments (head) apos o deploy
 docker compose exec backend alembic current
 
 # Colunas novas existentes (confirma + lembrete)
@@ -115,6 +115,13 @@ ai_max_retries, ai_fallback_message) e cria a tabela `company_ai_usage`
 A migration `0018_audit_log` cria a tabela `audit_logs` (company_id, user_id,
 action, entity, entity_id, details, ip_address, user_agent, created_at).
 Registra acoes criticas: auth, CRUD de users/workflows, config, platform_admin.
+
+### Migration 0019 — membros x setores com nivel de acesso
+
+A migration `0019_user_departments` cria a tabela `user_departments` (user_id,
+department_id, level, UniqueConstraint uq_user_department). Associa membros a
+setores com nível (`view`/`attend`/`manage`) e habilita o filtro de conversas
+por setor no inbox. Aplicada automaticamente no startup do backend.
 
 ## Portas
 

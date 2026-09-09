@@ -18,6 +18,7 @@ from app.schemas.message_schema import (
 from app.services import evolution
 from app.services.config_service import get_or_create_config
 from app.services.deps import get_current_user
+from app.services import access_rules
 from app.routers.config_router import _evo_config
 
 router = APIRouter(
@@ -63,6 +64,9 @@ def create_message(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    if not access_rules.can_attend(db, current_user, conversation):
+        raise HTTPException(status_code=403, detail="Voce nao pode enviar mensagens neste setor")
+
     new_message = Message(
         conversation_id=message.conversation_id,
         sender_type=message.sender_type,
@@ -92,6 +96,9 @@ def get_messages(
     )
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    if not access_rules.can_view(db, current_user, conversation):
+        raise HTTPException(status_code=403, detail="Voce nao tem acesso a esta conversa")
 
     q = db.query(Message).filter(Message.conversation_id == conversation_id)
     total = q.count()
@@ -138,6 +145,14 @@ def update_message(
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
 
+    conversation = (
+        db.query(Conversation)
+        .filter(Conversation.id == message.conversation_id)
+        .first()
+    )
+    if not access_rules.can_attend(db, current_user, conversation):
+        raise HTTPException(status_code=403, detail="Voce nao pode editar mensagens deste setor")
+
     message.content = data.content
     db.commit()
     db.refresh(message)
@@ -161,6 +176,14 @@ def delete_message(
     )
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
+
+    conversation = (
+        db.query(Conversation)
+        .filter(Conversation.id == message.conversation_id)
+        .first()
+    )
+    if not access_rules.can_attend(db, current_user, conversation):
+        raise HTTPException(status_code=403, detail="Voce nao pode excluir mensagens deste setor")
 
     db.delete(message)
     db.commit()
@@ -190,6 +213,9 @@ def reply_in_conversation(
     )
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    if not access_rules.can_attend(db, current_user, conversation):
+        raise HTTPException(status_code=403, detail="Voce nao pode responder conversas deste setor")
 
     content = data.content.strip()
     if not content:

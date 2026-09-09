@@ -206,7 +206,8 @@ ai-saas/
 │       ├── 0015_agenda_slot_index.py
 │       ├── 0016_pending_appointment_actions.py
 │       ├── 0017_ai_limits.py
-│       └── 0018_audit_log.py
+│       ├── 0018_audit_log.py
+│       └── 0019_user_departments.py
 ├── docker-compose.yml
 ├── docker-compose.dev.yml
 ├── docker-compose.evolution.yml
