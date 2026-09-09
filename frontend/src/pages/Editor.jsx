@@ -169,6 +169,8 @@ export default function Editor() {
   const [integrationChecks, setIntegrationChecks] = useState(null);
   const [checkingIntegrations, setCheckingIntegrations] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [versions, setVersions] = useState([]);
+  const [showVersions, setShowVersions] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
   const [testMessage, setTestMessage] = useState("Ola! Preciso de ajuda com os planos.");
@@ -393,6 +395,30 @@ export default function Editor() {
     }
   }
 
+  async function loadVersions() {
+    try {
+      const data = await api.getWorkflowVersions(id);
+      setVersions(data);
+    } catch (e) {
+      setEditorError("Erro ao carregar versoes: " + e.message);
+    }
+  }
+
+  async function rollbackVersion(versionId) {
+    if (!confirm("Restaurar esta versao? O estado atual sera salvo como nova versao.")) return;
+    try {
+      const updated = await api.rollbackWorkflowVersion(id, versionId);
+      setWf(updated);
+      if (updated.data) {
+        setNodes(updated.data.nodes || []);
+        setEdges(updated.data.edges || []);
+      }
+      loadVersions();
+    } catch (e) {
+      setEditorError("Erro ao restaurar: " + e.message);
+    }
+  }
+
   const fields = selectedNode?.spec?.fields || [];
   const responseGuidance = wf?.trigger_type === "message"
     ? workflowGuidance(nodes, edges)
@@ -425,6 +451,9 @@ export default function Editor() {
           </button>
           <button className="btn secondary" onClick={() => setShowTestModal(true)} disabled={saving || running}>
             {running ? "Testando..." : "Rodar teste"}
+          </button>
+          <button className="btn ghost" onClick={() => { setShowVersions(!showVersions); if (!showVersions) loadVersions(); }}>
+            Versoes
           </button>
           <button className="btn primary" onClick={() => save()} disabled={saving || running}>
             {saving ? "Salvando..." : "Salvar"}
@@ -732,6 +761,31 @@ export default function Editor() {
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {showVersions && (
+            <div className="run-result">
+              <h4>Versoes</h4>
+              <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
+                Cada salvamento cria uma versao automaticamente. Restaurar salva o estado atual como nova versao.
+              </p>
+              {versions.length === 0 && <p className="muted" style={{ fontSize: 12 }}>Nenhuma versao salva ainda.</p>}
+              {versions.map((v) => (
+                <div key={v.id} className="dash-list-row" style={{ fontSize: 12 }}>
+                  <span className="dash-rank" style={{ width: 28, fontSize: 11 }}>v{v.version_number}</span>
+                  <span className="dash-name" style={{ fontSize: 11 }}>
+                    {v.name}
+                    {v.note && <span className="muted"> — {v.note}</span>}
+                  </span>
+                  <span className="dash-meta" style={{ fontSize: 10 }}>
+                    {new Date(v.created_at).toLocaleDateString("pt-BR")}
+                  </span>
+                  <button className="btn ghost small" style={{ fontSize: 11 }} onClick={() => rollbackVersion(v.id)}>
+                    Restaurar
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </aside>

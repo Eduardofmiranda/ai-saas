@@ -22,3 +22,4 @@ from app.models.pending_appointment_action import PendingAppointmentAction
 from app.services.ai_limits import CompanyAIUsage
 from app.models.audit_log import AuditLog
 from app.models.outbound_webhook import OutboundWebhook, OutboundWebhookLog
+from app.models.workflow_version import WorkflowVersion

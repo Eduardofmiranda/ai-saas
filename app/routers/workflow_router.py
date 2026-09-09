@@ -6,6 +6,7 @@ from app.database.session import get_db
 from app.models.execution import Execution
 from app.models.user import User
 from app.models.workflow import Workflow
+from app.models.workflow_version import WorkflowVersion
 from app.schemas.workflow_schema import (
     WorkflowCreate,
     WorkflowResponse,
@@ -110,6 +111,27 @@ def update_workflow(
             ensure_valid_workflow_graph(graph, trigger_type=trigger_type)
         except WorkflowValidationError as exc:
             raise HTTPException(status_code=422, detail=str(exc))
+
+    # Snapshot automatico: salva versao anterior antes de sobrescrever
+    if "data" in updates and wf.data:
+        last_version = (
+            db.query(WorkflowVersion)
+            .filter(WorkflowVersion.workflow_id == wf.id)
+            .order_by(WorkflowVersion.version_number.desc())
+            .first()
+        )
+        next_version = (last_version.version_number + 1) if last_version else 1
+        snapshot = WorkflowVersion(
+            workflow_id=wf.id,
+            company_id=wf.company_id,
+            version_number=next_version,
+            name=wf.name,
+            data=wf.data,
+            trigger_type=wf.trigger_type,
+            trigger_config=wf.trigger_config,
+            created_by=current_user.id,
+        )
+        db.add(snapshot)
 
     # Uma mensagem recebida deve ter um unico fluxo principal. O motor executa
     # apenas um trigger "message" por empresa; manter varios ativos tornava o
@@ -221,4 +243,72 @@ def list_executions(
         .limit(50)
         .all()
     )
+
+
+@router.get("/{workflow_id}/versions")
+def list_versions(
+    workflow_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _get_owned_workflow(db, workflow_id, current_user.company_id)
+    return (
+        db.query(WorkflowVersion)
+        .filter(WorkflowVersion.workflow_id == workflow_id)
+        .order_by(WorkflowVersion.version_number.desc())
+        .limit(50)
+        .all()
+    )
+
+
+@router.post("/{workflow_id}/versions/{version_id}/rollback")
+def rollback_version(
+    workflow_id: int,
+    version_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None,
+):
+    wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
+    version = (
+        db.query(WorkflowVersion)
+        .filter(WorkflowVersion.id == version_id, WorkflowVersion.workflow_id == workflow_id)
+        .first()
+    )
+    if not version:
+        raise HTTPException(status_code=404, detail="Versao nao encontrada")
+
+    # Snapshot da versao atual antes de restaurar
+    last_version = (
+        db.query(WorkflowVersion)
+        .filter(WorkflowVersion.workflow_id == wf.id)
+        .order_by(WorkflowVersion.version_number.desc())
+        .first()
+    )
+    next_version = (last_version.version_number + 1) if last_version else 1
+    snapshot = WorkflowVersion(
+        workflow_id=wf.id,
+        company_id=wf.company_id,
+        version_number=next_version,
+        name=wf.name,
+        data=wf.data,
+        trigger_type=wf.trigger_type,
+        trigger_config=wf.trigger_config,
+        note=f"Rollback para versao {version.version_number}",
+        created_by=current_user.id,
+    )
+    db.add(snapshot)
+
+    # Restaurar dados da versao selecionada
+    wf.name = version.name
+    wf.data = version.data
+    wf.trigger_type = version.trigger_type
+    wf.trigger_config = version.trigger_config
+    db.commit()
+    db.refresh(wf)
+
+    log_action(db, current_user.company_id, current_user.id, "workflow.update",
+               entity="workflow", entity_id=workflow_id, request=request)
+
+    return wf
 

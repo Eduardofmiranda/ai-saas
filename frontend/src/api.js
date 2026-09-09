@@ -113,6 +113,9 @@ export const api = {
   updateOutboundWebhook: (id, body) => request("PATCH", `/outbound-webhooks/${id}`, body),
   deleteOutboundWebhook: (id) => request("DELETE", `/outbound-webhooks/${id}`),
   getOutboundWebhookLogs: (id) => request("GET", `/outbound-webhooks/${id}/logs`),
+  // Versionamento
+  getWorkflowVersions: (id) => request("GET", `/workflows/${id}/versions`),
+  rollbackWorkflowVersion: (id, versionId) => request("POST", `/workflows/${id}/versions/${versionId}/rollback`),
   // Usuarios / Administracao
   getUsers: (params = {}) => request("GET", `/users/${qs(params)}`),
   createUser: (body) => request("POST", "/users/", body),
