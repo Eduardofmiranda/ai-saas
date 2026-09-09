@@ -54,11 +54,11 @@ export function DonutChart({ segments, size = 150, thickness = 18 }) {
   );
 }
 
-export function BarChart({ data, height = 130 }) {
+export function BarChart({ data, height = 130, labelEvery = 1, dense = false }) {
   const max = Math.max(1, ...data.map((d) => d.value));
   return (
-    <div className="chart-bars" style={{ height }}>
-      {data.map((d) => (
+    <div className={`chart-bars${dense ? " dense" : ""}`} style={{ height }}>
+      {data.map((d, i) => (
         <div key={d.key} className="chart-col">
           <div className="chart-bar-track">
             <div
@@ -67,18 +67,18 @@ export function BarChart({ data, height = 130 }) {
               title={`${d.label}: ${d.value}`}
             />
           </div>
-          <span className="chart-bar-label">{d.label}</span>
+          {i % labelEvery === 0 && <span className="chart-bar-label">{d.label}</span>}
         </div>
       ))}
     </div>
   );
 }
 
-export function StackedBarChart({ data, height = 130 }) {
+export function StackedBarChart({ data, height = 130, labelEvery = 1, dense = false }) {
   const max = Math.max(1, ...data.map((d) => d.success + d.error));
   return (
-    <div className="chart-bars" style={{ height }}>
-      {data.map((d) => {
+    <div className={`chart-bars${dense ? " dense" : ""}`} style={{ height }}>
+      {data.map((d, i) => {
         const total = d.success + d.error;
         const okPct = Math.round((d.success / max) * 100);
         const errPct = Math.round((d.error / max) * 100);
@@ -90,7 +90,7 @@ export function StackedBarChart({ data, height = 130 }) {
                 <div className="chart-bar seg err" style={{ height: `${errPct}%` }} />
               </div>
             </div>
-            <span className="chart-bar-label">{d.label}</span>
+            {i % labelEvery === 0 && <span className="chart-bar-label">{d.label}</span>}
           </div>
         );
       })}

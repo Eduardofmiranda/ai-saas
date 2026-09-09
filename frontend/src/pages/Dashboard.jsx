@@ -239,10 +239,13 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="chart-card">
+            <div className="chart-card chart-wide">
               <h3>Conversas · últimos 30 dias</h3>
-              <div className="chart-card-body">
+              <div className="chart-card-body" style={{ display: "block" }}>
                 <BarChart
+                  dense
+                  labelEvery={5}
+                  height={150}
                   data={(data.conversations_last_30_days || []).map((d) => ({
                     key: d.date,
                     label: DAY_LABEL(d.date),
@@ -253,10 +256,13 @@ export default function Dashboard() {
             </div>
 
             {(data?.ai_messages_total || 0) > 0 && (
-              <div className="chart-card">
+              <div className="chart-card chart-wide">
                 <h3>Tokens de IA · últimos 30 dias</h3>
-                <div className="chart-card-body">
+                <div className="chart-card-body" style={{ display: "block" }}>
                   <BarChart
+                    dense
+                    labelEvery={5}
+                    height={150}
                     data={(data.ai_usage_last_30_days || []).map((d) => ({
                       key: d.date,
                       label: DAY_LABEL(d.date),
