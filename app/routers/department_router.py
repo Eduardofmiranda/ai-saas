@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.models.department import Department
 from app.models.user import User
+from app.models.user_department import UserDepartment
 from app.schemas.department_schema import (
     DepartmentCreate,
     DepartmentResponse,
@@ -105,6 +106,9 @@ def delete_department(
     if not dept:
         raise HTTPException(status_code=404, detail="Setor nao encontrado")
 
+    db.query(UserDepartment).filter(UserDepartment.department_id == dept.id).delete()
+    from app.models.conversation import Conversation
+    db.query(Conversation).filter(Conversation.department_id == dept.id).update({Conversation.department_id: None})
     db.delete(dept)
     db.commit()
     return {"message": "Setor removido com sucesso"}

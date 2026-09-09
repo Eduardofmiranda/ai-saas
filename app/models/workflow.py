@@ -53,6 +53,9 @@ class Workflow(Base):
     # Configuracao do trigger (ex: numero do WhatsApp, cron, endpoint)
     trigger_config = Column(JSON, default=dict)
 
+    # Setor opcional: workflow vinculado a um departamento especifico
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
+
     active = Column(Boolean, nullable=False, default=False)
 
     created_at = Column(DateTime(timezone=True), default=_utcnow)

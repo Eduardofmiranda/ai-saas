@@ -23,6 +23,7 @@ class Knowledge(Base):
     name = Column(String, nullable=False)
     description = Column(Text, default="")
     source_type = Column(String, default="text")
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -10,6 +10,7 @@ class WorkflowCreate(BaseModel):
     data: Optional[dict[str, Any]] = None
     trigger_type: Optional[str] = "message"
     trigger_config: Optional[dict[str, Any]] = None
+    department_id: Optional[int] = None
 
 
 class WorkflowUpdate(BaseModel):
@@ -19,6 +20,7 @@ class WorkflowUpdate(BaseModel):
     trigger_type: Optional[str] = None
     trigger_config: Optional[dict[str, Any]] = None
     active: Optional[bool] = None
+    department_id: Optional[int] = None
 
 
 class WorkflowResponse(BaseModel):
@@ -29,6 +31,7 @@ class WorkflowResponse(BaseModel):
     data: dict[str, Any]
     trigger_type: str
     trigger_config: dict[str, Any]
+    department_id: int | None = None
     active: bool
     created_at: datetime
     updated_at: datetime
