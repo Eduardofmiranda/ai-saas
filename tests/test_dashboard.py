@@ -1,5 +1,5 @@
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,11 +9,13 @@ from sqlalchemy.orm import sessionmaker
 from app.database.database import Base
 from app.main import app
 from app.models.conversation import Conversation
+from app.models.conversation_transfer import ConversationTransfer
 from app.models.customer import Customer
 from app.models.execution import Execution
 from app.models.message import Message
 from app.models.user import User
 from app.models.workflow import Workflow
+from app.services.ai_limits import CompanyAIUsage
 from app.services.deps import get_current_user
 
 
@@ -63,8 +65,13 @@ def _customer(db_session, *, name="Cliente", phone="5511999999999", company_id=1
     return cust
 
 
-def _conversation(db_session, *, customer, status="open", company_id=1):
-    conv = Conversation(company_id=company_id, customer_id=customer.id, status=status)
+def _conversation(db_session, *, customer, status="open", company_id=1, days_ago=0):
+    conv = Conversation(
+        company_id=company_id,
+        customer_id=customer.id,
+        status=status,
+        created_at=datetime.now(timezone.utc) - timedelta(days=days_ago),
+    )
     db_session.add(conv)
     db_session.flush()
     return conv
@@ -177,3 +184,104 @@ class TestDashboardData:
             assert body["customers"] == 1
             assert sum(item["count"] for item in body["messages_last_7_days"]) == 1
             assert sum(item["success"] + item["error"] for item in body["executions_last_7_days"]) == 0
+
+    def test_conversations_last_30_days(self, db_session, owner):
+        c = _customer(db_session)
+        _conversation(db_session, customer=c, days_ago=0)
+        _conversation(db_session, customer=c, days_ago=0)
+        _conversation(db_session, customer=c, days_ago=1)
+        _conversation(db_session, customer=c, days_ago=40)
+
+        other = _customer(db_session, phone="5511777777777", company_id=99)
+        _conversation(db_session, customer=other, company_id=99, days_ago=0)
+        db_session.commit()
+
+        for client in _make(db_session, owner):
+            body = client.get("/dashboard/").json()
+            series = body["conversations_last_30_days"]
+            assert len(series) == 30
+            assert sum(item["count"] for item in series) == 3
+            assert series[-1]["count"] == 2  # hoje
+            assert series[-2]["count"] == 1  # ontem
+            assert series[0]["count"] == 0   # ha 29 dias
+
+    def test_response_time_and_auto_vs_human(self, db_session, owner):
+        c = _customer(db_session)
+        t0 = datetime.now(timezone.utc)
+
+        conv_agent = _conversation(db_session, customer=c, status="closed")
+        db_session.add(Message(
+            conversation_id=conv_agent.id, sender_type="customer",
+            content="oi", created_at=t0 - timedelta(minutes=3),
+        ))
+        db_session.add(Message(
+            conversation_id=conv_agent.id, sender_type="agent",
+            content="ola, como posso ajudar?", created_at=t0,
+        ))
+
+        conv_bot = _conversation(db_session, customer=c, status="closed")
+        db_session.add(Message(
+            conversation_id=conv_bot.id, sender_type="customer",
+            content="oi", created_at=t0 - timedelta(minutes=3),
+        ))
+        db_session.add(Message(
+            conversation_id=conv_bot.id, sender_type="bot",
+            content="ola!", created_at=t0,
+        ))
+
+        conv_transfer = _conversation(db_session, customer=c, status="closed")
+        db_session.add(ConversationTransfer(
+            conversation_id=conv_transfer.id, company_id=1,
+            actor_type="user", user_name="Atendente", action="assumed",
+        ))
+
+        _conversation(db_session, customer=c, status="open")
+        db_session.commit()
+
+        for client in _make(db_session, owner):
+            body = client.get("/dashboard/").json()
+            assert body["avg_response_time_minutes"] == 3.0
+            assert body["auto_resolved"] == 1
+            assert body["human_resolved"] == 2
+
+    def test_ai_usage_totals_series_and_cost(self, db_session, owner):
+        today = date.today()
+        db_session.add(CompanyAIUsage(company_id=1, usage_date=today, message_count=5, token_count=4_000_000))
+        db_session.add(CompanyAIUsage(company_id=1, usage_date=today - timedelta(days=1), message_count=2, token_count=1_000_000))
+        db_session.add(CompanyAIUsage(company_id=99, usage_date=today, message_count=50, token_count=999_999_999))
+        db_session.commit()
+
+        for client in _make(db_session, owner):
+            body = client.get("/dashboard/").json()
+            assert body["ai_messages_total"] == 7
+            assert body["ai_tokens_total"] == 5_000_000
+            assert body["ai_estimated_cost"] == round(5_000_000 * 0.00075 / 1000, 2) == 3.75
+            series = body["ai_usage_last_30_days"]
+            assert len(series) == 30
+            assert series[-1]["messages"] == 5
+            assert series[-1]["tokens"] == 4_000_000
+            assert series[-2]["messages"] == 2
+            assert series[-2]["tokens"] == 1_000_000
+
+    def test_top_workflows_and_errors_by_node(self, db_session, owner):
+        wf_a = _workflow(db_session, name="Fluxo A")
+        wf_b = _workflow(db_session, name="Fluxo B")
+        other_wf = _workflow(db_session, name="Outra empresa", company_id=99)
+        _execution(db_session, workflow=wf_a, status="success")
+        _execution(db_session, workflow=wf_a, status="success")
+        err_a = _execution(db_session, workflow=wf_a, status="error")
+        _execution(db_session, workflow=wf_b, status="success")
+        err_b = _execution(db_session, workflow=wf_b, status="error")
+        _execution(db_session, workflow=other_wf, status="error")
+        err_a.error = "rag_node: falha ao consultar knowledge"
+        err_b.error = "http_node: timeout"
+        db_session.commit()
+
+        for client in _make(db_session, owner):
+            body = client.get("/dashboard/").json()
+            top = body["top_workflows"]
+            assert [w["name"] for w in top] == ["Fluxo A", "Fluxo B"]
+            assert top[0]["executions"] == 3 and top[0]["errors"] == 1
+            assert top[1]["executions"] == 2 and top[1]["errors"] == 1
+            errors = {item["node_id"]: item["count"] for item in body["errors_by_node"]}
+            assert errors == {"rag_node": 1, "http_node": 1}

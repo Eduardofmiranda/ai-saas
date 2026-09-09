@@ -314,3 +314,53 @@ async def test_tool_errors_do_not_disclose_sensitive_exception(fake_llm):
     assert "synthetic-secret" not in content
     assert "SQL" not in content
     assert "synthetic-customer" not in content
+
+
+@pytest.mark.asyncio
+async def test_generate_reply_reports_usage(fake_llm):
+    fake_llm["responses"] = [
+        _FakeResponse({
+            "choices": [{"message": {"content": "ok"}}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+        })
+    ]
+    seen = []
+    result = await llm.generate_reply(
+        system_prompt="s",
+        history=[{"role": "user", "content": "x"}],
+        provider="openai",
+        model="m",
+        api_key="k",
+        base_url="https://example.com/v1",
+        on_usage=lambda p, c: seen.append((p, c)),
+    )
+    assert result == "ok"
+    assert seen == [(10, 5)]
+
+
+@pytest.mark.asyncio
+async def test_reply_with_tools_accumulates_usage_across_rounds(fake_llm):
+    fake_llm["responses"] = [
+        _FakeResponse({
+            "choices": [{"message": _assistant_message(None, [_tool_call("f", "{}")])}],
+            "usage": {"prompt_tokens": 7, "completion_tokens": 3},
+        }),
+        _FakeResponse({
+            "choices": [{"message": {"content": "done"}}],
+            "usage": {"prompt_tokens": 12, "completion_tokens": 1},
+        }),
+    ]
+    seen = []
+    result = await generate_reply_with_tools(
+        system_prompt="s",
+        history=[{"role": "user", "content": "x"}],
+        provider="openai",
+        model="m",
+        api_key="k",
+        base_url="https://example.com/v1",
+        tools=[{"type": "function", "function": {"name": "f"}}],
+        execute_tool=lambda name, args: {"ok": True},
+        on_usage=lambda p, c: seen.append((p, c)),
+    )
+    assert result == "done"
+    assert seen == [(7, 3), (12, 1)]

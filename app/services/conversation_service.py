@@ -267,6 +267,11 @@ async def handle_incoming_message(
             .all()
         )
         history = evolution.build_history(history_messages)
+        used_tokens = [0]
+
+        def _count_usage(prompt_tokens, completion_tokens):
+            used_tokens[0] += int(prompt_tokens or 0) + int(completion_tokens or 0)
+
         try:
             # Agenda habilitada: ativa as tools da Secretaria IA (function calling).
             # Sem agenda ou desativada: atende normalmente, sem tools (sem mudanca
@@ -291,8 +296,9 @@ async def handle_incoming_message(
                     execute_tool=lambda name, args, /: execute_customer_agenda_tool(
                         db, company_id, name, args, phone=phone,
                     ),
+                    on_usage=_count_usage,
                 )
-                record_ai_usage(db, company_id, messages=1)
+                record_ai_usage(db, company_id, messages=1, tokens=used_tokens[0])
             else:
                 reply_text = await llm.generate_reply(
                     system_prompt=config.system_prompt,
@@ -301,8 +307,9 @@ async def handle_incoming_message(
                     model=ai_model,
                     api_key=ai_api_key,
                     base_url=ai_base_url,
+                    on_usage=_count_usage,
                 )
-                record_ai_usage(db, company_id, messages=1)
+                record_ai_usage(db, company_id, messages=1, tokens=used_tokens[0])
         except llm.LLMError:
             # IA indisponivel: nao quebra o fluxo. O diagnostico preserva
             # apenas metadados operacionais, nunca prompt, chave ou resposta.

@@ -55,6 +55,12 @@ Pagina: `frontend/src/pages/Leads.jsx`. Rota `/leads` em `App.jsx`.
   (`.notice`) com botao que navega para `/conversas`.
 - Botao "Novo fluxo" para criar workflow.
 - Barra de progresso de execucoes (sucesso vs erro).
+- **KPIs adicionais (Fase 9.2):** "Resposta media" (`avg_response_time_minutes`) e
+  "Uso de IA" (mensagens + tokens totais), formatados em pt-BR.
+- **Chart grid ampliado (9.2):** donut de **resolucao** (automatica vs humana,
+  `auto_resolved`/`human_resolved`); `BarChart` de **conversas** (30 dias) e de
+  **tokens de IA** (30 dias, com total e custo estimado); listas **Top fluxos**
+  (execucoes + erros) e **Erros por node** (via classes `.dash-list`).
 
 ### `/editor/:id`
 - Editor visual de workflows

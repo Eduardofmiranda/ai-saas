@@ -148,7 +148,7 @@ A atualizacao de status (`PATCH`) registra automaticamente um `ConversationTrans
 
 | Metodo | URL | Descricao | Auth |
 |--------|-----|-----------|------|
-| GET | `/dashboard/` | Metricas da empresa: companies, customers, conversations (`open_conversations`, `pending_conversations`, `agent_conversations`, `closed_conversations`), messages, workflows, executions + series dos ultimos 7 dias: `messages_last_7_days` (`[{date, count}]`), `executions_last_7_days` (`[{date, success, error}]`) | JWT |
+| GET | `/dashboard/` | Metricas da empresa: companies, customers, conversations (`open_conversations`, `pending_conversations`, `agent_conversations`, `closed_conversations`), messages, workflows, executions; series: `messages_last_7_days`, `executions_last_7_days`, `conversations_last_30_days` (`[{date, count}]`), `ai_usage_last_30_days` (`[{date, messages, tokens}]`); analise: `avg_response_time_minutes`, `auto_resolved`/`human_resolved`, `ai_messages_total`/`ai_tokens_total`/`ai_estimated_cost`, `top_workflows` (`[{workflow_id, name, executions, errors}]`), `errors_by_node` (`[{node_id, count}]`) | JWT |
 
 ### Workflows
 

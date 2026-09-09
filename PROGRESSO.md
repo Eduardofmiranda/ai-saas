@@ -398,14 +398,16 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [ ] Dashboard de uso/consumo (melhoria futura)
 
 
-### 9.2 — Dashboard Avancado
-- [ ] Graficos de volume de conversas (por dia/semana/mes)
-- [ ] Tempo medio de resposta
-- [ ] Taxa de resolucao automatica vs humano
-- [ ] Uso de IA (tokens consumidos, custo estimado)
-- [ ] Conversas por status (abertas, fechadas, pendentes)
-- [ ] Top workflows mais executados
-- [ ] Erros e falhas por node
+### 9.2 — Dashboard Avancado ✅
+- [x] Graficos de volume de conversas (por dia/semana/mes) — serie 30 dias `conversations_last_30_days`
+- [x] Tempo medio de resposta — `avg_response_time_minutes` (cliente → resposta bot/humano)
+- [x] Taxa de resolucao automatica vs humano — `auto_resolved`/`human_resolved` (mensagem de agente ou transferencia por usuario)
+- [x] Uso de IA (tokens consumidos, custo estimado) — captura de `usage` do provedor no `llm.py` (callback `on_usage`) + `CompanyAIUsage.token_count`; serie 30 dias `ai_usage_last_30_days`, totais e `ai_estimated_cost`
+- [x] Conversas por status (abertas, fechadas, pendentes) — donut ja existente
+- [x] Top workflows mais executados — `top_workflows` (execucoes + erros, top 5)
+- [x] Erros e falhas por node — `errors_by_node` (parse do prefixo no `execution.error`)
+- [x] Frontend: KPI "Resposta média", KPI "Uso de IA", donut de resolucao, barras 30 dias (conversas/tokens), listas Top fluxos e Erros por node
+- [x] Testes: `tests/test_dashboard.py` (8 testes) + `tests/test_llm.py` (2 testes de `on_usage`); suite 394 passed
 
 ### 9.3 — Metricas por Workflow
 - [ ] Execucoes totais e por periodo

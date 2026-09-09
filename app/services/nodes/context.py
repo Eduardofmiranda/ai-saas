@@ -132,6 +132,10 @@ class NodeContext:
             return f"[mock] {prompt[:120]}"
 
         history = (history or []) + [{"role": "user", "content": prompt}]
+        used_tokens = [0]
+
+        def _count_usage(prompt_tokens, completion_tokens):
+            used_tokens[0] += int(prompt_tokens or 0) + int(completion_tokens or 0)
 
         # Agenda ativa: habilita as tools da Secretaria IA (function calling).
         try:
@@ -156,8 +160,9 @@ class NodeContext:
                     execute_tool=lambda name, args, /: execute_customer_agenda_tool(
                         self.db, self.company_id, name, args, phone=self._agenda_phone,
                     ),
+                    on_usage=_count_usage,
                 )
-                record_ai_usage(self.db, self.company_id, messages=1)
+                record_ai_usage(self.db, self.company_id, messages=1, tokens=used_tokens[0])
                 return result
         except Exception:
             # Provedor/ferramentas indisponiveis: segue sem tools em vez de
@@ -171,8 +176,9 @@ class NodeContext:
             model=model,
             api_key=api_key,
             base_url=base_url,
+            on_usage=_count_usage,
         )
-        record_ai_usage(self.db, self.company_id, messages=1)
+        record_ai_usage(self.db, self.company_id, messages=1, tokens=used_tokens[0])
         return result
 
     async def extract_structured(
@@ -197,14 +203,18 @@ class NodeContext:
         )
         if instruction:
             system_prompt += f"\n\nInstrucoes extras do operador:\n{instruction}"
-        return await llm.generate_structured_json(
+        used_tokens = [0]
+        result = await llm.generate_structured_json(
             system_prompt=system_prompt,
             history=history or [],
             provider=resolved_ai["provider"],
             model=resolved_ai["model"],
             api_key=resolved_ai["api_key"],
             base_url=resolved_ai["base_url"],
+            on_usage=lambda p, c: used_tokens.__setitem__(0, used_tokens[0] + int(p or 0) + int(c or 0)),
         )
+        record_ai_usage(self.db, self.company_id, messages=1, tokens=used_tokens[0])
+        return result
 
     async def send_whatsapp(self, phone: str, text: str) -> dict:
         """Envia mensagem WhatsApp via Evolution API, salvo em modo de teste."""

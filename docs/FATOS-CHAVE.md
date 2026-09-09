@@ -84,6 +84,22 @@
 - Tabela `company_ai_usage` rastreia uso diario (migration `0017_ai_limits`).
 - `tests/test_ai_limits.py` (16 testes).
 
+## 5.1b Dashboard Avançado + captura de tokens (Fase 9.2 — Implementado)
+
+- `llm.py` agora reporta `usage` do provedor via callback opcional `on_usage(prompt, completion)`
+  (parâmetro novo, não-quebrador) em `generate_reply`, `generate_reply_with_tools` e
+  `generate_structured_json`; call sites em `conversation_service.py` e `nodes/context.py`
+  somam e gravam em `CompanyAIUsage.token_count` (antes sempre 0).
+- `GET /dashboard/` estendeu `DashboardResponse`: `conversations_last_30_days`,
+  `avg_response_time_minutes` (cliente → resposta), `auto_resolved`/`human_resolved`
+  (humano = mensagem `agent` ou transfer `actor_type=user`), `ai_messages_total`/
+  `ai_tokens_total`/`ai_estimated_cost` (taxa média estimada `0.00075`/1k tokens,
+  constante `AI_ESTIMATED_COST_PER_1K_TOKENS`), `ai_usage_last_30_days`,
+  `top_workflows` (top 5 por execução, com erros) e `errors_by_node`
+  (parse do prefixo `node_id:` em `execution.error`).
+- **Fix multi-tenant:** `companies` contava o total global; agora escopo pela empresa logada.
+- Frontend Dashboard: 8 KPIs, donut de resolução, barras 30 dias, listas Top fluxos/Erros.
+
 ## 5.2 Audit Log (Fase 9.4 — Implementado)
 
 - Model `AuditLog`: company_id, user_id, action, entity, entity_id, details, ip_address, user_agent.

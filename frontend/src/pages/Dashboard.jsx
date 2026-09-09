@@ -17,6 +17,16 @@ const STATE_LABELS = {
   instance_not_found: "Instância não encontrada",
 };
 
+const formatNum = (n) => (Number(n) || 0).toLocaleString("pt-BR");
+
+const formatMin = (m) => {
+  const v = Number(m) || 0;
+  return `${v.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} min`;
+};
+
+const formatMoney = (v) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "USD" }).format(Number(v) || 0);
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
@@ -57,6 +67,8 @@ export default function Dashboard() {
     ["Clientes", data?.customers || 0, "cadastrados", null, "user", ""],
     ["Mensagens", data?.messages || 0, "trocadas", null, "mail", "kpi-green"],
     ["Execuções", data?.executions_total || 0, "totais", null, "refresh-cw", ""],
+    ["Resposta média", formatMin(data?.avg_response_time_minutes), "cliente → resposta", null, "clock", ""],
+    ["Uso de IA", formatNum(data?.ai_messages_total), `${formatNum(data?.ai_tokens_total)} tokens`, null, "zap", "kpi-purple"],
   ];
 
   const execOk = data?.executions_success || 0;
@@ -158,7 +170,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {((data?.conversations || 0) > 0 || (data?.executions_total || 0) > 0) && (
+        {((data?.conversations || 0) > 0 || (data?.executions_total || 0) > 0 || (data?.ai_messages_total || 0) > 0) && (
           <div className="chart-grid">
             <div className="chart-card">
               <h3>Conversas por status</h3>
@@ -177,6 +189,24 @@ export default function Dashboard() {
                     { key: "pending", value: data.pending_conversations || 0, label: "Aguardando humano", color: "#fbbf24" },
                     { key: "agent", value: data.agent_conversations || 0, label: "Com humano", color: "#8b5cf6" },
                     { key: "closed", value: data.closed_conversations || 0, label: "Fechadas", color: "var(--muted)" },
+                  ].filter((s) => s.value > 0)}
+                />
+              </div>
+            </div>
+
+            <div className="chart-card">
+              <h3>Resolução · conversas fechadas</h3>
+              <div className="chart-card-body">
+                <DonutChart
+                  segments={[
+                    { key: "auto", value: data.auto_resolved || 0, label: "Automática", color: "var(--green)" },
+                    { key: "human", value: data.human_resolved || 0, label: "Com humano", color: "#8b5cf6" },
+                  ].filter((s) => s.value > 0)}
+                />
+                <ChartLegend
+                  items={[
+                    { key: "auto", value: data.auto_resolved || 0, label: "Automática", color: "var(--green)" },
+                    { key: "human", value: data.human_resolved || 0, label: "Com humano", color: "#8b5cf6" },
                   ].filter((s) => s.value > 0)}
                 />
               </div>
@@ -208,6 +238,68 @@ export default function Dashboard() {
                 />
               </div>
             </div>
+
+            <div className="chart-card">
+              <h3>Conversas · últimos 30 dias</h3>
+              <div className="chart-card-body">
+                <BarChart
+                  data={(data.conversations_last_30_days || []).map((d) => ({
+                    key: d.date,
+                    label: DAY_LABEL(d.date),
+                    value: d.count,
+                  }))}
+                />
+              </div>
+            </div>
+
+            {(data?.ai_messages_total || 0) > 0 && (
+              <div className="chart-card">
+                <h3>Tokens de IA · últimos 30 dias</h3>
+                <div className="chart-card-body">
+                  <BarChart
+                    data={(data.ai_usage_last_30_days || []).map((d) => ({
+                      key: d.date,
+                      label: DAY_LABEL(d.date),
+                      value: d.tokens,
+                    }))}
+                  />
+                  <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+                    {formatNum(data.ai_tokens_total)} tokens no total · custo estimado {formatMoney(data.ai_estimated_cost)}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {(data?.executions_total || 0) > 0 && (
+              <div className="chart-card">
+                <h3>Top fluxos</h3>
+                <div className="dash-list">
+                  {(data.top_workflows || []).map((w, i) => (
+                    <div key={w.workflow_id} className="dash-list-row">
+                      <span className="dash-rank">{i + 1}</span>
+                      <span className="dash-name">{w.name}</span>
+                      <span className="muted dash-meta">{w.executions} exec · {w.errors} erros</span>
+                    </div>
+                  ))}
+                  {(data.top_workflows || []).length === 0 && <p className="muted">Sem execuções ainda.</p>}
+                </div>
+              </div>
+            )}
+
+            {(data?.executions_total || 0) > 0 && (
+              <div className="chart-card">
+                <h3>Erros por node</h3>
+                <div className="dash-list">
+                  {(data.errors_by_node || []).map((e) => (
+                    <div key={e.node_id} className="dash-list-row">
+                      <span className="dash-name">{e.node_id}</span>
+                      <span className="muted dash-meta">{e.count} erro(s)</span>
+                    </div>
+                  ))}
+                  {(data.errors_by_node || []).length === 0 && <p className="muted">Nenhum erro registrado.</p>}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

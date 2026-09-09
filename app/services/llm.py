@@ -68,6 +68,19 @@ def _resolve(provider: str | None, model: str | None, api_key: str | None, base_
     }
 
 
+def _report_usage(data: dict, on_usage: Callable[[int, int], None] | None) -> None:
+    """Entrega prompt/completion tokens reportados pelo provedor ao callback."""
+    if on_usage is None:
+        return
+    try:
+        usage = data.get("usage") or {}
+        prompt = int(usage.get("prompt_tokens") or 0)
+        completion = int(usage.get("completion_tokens") or 0)
+    except (TypeError, ValueError):
+        return
+    on_usage(prompt, completion)
+
+
 async def generate_reply(
     system_prompt: str,
     history: list[dict],
@@ -78,6 +91,7 @@ async def generate_reply(
     base_url: str | None = None,
     temperature: float = 0.4,
     timeout: float = 40.0,
+    on_usage: Callable[[int, int], None] | None = None,
 ) -> str:
     """Gera uma resposta do assistente dado um historico de mensagens.
 
@@ -129,6 +143,8 @@ async def generate_reply(
     except httpx.HTTPError as exc:
         raise LLMError("Falha de rede ao chamar o provedor de IA") from exc
 
+    _report_usage(data, on_usage)
+
     try:
         return data["choices"][0]["message"]["content"].strip()
     except (KeyError, IndexError, TypeError):
@@ -167,6 +183,7 @@ async def _chat_with_tools(
     *,
     temperature: float,
     timeout: float,
+    on_usage: Callable[[int, int], None] | None = None,
 ) -> tuple[str, list[dict]]:
     """Chama chat/completions com `tools`. Retorna (content, tool_calls)."""
     payload = {
@@ -186,6 +203,8 @@ async def _chat_with_tools(
         raise LLMError(provider_status_error_message(exc.response.status_code)) from exc
     except httpx.HTTPError as exc:
         raise LLMError("Falha de rede ao chamar o provedor de IA") from exc
+
+    _report_usage(data, on_usage)
 
     try:
         message = data["choices"][0]["message"]
@@ -207,10 +226,11 @@ async def generate_reply_with_tools(
     model: str | None = None,
     api_key: str | None = None,
     base_url: str | None = None,
-    temperature: float = 0.4,
+temperature: float = 0.4,
     timeout: float = 40.0,
     max_tool_rounds: int = 4,
     max_tool_calls: int = 16,
+    on_usage: Callable[[int, int], None] | None = None,
 ) -> str:
     """Gera resposta com suporte a function calling (tools OpenAI-compativeis).
 
@@ -263,6 +283,7 @@ async def generate_reply_with_tools(
                 tools,
                 temperature=temperature,
                 timeout=timeout,
+                on_usage=on_usage,
             )
             if not tool_calls:
                 return content
@@ -297,6 +318,7 @@ async def generate_reply_with_tools(
             base_url=cfg["base_url"],
             temperature=temperature,
             timeout=timeout,
+            on_usage=on_usage,
         )
 
     raise LLMError("IA nao concluiu a resposta apos varias chamadas de ferramenta")
@@ -330,7 +352,7 @@ def extract_json(text: str) -> dict:
     return parsed if isinstance(parsed, dict) else {}
 
 
-async def _chat_json(url: str, headers: dict, model: str, messages: list[dict], *, json_mode: bool, timeout: float = 40.0) -> dict:
+async def _chat_json(url: str, headers: dict, model: str, messages: list[dict], *, json_mode: bool, timeout: float = 40.0, on_usage: Callable[[int, int], None] | None = None) -> dict:
     payload = {
         "model": model,
         "messages": messages,
@@ -349,6 +371,8 @@ async def _chat_json(url: str, headers: dict, model: str, messages: list[dict], 
         raise LLMError(provider_status_error_message(exc.response.status_code)) from exc
     except httpx.HTTPError as exc:
         raise LLMError("Falha de rede ao chamar o provedor de IA") from exc
+
+    _report_usage(data, on_usage)
 
     try:
         content = data["choices"][0]["message"]["content"]
@@ -370,6 +394,7 @@ async def generate_structured_json(
     api_key: str | None = None,
     base_url: str | None = None,
     timeout: float = 40.0,
+    on_usage: Callable[[int, int], None] | None = None,
 ) -> dict:
     """Gera um objeto JSON estruturado (ex.: extracao de dados da conversa).
 
@@ -408,6 +433,6 @@ async def generate_structured_json(
     ]
 
     try:
-        return await _chat_json(url, headers, cfg["model"], messages, json_mode=True, timeout=timeout)
+        return await _chat_json(url, headers, cfg["model"], messages, json_mode=True, timeout=timeout, on_usage=on_usage)
     except _JSONModeUnsupported:
-        return await _chat_json(url, headers, cfg["model"], messages, json_mode=False, timeout=timeout)
+        return await _chat_json(url, headers, cfg["model"], messages, json_mode=False, timeout=timeout, on_usage=on_usage)
