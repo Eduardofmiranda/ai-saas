@@ -500,11 +500,14 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [ ] Status de conexao em tempo real (planejado)
 - [ ] Notificacoes push no browser (planejado)
 
-### 10.8 — Campanhas
-- [ ] Enviar mensagens em massa (broadcast)
-- [ ] Selecao de destinatarios (por tag, por status)
-- [ ] Agendamento de envio
-- [ ] Metricas de campanha (enviadas, entregues, lidas)
+### 10.8 — Campanhas ✅
+- [x] Models `Campaign` + `CampaignLog` (migration 0024)
+- [x] Celery task `send_campaign` com rate limiting (2s entre envios)
+- [x] CRUD: GET/POST/DELETE `/campaigns/` + `POST /{id}/start` + `GET /{id}/logs`
+- [x] Status lifecycle: draft -> pending -> sending -> completed/error
+- [x] Frontend: secao Campanhas na pagina Admin (criar, iniciar, excluir, progresso)
+- [ ] Selecao de destinatarios por tag (planejado)
+- [ ] Agendamento de envio (planejado)
 
 ---
 
