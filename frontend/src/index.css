@@ -550,6 +550,12 @@ body.sb-collapsed .layout { padding-left: var(--sidebar-w-collapsed); }
   line-height: 1.6; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.04);
 }
 .log-line:last-child { border-bottom: none; }
+.run-result-header { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.run-outputs { display: flex; flex-direction: column; gap: 2px; }
+.run-output-row { display: flex; gap: 8px; padding: 5px 8px; border-radius: 6px; font-size: 12px; }
+.run-output-row:nth-child(odd) { background: var(--panel2); }
+.run-output-key { color: var(--muted); font-weight: 600; min-width: 100px; }
+.run-output-val { color: var(--text); word-break: break-all; }
 
 /* ---------- Knowledge ---------- */
 .knowledge-form {

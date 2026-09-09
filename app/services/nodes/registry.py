@@ -145,8 +145,11 @@ async def _run_condition(ctx, node):
 async def _run_delay(ctx, node):
     cfg = node.get("data", {})
     seconds = float(cfg.get("seconds", 1))
-    await asyncio.sleep(seconds)
-    ctx.log(f"aguardou {seconds}s")
+    if ctx.dry_run:
+        ctx.log(f"Teste: aguardo de {seconds}s ignorado (dry_run).")
+    else:
+        await asyncio.sleep(seconds)
+        ctx.log(f"aguardou {seconds}s")
     return {"outputs": {"seconds": seconds}}
 
 

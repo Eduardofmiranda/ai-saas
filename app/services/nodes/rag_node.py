@@ -128,20 +128,23 @@ async def run_rag_node(ctx: NodeContext, node: dict) -> dict:
     )
 
     if conversation_id and ctx.db:
-        try:
-            from app.models.message import Message
+        if ctx.dry_run:
+            ctx.log("Teste: resposta da IA RAG nao foi salva na conversa.")
+        else:
+            try:
+                from app.models.message import Message
 
-            msg = Message(
-                conversation_id=conversation_id,
-                sender_type="bot",
-                content=reply,
-            )
+                msg = Message(
+                    conversation_id=conversation_id,
+                    sender_type="bot",
+                    content=reply,
+                )
 
-            ctx.db.add(msg)
-            ctx.db.commit()
+                ctx.db.add(msg)
+                ctx.db.commit()
 
-        except Exception:
-            ctx.db.rollback()
+            except Exception:
+                ctx.db.rollback()
 
     # ---------------------------------------------------------
     # Fontes utilizadas

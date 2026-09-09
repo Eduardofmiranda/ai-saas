@@ -170,6 +170,9 @@ export default function Editor() {
   const [checkingIntegrations, setCheckingIntegrations] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [testMessage, setTestMessage] = useState("Ola! Preciso de ajuda com os planos.");
+  const [testPhone, setTestPhone] = useState("5511999999999");
 
   useEffect(() => {
     let cancelled = false;
@@ -349,20 +352,20 @@ export default function Editor() {
     }
   }
 
-  async function run() {
+  async function run(payload) {
     if (running) return;
     setRunning(true);
     setRunResult(null);
-    // O teste salva o canvas, mas simula envios, espera e handoff.
+    setShowTestModal(false);
     const saved = await save();
     if (!saved) { setRunning(false); return; }
     try {
-      const payload = {
-        message: { text: "Ola! Preciso de ajuda com os planos." },
-        customer: "5511999999999",
-        phone: "5511999999999",
+      const testPayload = payload || {
+        message: { text: testMessage },
+        customer: testPhone,
+        phone: testPhone,
       };
-      const ex = await api.runWorkflow(id, payload, true);
+      const ex = await api.runWorkflow(id, testPayload, true);
       setRunResult(ex);
     } catch (e) {
       setEditorError("Erro ao executar: " + e.message);
@@ -420,7 +423,7 @@ export default function Editor() {
           <button className={wf?.active ? "btn ghost" : "btn secondary"} onClick={() => save(!wf?.active)} disabled={saving || running}>
             {wf?.active ? "Desativar" : "Ativar"}
           </button>
-          <button className="btn secondary" onClick={() => run()} disabled={saving || running}>
+          <button className="btn secondary" onClick={() => setShowTestModal(true)} disabled={saving || running}>
             {running ? "Testando..." : "Rodar teste"}
           </button>
           <button className="btn primary" onClick={() => save()} disabled={saving || running}>
@@ -695,22 +698,40 @@ export default function Editor() {
               {runResult.context?.dry_run && (
                 <p className="test-run-note">Teste seguro: nenhum WhatsApp foi enviado, nenhuma espera ou transferencia foi persistida.</p>
               )}
-              <div className={`badge ${runResult.status === "success" ? "on" : "off"}`}>
-                Status: {runResult.status}
+              <div className="run-result-header">
+                <div className={`badge ${runResult.status === "success" ? "on" : "off"}`}>
+                  {runResult.status}
+                </div>
+                {runResult.started_at && runResult.finished_at && (
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    {((new Date(runResult.finished_at) - new Date(runResult.started_at)) / 1000).toFixed(1)}s
+                  </span>
+                )}
               </div>
               {runResult.error && <Alert variant="error" onDismiss={() => setRunResult({ ...runResult, error: "" })}>{runResult.error}</Alert>}
 
               {runResult.context?.logs?.length > 0 && (
                 <div className="run-logs">
-                  <h5>Log da execucao</h5>
+                  <h5>Log</h5>
                   {runResult.context.logs.map((line, i) => (
                     <div key={i} className="log-line">{line}</div>
                   ))}
                 </div>
               )}
 
-              <h5>Saidas</h5>
-              <pre>{JSON.stringify(runResult.node_results, null, 2)}</pre>
+              {runResult.node_results && Object.keys(runResult.node_results).length > 0 && (
+                <>
+                  <h5>Saidas</h5>
+                  <div className="run-outputs">
+                    {Object.entries(runResult.node_results).filter(([k]) => !["messages", "conversation", "trigger"].includes(k)).map(([key, val]) => (
+                      <div key={key} className="run-output-row">
+                        <span className="run-output-key">{key}</span>
+                        <span className="run-output-val">{typeof val === "object" ? JSON.stringify(val) : String(val)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </aside>
@@ -724,6 +745,45 @@ export default function Editor() {
           onConfirm={confirmDeleteNode}
           onCancel={() => setConfirmDelete(false)}
         />
+      )}
+
+      {showTestModal && (
+        <div className="modal-overlay" onClick={() => setShowTestModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Configurar teste</h2>
+              <button className="btn ghost small" onClick={() => setShowTestModal(false)}>Fechar</button>
+            </div>
+            <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <p className="muted" style={{ fontSize: 12 }}>O teste roda em modo seguro: nenhum WhatsApp e enviado, esperas e transferencias sao simuladas.</p>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+                Mensagem do cliente
+                <textarea
+                  className="input"
+                  rows={3}
+                  value={testMessage}
+                  onChange={(e) => setTestMessage(e.target.value)}
+                  placeholder="Digite a mensagem que o cliente enviaria..."
+                />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+                Telefone do cliente
+                <input
+                  className="input"
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                  placeholder="5511999999999"
+                />
+              </label>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button className="btn ghost" onClick={() => setShowTestModal(false)}>Cancelar</button>
+                <button className="btn primary" onClick={() => run({ message: { text: testMessage }, customer: testPhone, phone: testPhone })} disabled={running || !testMessage.trim()}>
+                  {running ? "Testando..." : "Rodar teste"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
