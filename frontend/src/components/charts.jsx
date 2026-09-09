@@ -67,7 +67,7 @@ export function BarChart({ data, height = 130, labelEvery = 1, dense = false }) 
               title={`${d.label}: ${d.value}`}
             />
           </div>
-          {i % labelEvery === 0 && <span className="chart-bar-label">{d.label}</span>}
+          <span className="chart-bar-label">{i % labelEvery === 0 ? d.label : ""}</span>
         </div>
       ))}
     </div>
