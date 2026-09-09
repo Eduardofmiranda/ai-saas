@@ -466,11 +466,14 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [ ] Diff visual entre versoes
 - [ ] Publicacao de versao (producao vs staging)
 
-### 10.5 — Webhooks Outbound
-- [ ] Configurar webhook URL por empresa
-- [ ] Enviar evento quando conversa inicia, termina, ou workflow executa
-- [ ] Retry com backoff exponencial
-- [ ] Log de envios e falhas
+### 10.5 — Webhooks Outbound ✅
+- [x] Model `OutboundWebhook` + `OutboundWebhookLog` (migration 0020)
+- [x] Service com assinatura HMAC-SHA256, retry 3x com backoff, logging
+- [x] Router CRUD: GET/POST/PATCH/DELETE + logs por webhook
+- [x] Dispatch automatico no workflow_engine (success/error, dry_run ignorado)
+- [x] Frontend: secao Webhooks na pagina Admin (listar, criar, ativar/desativar, excluir)
+- [x] Headers: X-FlowAI-Event, X-FlowAI-Delivery, X-FlowAI-Signature
+- [x] Testes: 9 passed (sign, dispatch, retry, logging)
 
 ### 10.6 — API Publica
 - [ ] Documentacao OpenAPI/Swagger completa
