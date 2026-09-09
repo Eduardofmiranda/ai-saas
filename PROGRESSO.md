@@ -478,11 +478,15 @@ Workflows e nodes usam a politica efetiva do usuario no backend; nao confiam em 
 - [x] Headers: X-FlowAI-Event, X-FlowAI-Delivery, X-FlowAI-Signature
 - [x] Testes: 9 passed (sign, dispatch, retry, logging)
 
-### 10.6 — API Publica
-- [ ] Documentacao OpenAPI/Swagger completa
-- [ ] API keys por empresa (nao compartilhar JWT)
-- [ ] Rate limiting por API key
-- [ ] SDKs para integracao (Python, Node.js)
+### 10.6 — API Publica ✅
+- [x] Model `ApiKey` (key_hash, key_prefix, scopes, active, last_used_at, expires_at)
+- [x] Migration `0022_api_keys`
+- [x] Auth: `get_current_user_by_api_key()` via header `X-API-Key`
+- [x] CRUD: GET/POST/PATCH/DELETE `/api-keys/` (max 10 por empresa)
+- [x] OpenAPI security scheme (`ApiKeyAuth`) para Swagger
+- [x] Frontend: secao API Keys na pagina Admin (criar, ativar/desativar, excluir)
+- [ ] Rate limiting por API key (planejado)
+- [ ] SDKs para integracao (planejado)
 
 ### 10.7 — WebSocket
 - [ ] Endpoint WebSocket para atualizacao em tempo real
