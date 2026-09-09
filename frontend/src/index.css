@@ -359,6 +359,8 @@ body.sb-collapsed .layout { padding-left: var(--sidebar-w-collapsed); }
 
 /* ---------- Editor ---------- */
 .editor-layout { height: 100vh; display: flex; flex-direction: column; }
+.editor-banner { padding: 8px 14px 0; }
+.editor-banner .alert { margin: 0; }
 .ed-title { font-weight: 700; }
 .ed-title .badge { margin-left: 8px; }
 .editor-body { flex: 1; display: flex; min-height: 0; }

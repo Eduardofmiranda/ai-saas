@@ -16,6 +16,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { api } from "../api";
 import Header from "../components/Header";
+import { Alert, ConfirmDialog, Icon } from "../components/ui";
 import { activationChecklist, connectionIssue, integrationChecklist, nodeData, suggestedPrompt, workflowGuidance } from "../workflowGraph";
 
 const ICONS = {
@@ -118,7 +119,7 @@ function FieldHelp({ children }) {
 function StickyNote({ data, selected }) {
   return (
     <div className={`rf-node sticky-note ${selected ? "selected" : ""}`}>
-      <div className="sticky-header">📝 Nota</div>
+      <div className="sticky-header"><Icon name="file-text" size={11} /> Nota</div>
       <div className="sticky-content">{data.text || "Clique para editar..."}</div>
     </div>
   );
@@ -167,6 +168,8 @@ export default function Editor() {
   const [showActivationChecklist, setShowActivationChecklist] = useState(false);
   const [integrationChecks, setIntegrationChecks] = useState(null);
   const [checkingIntegrations, setCheckingIntegrations] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -201,7 +204,7 @@ export default function Editor() {
           markerEnd: { type: MarkerType.ArrowClosed },
         })));
       })
-      .catch((e) => { if (!cancelled) alert("Erro ao carregar fluxo: " + e.message); });
+      .catch((e) => { if (!cancelled) setLoadError("Erro ao carregar fluxo: " + e.message); });
     return () => { cancelled = true; };
   }, [id]);
 
@@ -300,11 +303,16 @@ export default function Editor() {
 
   function deleteSelectedNode() {
     if (!selectedNode) return;
-    if (!confirm("Excluir este node?")) return;
+    setConfirmDelete(true);
+  }
+
+  function confirmDeleteNode() {
+    if (!selectedNode) return;
     const nodeId = selectedNode.id;
     setNodes((ns) => ns.filter((n) => n.id !== nodeId));
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
     setSelectedNode(null);
+    setConfirmDelete(false);
   }
 
   const deleteNodeById = useCallback((nodeId) => {
@@ -357,7 +365,7 @@ export default function Editor() {
       const ex = await api.runWorkflow(id, payload, true);
       setRunResult(ex);
     } catch (e) {
-      alert("Erro ao executar: " + e.message);
+      setEditorError("Erro ao executar: " + e.message);
     } finally {
       setRunning(false);
     }
@@ -421,6 +429,12 @@ export default function Editor() {
         </div>
       </Header>
 
+      {loadError && (
+        <div className="editor-banner">
+          <Alert variant="error" onDismiss={() => setLoadError("")}>{loadError}</Alert>
+        </div>
+      )}
+
       <div className="editor-body" ref={wrapper}>
         <aside className="palette">
           <h4>Nodes</h4>
@@ -428,6 +442,7 @@ export default function Editor() {
             type="text"
             className="palette-search"
             placeholder="Buscar node..."
+            aria-label="Buscar node"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -435,11 +450,15 @@ export default function Editor() {
             {filteredNodes.map((nt) => (
               <div key={nt.type} className={`palette-item ${nt.editor_available === false ? "unavailable" : ""}`}
                    draggable={nt.editor_available !== false}
+                   role="button"
+                   tabIndex={nt.editor_available === false ? -1 : 0}
+                   aria-disabled={nt.editor_available === false}
                    title={nt.editor_available === false ? "Node em revisao: nao pode ser usado em novos fluxos." : nt.description}
                    onDragStart={(e) => {
                      if (nt.editor_available === false) { e.preventDefault(); return; }
                      e.dataTransfer.setData("application/flow-node", JSON.stringify(nt));
                    }}
+                   onKeyDown={(e) => { if (nt.editor_available !== false && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); addNode(nt); } }}
                    onClick={() => addNode(nt)}>
                 <span className="rf-icon">{ICONS[nt.category] || "•"}</span>
                 <div>
@@ -501,9 +520,8 @@ export default function Editor() {
               ariaLabel="Mapa de navegacao do fluxo"
             />
             {editorError && (
-              <Panel position="top-center" className="editor-validation" role="alert">
-                <span>{editorError}</span>
-                <button type="button" onClick={() => setEditorError("")} aria-label="Fechar aviso">×</button>
+              <Panel position="top-center">
+                <Alert variant="error" onDismiss={() => setEditorError("")}>{editorError}</Alert>
               </Panel>
             )}
             {(responseGuidance || showActivationChecklist) && (
@@ -680,7 +698,7 @@ export default function Editor() {
               <div className={`badge ${runResult.status === "success" ? "on" : "off"}`}>
                 Status: {runResult.status}
               </div>
-              {runResult.error && <div className="error">{runResult.error}</div>}
+              {runResult.error && <Alert variant="error" onDismiss={() => setRunResult({ ...runResult, error: "" })}>{runResult.error}</Alert>}
 
               {runResult.context?.logs?.length > 0 && (
                 <div className="run-logs">
@@ -697,6 +715,16 @@ export default function Editor() {
           )}
         </aside>
       </div>
+
+      {confirmDelete && selectedNode && (
+        <ConfirmDialog
+          title="Excluir node"
+          message={`Excluir o node "${selectedNode.type === "sticky_note" ? "Nota" : selectedNode.data?.label || selectedNode.type}"? As conexões e a configuração serão perdidas.`}
+          confirmLabel="Excluir"
+          onConfirm={confirmDeleteNode}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
     </div>
   );
 }

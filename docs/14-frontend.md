@@ -234,7 +234,10 @@ Cada tipo de node tem:
 ## Design System (componentes compartilhados)
 
 **Implementado.** Padroes unificados criados na reforma de UI (agosto/2026),
-aplicados em todas as paginas exceto o Editor (`Editor.jsx`, mantido como esta):
+aplicados em todas as paginas. No `Editor.jsx` valem os mesmos primitivos
+(`Alert`/`ConfirmDialog`/`Icon`) para erros, confirmacoes e emojis, **exceto**
+os glifos de categoria dos nodes (▶ ✦ ➜ ⇄ ✆ ◆ ★) e o atalho Delete direto
+(sem confirmacao), que sao identidade visual/agilidade do editor — mantidos:
 
 - **Icones**: usar **sempre** `<Icon name="..." size={16} />` de `components/ui/Icon.jsx`
   em vez de emojis/`<svg>` soltos. Conjunto fechado de nomes (ver `Icon.jsx`).
