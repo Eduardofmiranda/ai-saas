@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { NAV_SECTIONS } from "../nav";
+import Icon from "./ui/Icon";
 
 function isNavActive(pathname, to) {
   return pathname === to || (to === "/fluxos" && pathname.startsWith("/editor"));
@@ -39,8 +40,12 @@ export default function Header({ children }) {
         )}
       </span>
       <div className="btn-group">
-        <button className="btn ghost small" onClick={() => navigate("/conta")}>Senha</button>
-        <button className="btn ghost small" onClick={logout}>Sair</button>
+        <button className="btn ghost small" onClick={() => navigate("/conta")}>
+          <Icon name="key" size={14} /> Senha
+        </button>
+        <button className="btn ghost small" onClick={logout}>
+          <Icon name="log-out" size={14} /> Sair
+        </button>
       </div>
     </div>
   );
@@ -48,7 +53,14 @@ export default function Header({ children }) {
   if (children) {
     return (
       <header className="topbar">
-        <div className="logo" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
+        <div
+          className="logo"
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate("/")}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/"); } }}
+          aria-label="Ir para o painel"
+        >
           Flow<span>AI</span>
         </div>
         {children}
@@ -57,7 +69,8 @@ export default function Header({ children }) {
     );
   }
 
-  const go = (to) => {
+  const go = (to) => (e) => {
+    e.preventDefault();
     navigate(to);
     setMobileOpen(false);
   };
@@ -66,8 +79,15 @@ export default function Header({ children }) {
     <>
       <div className={`app-backdrop ${mobileOpen ? "show" : ""}`} onClick={() => setMobileOpen(false)} />
       <aside className={`sidebar ${collapsed ? "collapsed" : ""} ${mobileOpen ? "open" : ""}`}>
-        <div className="sidebar-brand" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
-          <span className="sidebar-brand-icon">✨</span>
+        <div
+          className="sidebar-brand"
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate("/")}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/"); } }}
+          aria-label="FlowAI — Ir para o painel"
+        >
+          <span className="sidebar-brand-icon"><Icon name="sparkles" size={18} /></span>
           <span className="sidebar-brand-text">Flow<span>AI</span></span>
         </div>
         <nav className="sidebar-nav" aria-label="Menu principal">
@@ -80,9 +100,9 @@ export default function Header({ children }) {
                   href={item.to}
                   title={item.label}
                   className={`sidebar-link ${isNavActive(pathname, item.to) ? "active" : ""}`}
-                  onClick={() => go(item.to)}
+                  onClick={go(item.to)}
                 >
-                  <span className="sidebar-link-icon">{item.icon}</span>
+                  <span className="sidebar-link-icon"><Icon name={item.icon} size={16} /></span>
                   <span className="sidebar-link-label">{item.label}</span>
                 </a>
               ))}
@@ -91,12 +111,14 @@ export default function Header({ children }) {
         </nav>
         <div className="sidebar-footer">
           <button className="sidebar-collapse" onClick={() => setCollapsed((c) => !c)} aria-label={collapsed ? "Expandir menu" : "Recolher menu"}>
-            {collapsed ? "»" : "«"}
+            <Icon name={collapsed ? "chevrons-right" : "chevrons-left"} size={14} />
           </button>
         </div>
       </aside>
       <header className="topbar">
-        <button className="btn ghost small topbar-menu" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">☰</button>
+        <button className="btn ghost small topbar-menu" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
+          <Icon name="menu" size={16} />
+        </button>
         <div className="topbar-spacer" />
         {topRight}
       </header>

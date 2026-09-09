@@ -46,7 +46,6 @@ export default function App() {
           <Route path="/conta" element={<Protected><Account /></Protected>} />
           <Route path="/editor/:id" element={<Protected><Editor /></Protected>} />
           <Route path="/ai" element={<Protected><AI /></Protected>} />
-          <Route path="/editor/:id" element={<Protected><Editor /></Protected>} />
           <Route path="/knowledge" element={<Protected><Knowledge /></Protected>} />
           <Route path="/admin" element={<Protected><Admin /></Protected>} />
           <Route path="/plataforma" element={<PlatformProtected><PlatformAdmin /></PlatformProtected>} />

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { api } from "../api";
 import Header from "../components/Header";
+import Alert from "../components/ui/Alert";
+import { formatPhone, avatarColor } from "../utils/format";
 
 const POLL_MS = 5000;
 
@@ -29,19 +31,25 @@ function dateLabel(iso) {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-function formatPhone(p) {
-  const d = (p || "").replace(/\D/g, "");
-  if (d.length === 13) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}`;
-  if (d.length === 12) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 8)}-${d.slice(8)}`;
-  return d;
-}
+const STATUS_LABEL = {
+  open: "Aberta",
+  pending_agent: "Aguardando",
+  agent: "Atendendo",
+  closed: "Fechada",
+};
 
-const COLORS = ["#4f7cff", "#8b5cf6", "#06b6d4", "#22c55e", "#f59e0b", "#ec4899"];
-function avatarColor(seed) {
-  let h = 0;
-  for (const ch of String(seed || "")) h = (h * 31 + ch.charCodeAt(0)) % 997;
-  return COLORS[h % COLORS.length];
-}
+const STATUS_ACTIONS = {
+  open: [{ label: "Fechar", target: "closed" }],
+  pending_agent: [
+    { label: "Assumir", target: "agent" },
+    { label: "Fechar", target: "closed" },
+  ],
+  agent: [
+    { label: "Liberar", target: "open" },
+    { label: "Fechar", target: "closed" },
+  ],
+  closed: [{ label: "Reabrir", target: "open" }],
+};
 
 export default function Conversations() {
   const [conversations, setConversations] = useState([]);
@@ -52,9 +60,12 @@ export default function Conversations() {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const [composerError, setComposerError] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
   const endRef = useRef(null);
   const inputRef = useRef(null);
   const sendingRef = useRef(false);
+  const lastSelectedIdRef = useRef(null);
+  const justSentRef = useRef(false);
 
   const selectedConv = conversations.find((c) => c.id === selected) || null;
 
@@ -95,7 +106,13 @@ export default function Conversations() {
   }, [selected]);
 
   useEffect(() => {
-    if (endRef.current) endRef.current.scrollIntoView({ block: "end" });
+    if (!endRef.current) return;
+    const shouldScroll = justSentRef.current || selected !== lastSelectedIdRef.current;
+    if (shouldScroll) {
+      endRef.current.scrollIntoView({ block: "end" });
+      justSentRef.current = false;
+      lastSelectedIdRef.current = selected;
+    }
   }, [messages]);
 
   const select = useCallback((id) => {
@@ -112,6 +129,7 @@ export default function Conversations() {
 
     // Optimistic: adiciona mensagem imediatamente
     const tempId = `temp-${Date.now()}`;
+    justSentRef.current = true;
     setMessages((prev) => [...(prev || []), { id: tempId, sender_type: "agent", content, created_at: new Date().toISOString() }]);
     setDraft("");
     inputRef.current?.focus();
@@ -134,29 +152,24 @@ export default function Conversations() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendReply(); }
   }
 
-  async function toggleStatus() {
-    if (!selectedConv) return;
-    const next = selectedConv.status === "pending_agent" ? "open" : selectedConv.status === "open" ? "closed" : selectedConv.status === "agent" ? "open" : "open";
+  async function changeStatus(target) {
+    if (!selectedConv || actionLoading) return;
+    setActionLoading(true);
     try {
-      await api.updateConversation(selectedConv.id, { status: next });
+      await api.updateConversation(selectedConv.id, { status: target });
       // Poll vai atualizar
     } catch (e) { setError(e.message); }
-  }
-
-  async function assumeConversation() {
-    if (!selectedConv) return;
-    try {
-      await api.assumeConversation(selectedConv.id);
-      // Poll vai atualizar
-    } catch (e) { setError(e.message); }
+    finally { setActionLoading(false); }
   }
 
   async function pauseWorkflow() {
-    if (!selectedConv) return;
+    if (!selectedConv || actionLoading) return;
+    setActionLoading(true);
     try {
       await api.pauseConversationWorkflow(selectedConv.id);
       // Poll vai atualizar
     } catch (e) { setError(e.message); }
+    finally { setActionLoading(false); }
   }
 
   const ql = q.trim().toLowerCase();
@@ -184,13 +197,15 @@ export default function Conversations() {
     <div className="layout">
       <Header />
       <main className="content inbox-content">
-        {error && <div className="error">{error}</div>}
+        <h1 className="sr-only">Conversas</h1>
+        {error && <Alert variant="error">{error}</Alert>}
         <div className="inbox-layout">
           <aside className="inbox-list">
             <div className="inbox-toolbar">
               <input
                 className="inbox-search"
-                placeholder="Buscar..."
+                placeholder="Buscar conversas..."
+                aria-label="Buscar conversas"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
@@ -219,7 +234,7 @@ export default function Conversations() {
                 filtered.map((c) => {
                   const name = c.customer?.name || c.customer?.phone || `#${c.id}`;
                   return (
-                    <div key={c.id} className={`inbox-item ${selected === c.id ? "selected" : ""}`} onClick={() => select(c.id)}>
+                    <button key={c.id} type="button" className={`inbox-item ${selected === c.id ? "selected" : ""}`} onClick={() => select(c.id)}>
                       <div className="inbox-avatar" style={{ background: avatarColor(name) }}>{name.slice(0, 1).toUpperCase()}</div>
                       <div className="inbox-item-body">
                         <div className="inbox-item-top">
@@ -229,9 +244,10 @@ export default function Conversations() {
                         <div className="inbox-item-bottom">
                           <span className="inbox-item-preview">{c.last_message || "Sem mensagens"}</span>
                           <span className={`inbox-status-dot inbox-status-dot-${c.status}`} />
+                          <span className="sr-only">{STATUS_LABEL[c.status] || c.status}</span>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })
               )}
@@ -253,23 +269,21 @@ export default function Conversations() {
                   </div>
                   <div className="inbox-thread-actions">
                     {selectedConv.has_pending_flow && (
-                      <button className="btn warning small" onClick={pauseWorkflow} title="Pausar fluxo e assumir atendimento">
+                      <button className="btn warning small" onClick={pauseWorkflow} title="Pausar fluxo e assumir atendimento" disabled={actionLoading}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
                         Pausar fluxo
                       </button>
                     )}
-                    {selectedConv.status === "pending_agent" && (
-                      <button className="btn primary small" onClick={assumeConversation}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        Assumir
+                    {(STATUS_ACTIONS[selectedConv.status] || []).map((action) => (
+                      <button
+                        key={action.target}
+                        className="btn ghost small"
+                        onClick={() => changeStatus(action.target)}
+                        disabled={actionLoading}
+                      >
+                        {action.label}
                       </button>
-                    )}
-                    {selectedConv.status === "agent" && (
-                      <button className="btn ghost small" onClick={toggleStatus}>Liberar</button>
-                    )}
-                    <button className="btn ghost small" onClick={toggleStatus}>
-                      {selectedConv.status === "closed" ? "Reabrir" : "Fechar"}
-                    </button>
+                    ))}
                   </div>
                 </header>
 
@@ -309,18 +323,19 @@ export default function Conversations() {
                   <textarea
                     ref={inputRef}
                     className="inbox-input"
-                    rows="1"
+                    rows={1}
                     placeholder={selectedConv.status === "closed" ? "Conversa fechada..." : "Digite sua resposta..."}
+                    aria-label="Digite sua resposta"
                     value={draft}
                     disabled={selectedConv.status === "closed"}
                     onChange={(e) => setDraft(e.target.value)}
                     onKeyDown={onKeyDown}
                   />
-                  <button className="btn primary inbox-send-btn" onClick={sendReply} disabled={!draft.trim() || selectedConv.status === "closed"}>
+                  <button className="btn primary inbox-send-btn" onClick={sendReply} disabled={!draft.trim() || selectedConv.status === "closed"} aria-label="Enviar mensagem">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                   </button>
                 </div>
-                {composerError && <div className="error" style={{ margin: "0 12px 8px" }}>{composerError}</div>}
+                {composerError && <Alert variant="error">{composerError}</Alert>}
               </>
             ) : (
               <div className="inbox-placeholder">

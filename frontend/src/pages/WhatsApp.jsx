@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import Header from "../components/Header";
 import BusinessHoursPanel from "../components/BusinessHoursPanel";
+import Alert from "../components/ui/Alert";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import PageHeader from "../components/ui/PageHeader";
 
 const STATE_LABELS = {
   not_configured: "Não configurado",
@@ -22,6 +25,7 @@ export default function WhatsApp() {
   const [qrBase64, setQrBase64] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function loadStatus() {
     try {
@@ -66,13 +70,13 @@ export default function WhatsApp() {
     }
   }
 
-  async function handleDisconnect() {
-    if (!window.confirm("Desconectar o WhatsApp?")) return;
+  async function handleDisconnectConfirm() {
     setDisconnecting(true);
     setError("");
     try {
       await api.disconnectWhatsApp();
       setQrBase64(null);
+      setConfirmOpen(false);
       await loadStatus();
     } catch (e) {
       setError("Erro ao desconectar: " + e.message);
@@ -88,14 +92,9 @@ export default function WhatsApp() {
     <div className="layout">
       <Header />
       <main className="content">
-        <div className="content-head">
-          <div>
-            <h2>WhatsApp</h2>
-            <p className="muted">Conecte seu WhatsApp para atender automaticamente com IA.</p>
-          </div>
-        </div>
+        <PageHeader title="WhatsApp" subtitle="Conecte seu WhatsApp para atender automaticamente com IA." />
 
-        {error && <div className="error">{error}</div>}
+        {error && <Alert variant="error">{error}</Alert>}
 
         {loading && <p className="muted">Verificando status...</p>}
 
@@ -117,7 +116,7 @@ export default function WhatsApp() {
                 <p className="muted">As mensagens são processadas automaticamente pela IA conforme seus fluxos.</p>
                 <button
                   className="btn ghost"
-                  onClick={handleDisconnect}
+                  onClick={() => setConfirmOpen(true)}
                   disabled={disconnecting}
                 >
                   {disconnecting ? "Desconectando..." : "Desconectar WhatsApp"}
@@ -143,10 +142,10 @@ export default function WhatsApp() {
                 {qrBase64 && (
                   <div className="qr-section">
                     <div className="qr-box">
-                      <img src={`data:image/png;base64,${qrBase64}`} alt="QR Code" />
+                      <img src={`data:image/png;base64,${qrBase64}`} alt="QR Code para conectar o WhatsApp" />
                     </div>
                     <p className="muted">Escaneie com o WhatsApp do seu celular.</p>
-                    <p className="muted qr-expire">O QR expira em breve — clique para gerar um novo.</p>
+                    <p className="muted qr-expire">O QR expira em breve. Gere um novo código se necessário.</p>
                     <button
                       className="btn ghost"
                       onClick={handleSetup}
@@ -163,6 +162,17 @@ export default function WhatsApp() {
 
         <BusinessHoursPanel />
       </main>
+
+      {confirmOpen && (
+        <ConfirmDialog
+          title="Desconectar WhatsApp"
+          message="Desconectar o WhatsApp?"
+          confirmLabel="Desconectar"
+          onConfirm={handleDisconnectConfirm}
+          onCancel={() => setConfirmOpen(false)}
+          loading={disconnecting}
+        />
+      )}
     </div>
   );
 }

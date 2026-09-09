@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import Header from "../components/Header";
+import { PageHeader, Alert, Icon, EmptyState, ConfirmDialog } from "../components/ui";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -10,6 +11,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showTemplates, setShowTemplates] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function load() {
     try {
@@ -58,14 +61,17 @@ export default function Home() {
     }
   }
 
-  async function remove(id, e) {
-    e.stopPropagation();
-    if (!confirm("Excluir este fluxo?")) return;
+  async function remove(id) {
+    setDeleting(true);
     try {
       await api.deleteWorkflow(id);
+      setConfirmDelete(null);
       load();
     } catch (e) {
       setError("Erro ao excluir: " + e.message);
+      setConfirmDelete(null);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -84,17 +90,16 @@ export default function Home() {
     <div className="layout">
       <Header />
       <main className="content">
-        <div className="content-head">
-          <h2>Fluxos de automacao</h2>
+        <PageHeader title="Fluxos de automação" subtitle="Crie, organize e acompanhe seus fluxos de atendimento.">
           <div className="btn-group">
             <button className="btn secondary" onClick={() => setShowTemplates(!showTemplates)}>
               {showTemplates ? "Fechar" : "Templates"}
             </button>
             <button className="btn primary" onClick={createNew}>+ Novo fluxo</button>
           </div>
-        </div>
+        </PageHeader>
 
-        {error && <div className="error">{error}</div>}
+        {error && <Alert variant="error" onDismiss={() => setError("")}>{error}</Alert>}
 
         {activeMessageFlows.length > 1 && (
           <div className="notice">
@@ -105,14 +110,14 @@ export default function Home() {
         {showTemplates && (
           <div className="templates-panel">
             <h3>Templates prontos</h3>
-            <p className="muted">Escolha um template para comecar rapido</p>
+            <p className="muted">Escolha um template para começar rápido</p>
             <div className="templates-grid">
               {templates.map((tpl) => (
-                <div key={tpl.id} className="template-card" onClick={() => applyTemplate(tpl.id)}>
+                <button key={tpl.id} type="button" className="template-card" onClick={() => applyTemplate(tpl.id)}>
                   <h4>{tpl.name}</h4>
                   <p>{tpl.description}</p>
                   <span className="tag">{tpl.category}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -121,22 +126,31 @@ export default function Home() {
         {loading && <p className="muted">Carregando fluxos...</p>}
 
         {!loading && !error && workflows.length === 0 && !showTemplates && (
-          <div className="empty">
-            <p>Nenhum fluxo ainda.</p>
-            <p>Crie o primeiro ou escolha um template.</p>
-            <div className="btn-group" style={{ marginTop: 12 }}>
-              <button className="btn secondary" onClick={() => setShowTemplates(true)}>Templates</button>
-              <button className="btn primary" onClick={createNew}>+ Criar fluxo</button>
-            </div>
-          </div>
+          <EmptyState
+            icon={<Icon name="workflow" size={40} />}
+            title="Nenhum fluxo ainda"
+            action={
+              <div className="btn-group">
+                <button className="btn secondary" onClick={() => setShowTemplates(true)}>Templates</button>
+                <button className="btn primary" onClick={createNew}>+ Criar fluxo</button>
+              </div>
+            }
+          >
+            Crie o primeiro ou escolha um template.
+          </EmptyState>
         )}
 
         {!showTemplates && (
           <div className="wf-grid">
             {workflows.map((wf) => (
-              <div key={wf.id} className="wf-card" onClick={() => navigate(`/editor/${wf.id}`)}>
+              <button
+                key={wf.id}
+                type="button"
+                className="wf-card"
+                onClick={() => navigate(`/editor/${wf.id}`)}
+              >
                 <h3>{wf.name}</h3>
-                <p>{wf.description || "Sem descricao"}</p>
+                <p>{wf.description || "Sem descrição"}</p>
                 <div className="wf-meta">
                   <button
                     className={`btn small ${wf.active ? "ghost" : "secondary"}`}
@@ -146,11 +160,22 @@ export default function Home() {
                     {wf.active ? "Ativo" : "Inativo"}
                   </button>
                   <button className="btn ghost small" onClick={(e) => duplicate(wf.id, e)}>Duplicar</button>
-                  <button className="btn ghost small danger" onClick={(e) => remove(wf.id, e)}>Excluir</button>
+                  <button className="btn ghost small danger" onClick={() => setConfirmDelete(wf)}>Excluir</button>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
+        )}
+
+        {confirmDelete && (
+          <ConfirmDialog
+            title="Excluir fluxo"
+            message={`Excluir o fluxo "${confirmDelete.name}"?`}
+            confirmLabel="Excluir"
+            loading={deleting}
+            onConfirm={() => remove(confirmDelete.id)}
+            onCancel={() => setConfirmDelete(null)}
+          />
         )}
       </main>
     </div>

@@ -2,26 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import Header from "../components/Header";
 import { useAuth } from "../context/AuthContext";
-
-const DAYS = [
-  ["mon", "Segunda", "Seg"],
-  ["tue", "Terça", "Ter"],
-  ["wed", "Quarta", "Qua"],
-  ["thu", "Quinta", "Qui"],
-  ["fri", "Sexta", "Sex"],
-  ["sat", "Sábado", "Sáb"],
-  ["sun", "Domingo", "Dom"],
-];
-
-const TIMEZONES = [
-  "America/Sao_Paulo",
-  "America/Manaus",
-  "America/Cuiaba",
-  "America/Fortaleza",
-  "America/Recife",
-  "America/Santarem",
-  "UTC",
-];
+import Alert from "../components/ui/Alert";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import EmptyState from "../components/ui/EmptyState";
+import Icon from "../components/ui/Icon";
+import Modal from "../components/ui/Modal";
+import PageHeader from "../components/ui/PageHeader";
+import { DAYS, TIMEZONES } from "../utils/constants";
 
 const STATUS_META = {
   scheduled: { label: "Agendado", cls: "scheduled" },
@@ -38,7 +25,7 @@ const ORIGIN_LABEL = {
 };
 
 function defaultSchedule() {
-  return Object.fromEntries(DAYS.map(([key]) => [key, ["09:00", "18:00"]]));
+  return Object.fromEntries(DAYS.map((d) => [d.key, ["09:00", "18:00"]]));
 }
 
 function addMinutes(hhmm, mins) {
@@ -59,6 +46,7 @@ export default function Agenda() {
   const [cfg, setCfg] = useState(null);
   const [appts, setAppts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState(false);
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
 
@@ -85,18 +73,6 @@ export default function Agenda() {
   }
 
   useEffect(() => { load(); }, []);
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        setConfigOpen(false);
-        setCreateOpen(false);
-        setCancelTarget(null);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   const filtered = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
@@ -129,22 +105,25 @@ export default function Agenda() {
   const canceledCount = useMemo(() => appts.filter((a) => a.status === "canceled").length, [appts]);
 
   const openDays = DAYS
-    .map(([key, , short]) => {
-      const w = cfg?.schedule?.[key];
-      return Array.isArray(w) && w[0] && w[1] ? `${short} ${w[0]}-${w[1]}` : null;
+    .map((d) => {
+      const w = cfg?.schedule?.[d.key];
+      return Array.isArray(w) && w[0] && w[1] ? `${d.label} ${w[0]}-${w[1]}` : null;
     })
     .filter(Boolean);
 
   async function toggleEnabled() {
-    if (!isManager || !cfg) return;
+    if (!isManager || !cfg || toggling) return;
     setError("");
     setOk("");
+    setToggling(true);
     try {
       const saved = await api.updateAgendaConfig({ enabled: !cfg.enabled });
       setCfg(saved);
       setOk(saved.enabled ? "Agenda ativada. A secretária IA já pode criar agendamentos." : "Agenda desativada.");
     } catch (e) {
       setError(e.message);
+    } finally {
+      setToggling(false);
     }
   }
 
@@ -165,45 +144,33 @@ export default function Agenda() {
     <div className="layout">
       <Header />
       <main className="content">
-        <div className="page-header page-header-row">
-          <div className="page-header">
-            <h1>Agenda</h1>
-            <p className="muted">
-              Compromissos e agendamentos da empresa — inclusive os criados pela Secretaria IA no WhatsApp.
-            </p>
-          </div>
+        <PageHeader
+          title="Agenda"
+          subtitle="Compromissos e agendamentos da empresa — inclusive os criados pela Secretaria IA no WhatsApp."
+        >
           <button className="btn primary" onClick={() => setCreateOpen(true)}>+ Novo agendamento</button>
-        </div>
+        </PageHeader>
 
-        {error && <div className="alert alert-error">{error}</div>}
-        {ok && (
-          <div className="alert alert-success" role="status">
-            {ok}
-            <button
-              aria-label="Fechar aviso"
-              style={{ marginLeft: "auto", background: "none", border: "none", color: "inherit", cursor: "pointer", fontSize: 14 }}
-              onClick={() => setOk("")}
-            >✕</button>
-          </div>
-        )}
+        {error && <Alert variant="error">{error}</Alert>}
+        {ok && <Alert variant="success" onDismiss={() => setOk("")}>{ok}</Alert>}
 
         <div className="stat-grid">
           <div className="stat-card">
-            <span className="stat-icon">📅</span>
+            <span className="stat-icon"><Icon name="calendar" size={21} /></span>
             <div>
               <div className="stat-value">{activeCount}</div>
               <div className="stat-label">Compromissos ativos</div>
             </div>
           </div>
           <div className="stat-card green">
-            <span className="stat-icon">🗓️</span>
+            <span className="stat-icon"><Icon name="calendar-check" size={21} /></span>
             <div>
               <div className="stat-value">{activeDayCount}</div>
               <div className="stat-label">Dias de agenda</div>
             </div>
           </div>
           <div className="stat-card amber">
-            <span className="stat-icon">✖️</span>
+            <span className="stat-icon"><Icon name="calendar-x" size={21} /></span>
             <div>
               <div className="stat-value">{canceledCount}</div>
               <div className="stat-label">Cancelados</div>
@@ -225,7 +192,7 @@ export default function Agenda() {
                   type="checkbox"
                   checked={Boolean(cfg?.enabled)}
                   onChange={toggleEnabled}
-                  disabled={!isManager || !cfg}
+                  disabled={!isManager || !cfg || toggling}
                 />
                 <span>Ativar agenda</span>
               </label>
@@ -263,7 +230,7 @@ export default function Agenda() {
 
         <div className="toolbar" style={{ marginTop: 20 }}>
           <div className="search-box grow">
-            <span className="search-icon">🔎</span>
+            <span className="search-icon"><Icon name="search" size={14} /></span>
             <input
               className="input"
               placeholder="Buscar por cliente, telefone ou serviço..."
@@ -306,26 +273,28 @@ export default function Agenda() {
             <p className="muted">Carregando agenda...</p>
           </div>
         ) : appts.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">📅</div>
-            <h3>Nenhum agendamento</h3>
-            <p>
-              Crie o primeiro compromisso manualmente ou deixe a Secretaria IA marcar pelo WhatsApp.
-            </p>
-            <button className="btn primary" onClick={() => setCreateOpen(true)}>+ Novo agendamento</button>
-          </div>
+          <EmptyState
+            icon={<Icon name="calendar" size={40} />}
+            title="Nenhum agendamento"
+            action={<button className="btn primary" onClick={() => setCreateOpen(true)}>+ Novo agendamento</button>}
+          >
+            Crie o primeiro compromisso manualmente ou deixe a Secretaria IA marcar pelo WhatsApp.
+          </EmptyState>
         ) : filtered.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">🔎</div>
-            <h3>Nada encontrado</h3>
-            <p>Ajuste os filtros ou a busca para localizar os agendamentos.</p>
-            <button
-              className="btn ghost"
-              onClick={() => setFilters({ status: "", dateFrom: "", dateTo: "", query: "" })}
-            >
-              Limpar filtros
-            </button>
-          </div>
+          <EmptyState
+            icon={<Icon name="search" size={40} />}
+            title="Nada encontrado"
+            action={
+              <button
+                className="btn ghost"
+                onClick={() => setFilters({ status: "", dateFrom: "", dateTo: "", query: "" })}
+              >
+                Limpar filtros
+              </button>
+            }
+          >
+            Ajuste os filtros ou a busca para localizar os agendamentos.
+          </EmptyState>
         ) : (
           <div className="card" style={{ padding: 0, overflow: "hidden" }}>
             <table className="table">
@@ -394,13 +363,10 @@ export default function Agenda() {
       )}
 
       {cancelTarget && (
-        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setCancelTarget(null); }}>
-          <div className="modal" role="dialog" aria-modal="true">
-            <div className="modal-header">
-              <div className="modal-title">Cancelar agendamento</div>
-              <button className="modal-close" onClick={() => setCancelTarget(null)} aria-label="Fechar">✕</button>
-            </div>
-            <div className="modal-body">
+        <ConfirmDialog
+          title="Cancelar agendamento"
+          message={
+            <>
               <p style={{ margin: "0 0 6px", lineHeight: 1.5 }}>
                 Deseja cancelar o agendamento de <strong>{cancelTarget.customer_name || cancelTarget.phone}</strong> em{" "}
                 <strong>{cancelTarget.date} às {cancelTarget.start_time}</strong>?
@@ -408,13 +374,12 @@ export default function Agenda() {
               <p className="muted" style={{ margin: 0, fontSize: 13 }}>
                 O compromisso ficará com status “cancelado” e o histórico registra quem cancelou.
               </p>
-            </div>
-            <div className="modal-footer">
-              <button className="btn ghost" onClick={() => setCancelTarget(null)}>Manter</button>
-              <button className="btn solid-danger" onClick={() => confirmCancel(cancelTarget)}>Cancelar agendamento</button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+          confirmLabel="Cancelar agendamento"
+          onConfirm={() => confirmCancel(cancelTarget)}
+          onCancel={() => setCancelTarget(null)}
+        />
       )}
     </div>
   );
@@ -423,7 +388,7 @@ export default function Agenda() {
 function ConfigModal({ cfg, onClose, onSaved }) {
   const [data, setData] = useState(() => {
     const schedule = defaultSchedule();
-    for (const [key] of DAYS) {
+    for (const { key } of DAYS) {
       const w = cfg.schedule?.[key];
       if (Array.isArray(w) && w.length === 2) schedule[key] = w;
       else schedule[key] = ["", ""];
@@ -477,7 +442,7 @@ function ConfigModal({ cfg, onClose, onSaved }) {
     setErr("");
     try {
       const schedule = {};
-      for (const [key] of DAYS) {
+      for (const { key } of DAYS) {
         const [start, end] = data.schedule[key];
         schedule[key] = start && end ? [start, end] : [];
       }
@@ -509,249 +474,249 @@ function ConfigModal({ cfg, onClose, onSaved }) {
     }
   }
 
+  const safeClose = () => { if (!saving) onClose(); };
+
   return (
-    <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}>
-      <div className="modal" style={{ width: 560, maxWidth: "100%" }} role="dialog" aria-modal="true">
-        <div className="modal-header">
-          <div className="modal-title">Configurar agenda</div>
-          <button className="modal-close" onClick={onClose} aria-label="Fechar">✕</button>
-        </div>
-        <form onSubmit={handleSave}>
-          <div className="modal-body">
-            {err && <div className="alert alert-error">{err}</div>}
-            <div className="stack" style={{ gap: 14 }}>
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={data.enabled}
-                  onChange={(e) => setData((d) => ({ ...d, enabled: e.target.checked }))}
-                />
-                <span>Agenda ativa</span>
-              </label>
+    <Modal
+      title="Configurar agenda"
+      onClose={safeClose}
+      width={560}
+      footer={
+        <>
+          <button type="button" className="btn ghost" onClick={safeClose} disabled={saving}>
+            Cancelar
+          </button>
+          <button type="submit" form="agenda-config-form" className="btn primary" disabled={saving}>
+            {saving ? "Salvando..." : "Salvar configuração"}
+          </button>
+        </>
+      }
+    >
+      <form id="agenda-config-form" onSubmit={handleSave}>
+        <div className="stack" style={{ gap: 14 }}>
+          {err && <Alert variant="error">{err}</Alert>}
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={data.enabled}
+              onChange={(e) => setData((d) => ({ ...d, enabled: e.target.checked }))}
+            />
+            <span>Agenda ativa</span>
+          </label>
 
-              <div className="field">
-                <span>Fuso horário</span>
-                <select
-                  className="input"
-                  value={data.timezone}
-                  onChange={(e) => setData((d) => ({ ...d, timezone: e.target.value }))}
-                >
-                  {TIMEZONES.map((tz) => (
-                    <option key={tz} value={tz}>{tz}</option>
-                  ))}
-                </select>
-              </div>
+          <div className="field">
+            <span>Fuso horário</span>
+            <select
+              className="input"
+              value={data.timezone}
+              onChange={(e) => setData((d) => ({ ...d, timezone: e.target.value }))}
+            >
+              {TIMEZONES.map((tz) => (
+                <option key={tz} value={tz}>{tz}</option>
+              ))}
+            </select>
+          </div>
 
-              <div className="field">
-                <span>Horários por dia</span>
-                <div className="bh-days">
-                  {DAYS.map(([key, label]) => {
-                    const [start, end] = data.schedule[key];
-                    const active = !!(start && end);
-                    return (
-                      <div key={key} className={`bh-day ${active ? "active" : ""}`}>
-                        <label className="bh-day-toggle">
-                          <input
-                            type="checkbox"
-                            checked={active}
-                            onChange={(e) => toggleDay(key, e.target.checked)}
-                          />
-                          <span>{label}</span>
-                        </label>
-                        {active && (
-                          <div className="bh-day-times">
-                            <input
-                              type="time"
-                              value={start}
-                              onChange={(e) => setSchedule(key, 0, e.target.value)}
-                            />
-                            <span>até</span>
-                            <input
-                              type="time"
-                              value={end}
-                              onChange={(e) => setSchedule(key, 1, e.target.value)}
-                            />
-                          </div>
-                        )}
+          <div className="field">
+            <span>Horários por dia</span>
+            <div className="bh-days">
+              {DAYS.map((d) => {
+                const [start, end] = data.schedule[d.key];
+                const active = !!(start && end);
+                return (
+                  <div key={d.key} className={`bh-day ${active ? "active" : ""}`}>
+                    <label className="bh-day-toggle">
+                      <input
+                        type="checkbox"
+                        checked={active}
+                        onChange={(e) => toggleDay(d.key, e.target.checked)}
+                      />
+                      <span>{d.label}</span>
+                    </label>
+                    {active && (
+                      <div className="bh-day-times">
+                        <span className="sr-only">Início</span>
+                        <input
+                          type="time"
+                          value={start}
+                          onChange={(e) => setSchedule(d.key, 0, e.target.value)}
+                        />
+                        <span>até</span>
+                        <span className="sr-only">Fim</span>
+                        <input
+                          type="time"
+                          value={end}
+                          onChange={(e) => setSchedule(d.key, 1, e.target.value)}
+                        />
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <label className="field">
-                  <span>Duração padrão (min)</span>
-                  <input
-                    className="input"
-                    type="number"
-                    min="5"
-                    max="240"
-                    value={data.slot_duration}
-                    onChange={(e) => setData((d) => ({ ...d, slot_duration: e.target.value }))}
-                  />
-                </label>
-                <label className="field">
-                  <span>Antecedência mínima (min)</span>
-                  <input
-                    className="input"
-                    type="number"
-                    min="0"
-                    value={data.min_advance}
-                    onChange={(e) => setData((d) => ({ ...d, min_advance: e.target.value }))}
-                  />
-                </label>
-              </div>
+          <div className="grid-2">
+            <label className="field">
+              <span>Duração padrão (min)</span>
+              <input
+                className="input"
+                type="number"
+                min="5"
+                max="240"
+                value={data.slot_duration}
+                onChange={(e) => setData((d) => ({ ...d, slot_duration: e.target.value }))}
+              />
+            </label>
+            <label className="field">
+              <span>Antecedência mínima (min)</span>
+              <input
+                className="input"
+                type="number"
+                min="0"
+                value={data.min_advance}
+                onChange={(e) => setData((d) => ({ ...d, min_advance: e.target.value }))}
+              />
+            </label>
+          </div>
 
+          <div className="field">
+            <span>Mensagem de confirmação</span>
+            <textarea
+              className="input"
+              rows="3"
+              maxLength={500}
+              placeholder="Ex.: Agendamento confirmado! Obrigado por escolher a gente."
+              value={data.confirmation_message}
+              onChange={(e) => setData((d) => ({ ...d, confirmation_message: e.target.value }))}
+            />
+          </div>
+
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={data.confirmation_required}
+              onChange={(e) => setData((d) => ({ ...d, confirmation_required: e.target.checked }))}
+            />
+            <span>Exigir confirmação do cliente (2 passos)</span>
+          </label>
+          {data.confirmation_required && (
+            <div className="stack" style={{ gap: 12 }}>
+              <label className="field">
+                <span>Prazo p/ confirmar (horas)</span>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  value={data.confirmation_expiry_hours}
+                  onChange={(e) => setData((d) => ({ ...d, confirmation_expiry_hours: e.target.value }))}
+                />
+              </label>
               <div className="field">
-                <span>Mensagem de confirmação</span>
+                <span>Pedido de confirmação enviado ao cliente</span>
                 <textarea
                   className="input"
                   rows="3"
                   maxLength={500}
-                  placeholder="Ex.: Agendamento confirmado! 🎉 Obrigado por escolher a gente."
-                  value={data.confirmation_message}
-                  onChange={(e) => setData((d) => ({ ...d, confirmation_message: e.target.value }))}
+                  value={data.confirmation_request_message}
+                  onChange={(e) => setData((d) => ({ ...d, confirmation_request_message: e.target.value }))}
                 />
-              </div>
-
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={data.confirmation_required}
-                  onChange={(e) => setData((d) => ({ ...d, confirmation_required: e.target.checked }))}
-                />
-                <span>Exigir confirmação do cliente (2 passos)</span>
-              </label>
-              {data.confirmation_required && (
-                <div className="stack" style={{ gap: 12 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <label className="field">
-                      <span>Prazo p/ confirmar (horas)</span>
-                      <input
-                        className="input"
-                        type="number"
-                        min="0"
-                        value={data.confirmation_expiry_hours}
-                        onChange={(e) => setData((d) => ({ ...d, confirmation_expiry_hours: e.target.value }))}
-                      />
-                    </label>
-                  </div>
-                  <div className="field">
-                    <span>Pedido de confirmação enviado ao cliente</span>
-                    <textarea
-                      className="input"
-                      rows="3"
-                      maxLength={500}
-                      value={data.confirmation_request_message}
-                      onChange={(e) => setData((d) => ({ ...d, confirmation_request_message: e.target.value }))}
-                    />
-                    <p className="muted" style={{ margin: "6px 0 0", fontSize: 12 }}>
-                      Use {`{nome}`}, {`{servico}`}, {`{data}`} e {`{horario}`}.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={data.reminders_enabled}
-                  onChange={(e) => setData((d) => ({ ...d, reminders_enabled: e.target.checked }))}
-                />
-                <span>Enviar lembretes automáticos</span>
-              </label>
-              {data.reminders_enabled && (
-                <div className="stack" style={{ gap: 12 }}>
-                  <div className="field">
-                    <span>Antecedência dos lembretes (horas, separadas por vírgula)</span>
-                    <input
-                      className="input"
-                      value={data.reminder_hours}
-                      placeholder="Ex.: 24, 1"
-                      onChange={(e) => setData((d) => ({ ...d, reminder_hours: e.target.value }))}
-                    />
-                  </div>
-                  <div className="field">
-                    <span>Mensagem do lembrete</span>
-                    <textarea
-                      className="input"
-                      rows="2"
-                      maxLength={500}
-                      value={data.reminder_message}
-                      onChange={(e) => setData((d) => ({ ...d, reminder_message: e.target.value }))}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="field">
-                <span>Número do WhatsApp da Secretaria IA (instância)</span>
-                <input
-                  className="input"
-                  maxLength={30}
-                  placeholder="Ex.: 5511999999999"
-                  value={data.whatsapp_number}
-                  onChange={(e) => setData((d) => ({ ...d, whatsapp_number: e.target.value }))}
-                />
-              </div>
-
-              <div className="field">
-                <span>Datas bloqueadas</span>
-                {data.blocked.map((b, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                    <input
-                      className="input"
-                      type="date"
-                      value={b.date}
-                      onChange={(e) => setBlocked(i, "date", e.target.value)}
-                    />
-                    <input
-                      className="input"
-                      type="time"
-                      value={b.start}
-                      onChange={(e) => setBlocked(i, "start", e.target.value)}
-                      title="Início"
-                    />
-                    <input
-                      className="input"
-                      type="time"
-                      value={b.end}
-                      onChange={(e) => setBlocked(i, "end", e.target.value)}
-                      title="Fim"
-                    />
-                    <button
-                      type="button"
-                      className="btn ghost small danger"
-                      onClick={() => setData((d) => ({ ...d, blocked: d.blocked.filter((_, idx) => idx !== i) }))}
-                    >
-                      Remover
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="btn ghost small"
-                  onClick={() =>
-                    setData((d) => ({ ...d, blocked: [...d.blocked, { date: "", start: "", end: "" }] }))
-                  }
-                >
-                  + Adicionar bloqueio
-                </button>
+                <p className="muted" style={{ margin: "6px 0 0", fontSize: 12 }}>
+                  Use {`{nome}`}, {`{servico}`}, {`{data}`} e {`{horario}`}.
+                </p>
               </div>
             </div>
+          )}
+
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={data.reminders_enabled}
+              onChange={(e) => setData((d) => ({ ...d, reminders_enabled: e.target.checked }))}
+            />
+            <span>Enviar lembretes automáticos</span>
+          </label>
+          {data.reminders_enabled && (
+            <div className="stack" style={{ gap: 12 }}>
+              <div className="field">
+                <span>Antecedência dos lembretes (horas, separadas por vírgula)</span>
+                <input
+                  className="input"
+                  value={data.reminder_hours}
+                  placeholder="Ex.: 24, 1"
+                  onChange={(e) => setData((d) => ({ ...d, reminder_hours: e.target.value }))}
+                />
+              </div>
+              <div className="field">
+                <span>Mensagem do lembrete</span>
+                <textarea
+                  className="input"
+                  rows="2"
+                  maxLength={500}
+                  value={data.reminder_message}
+                  onChange={(e) => setData((d) => ({ ...d, reminder_message: e.target.value }))}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="field">
+            <span>Número do WhatsApp da Secretaria IA (instância)</span>
+            <input
+              className="input"
+              maxLength={30}
+              placeholder="Ex.: 5511999999999"
+              value={data.whatsapp_number}
+              onChange={(e) => setData((d) => ({ ...d, whatsapp_number: e.target.value }))}
+            />
           </div>
-          <div className="modal-footer">
-            <button type="button" className="btn ghost" onClick={onClose} disabled={saving}>
-              Cancelar
-            </button>
-            <button type="submit" className="btn primary" disabled={saving}>
-              {saving ? "Salvando..." : "Salvar configuração"}
+
+          <div className="field">
+            <span>Datas bloqueadas</span>
+            {data.blocked.map((b, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <input
+                  className="input"
+                  type="date"
+                  value={b.date}
+                  onChange={(e) => setBlocked(i, "date", e.target.value)}
+                />
+                <span className="sr-only">Início do bloqueio</span>
+                <input
+                  className="input"
+                  type="time"
+                  value={b.start}
+                  onChange={(e) => setBlocked(i, "start", e.target.value)}
+                />
+                <span className="sr-only">Fim do bloqueio</span>
+                <input
+                  className="input"
+                  type="time"
+                  value={b.end}
+                  onChange={(e) => setBlocked(i, "end", e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn ghost small danger"
+                  onClick={() => setData((d) => ({ ...d, blocked: d.blocked.filter((_, idx) => idx !== i) }))}
+                >
+                  Remover
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="btn ghost small"
+              onClick={() =>
+                setData((d) => ({ ...d, blocked: [...d.blocked, { date: "", start: "", end: "" }] }))
+              }
+            >
+              + Adicionar bloqueio
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -811,110 +776,109 @@ function CreateModal({ cfg, onClose, onCreated }) {
     }
   }
 
+  const safeClose = () => { if (!saving) onClose(); };
+
   return (
-    <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}>
-      <div className="modal" role="dialog" aria-modal="true">
-        <div className="modal-header">
-          <div className="modal-title">Novo agendamento</div>
-          <button className="modal-close" onClick={onClose} aria-label="Fechar">✕</button>
+    <Modal
+      title="Novo agendamento"
+      onClose={safeClose}
+      footer={
+        <>
+          <button type="button" className="btn ghost" onClick={safeClose} disabled={saving}>
+            Cancelar
+          </button>
+          <button type="submit" form="agenda-create-form" className="btn primary" disabled={saving}>
+            {saving ? "Criando..." : "Criar agendamento"}
+          </button>
+        </>
+      }
+    >
+      <form id="agenda-create-form" onSubmit={handleSubmit}>
+        <div className="stack" style={{ gap: 14 }}>
+          {err && <Alert variant="error">{err}</Alert>}
+          <div className="field">
+            <span>Data</span>
+            <input
+              className="input"
+              type="date"
+              value={data.date}
+              min={todayDate()}
+              onChange={(e) => setData((d) => ({ ...d, date: e.target.value, start_time: "" }))}
+            />
+          </div>
+
+          <div className="field">
+            <span>Horário de início</span>
+            <input
+              className="input"
+              type="time"
+              value={data.start_time}
+              onChange={(e) => setData((d) => ({ ...d, start_time: e.target.value }))}
+            />
+            <span className="field-help">Fim automático: {endTime || "—"} ({duration} min)</span>
+            {slots.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                {slots.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`btn small ${data.start_time === s ? "primary" : "ghost"}`}
+                    onClick={() => setData((d) => ({ ...d, start_time: s }))}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+            {slots.length === 0 && cfg?.enabled && data.date && (
+              <span className="field-help">Sem horários livres nesta data.</span>
+            )}
+          </div>
+
+          <div className="grid-2">
+            <label className="field">
+              <span>Nome do cliente</span>
+              <input
+                className="input"
+                value={data.customer_name}
+                maxLength={120}
+                onChange={(e) => setData((d) => ({ ...d, customer_name: e.target.value }))}
+              />
+            </label>
+            <label className="field">
+              <span>Telefone <span className="field-required">obrigatório</span></span>
+              <input
+                className="input"
+                placeholder="(11) 99999-9999"
+                value={data.phone}
+                onChange={(e) => setData((d) => ({ ...d, phone: e.target.value }))}
+              />
+            </label>
+          </div>
+
+          <label className="field">
+            <span>Serviço</span>
+            <input
+              className="input"
+              placeholder="Ex.: Consulta, Corte, Avaliação"
+              value={data.service}
+              maxLength={120}
+              onChange={(e) => setData((d) => ({ ...d, service: e.target.value }))}
+            />
+          </label>
+
+          <label className="field">
+            <span>Observações</span>
+            <textarea
+              className="input"
+              rows="2"
+              maxLength={500}
+              value={data.notes}
+              onChange={(e) => setData((d) => ({ ...d, notes: e.target.value }))}
+            />
+          </label>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body">
-            {err && <div className="alert alert-error">{err}</div>}
-            <div className="stack" style={{ gap: 14 }}>
-              <div className="field">
-                <span>Data</span>
-                <input
-                  className="input"
-                  type="date"
-                  value={data.date}
-                  min={todayDate()}
-                  onChange={(e) => setData((d) => ({ ...d, date: e.target.value, start_time: "" }))}
-                />
-              </div>
-
-              <div className="field">
-                <span>Horário de início</span>
-                <input
-                  className="input"
-                  type="time"
-                  value={data.start_time}
-                  onChange={(e) => setData((d) => ({ ...d, start_time: e.target.value }))}
-                />
-                <span className="field-help">Fim automático: {endTime || "—"} ({duration} min)</span>
-                {slots.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-                    {slots.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        className={`btn small ${data.start_time === s ? "primary" : "ghost"}`}
-                        onClick={() => setData((d) => ({ ...d, start_time: s }))}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {slots.length === 0 && cfg?.enabled && data.date && (
-                  <span className="field-help">Sem horários livres nesta data.</span>
-                )}
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <label className="field">
-                  <span>Nome do cliente</span>
-                  <input
-                    className="input"
-                    value={data.customer_name}
-                    maxLength={120}
-                    onChange={(e) => setData((d) => ({ ...d, customer_name: e.target.value }))}
-                  />
-                </label>
-                <label className="field">
-                  <span>Telefone <span className="field-required">obrigatório</span></span>
-                  <input
-                    className="input"
-                    placeholder="(11) 99999-9999"
-                    value={data.phone}
-                    onChange={(e) => setData((d) => ({ ...d, phone: e.target.value }))}
-                  />
-                </label>
-              </div>
-
-              <label className="field">
-                <span>Serviço</span>
-                <input
-                  className="input"
-                  placeholder="Ex.: Consulta, Corte, Avaliação"
-                  value={data.service}
-                  maxLength={120}
-                  onChange={(e) => setData((d) => ({ ...d, service: e.target.value }))}
-                />
-              </label>
-
-              <label className="field">
-                <span>Observações</span>
-                <textarea
-                  className="input"
-                  rows="2"
-                  maxLength={500}
-                  value={data.notes}
-                  onChange={(e) => setData((d) => ({ ...d, notes: e.target.value }))}
-                />
-              </label>
-            </div>
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="btn ghost" onClick={onClose} disabled={saving}>
-              Cancelar
-            </button>
-            <button type="submit" className="btn primary" disabled={saving}>
-              {saving ? "Criando..." : "Criar agendamento"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }

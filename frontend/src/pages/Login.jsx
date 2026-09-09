@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import { Alert, Icon } from "../components/ui";
 
 const FEATURES = [
-  ["⚡", "Responda no WhatsApp 24h", "Fluxos visuais conectam a IA ao número, com encaminhamento para humanos."],
-  ["🧠", "Base de conhecimento própria", "A IA responde usando seus documentos, com contexto real do seu negócio."],
-  ["📊", "Painel completo", "Conversas, leads, setores e histórico de execuções em um só lugar."],
+  ["zap", "Responda no WhatsApp 24h", "Fluxos visuais conectam a IA ao número, com encaminhamento para humanos."],
+  ["cpu", "Base de conhecimento própria", "A IA responde usando seus documentos, com contexto real do seu negócio."],
+  ["bar-chart", "Painel completo", "Conversas, leads, setores e histórico de execuções em um só lugar."],
 ];
 
 export default function Login() {
@@ -71,10 +72,10 @@ export default function Login() {
     <div className="auth-wrap">
       <div className="auth-hero">
         <div className="auth-brand">
-          <div className="auth-logo-badge">🤖</div>
+          <div className="auth-logo-badge"><Icon name="bot" size={22} /></div>
           <div className="logo">Flow<span>AI</span></div>
         </div>
-        <h2>Automação de atendimento com IA</h2>
+        <h1>Automação de atendimento com IA</h1>
         <p className="muted">
           Conecte seu WhatsApp e deixe a IA atender seus clientes com fluxos
           visuais, base de conhecimento e encaminhamento para humanos.
@@ -82,7 +83,7 @@ export default function Login() {
         <ul className="auth-features">
           {FEATURES.map(([icon, title, text]) => (
             <li key={title}>
-              <span aria-hidden="true">{icon}</span>
+              <span aria-hidden="true"><Icon name={icon} size={18} /></span>
               <div>
                 <b>{title}</b>
                 <br />
@@ -137,12 +138,8 @@ export default function Login() {
             </p>
           )}
 
-          {info && (
-            <div className="alert alert-success" role="status">
-              {info}
-            </div>
-          )}
-          {error && <div className="alert alert-error">{error}</div>}
+          {info && <Alert variant="success">{info}</Alert>}
+          {error && <Alert variant="error">{error}</Alert>}
 
           <button className="btn primary block" disabled={loading}>
             {loading

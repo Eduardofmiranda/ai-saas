@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { api } from "../api";
 import Header from "../components/Header";
+import Alert from "../components/ui/Alert";
+import PageHeader from "../components/ui/PageHeader";
 
 export default function Account() {
   const [form, setForm] = useState({ current_password: "", new_password: "", confirm: "" });
@@ -21,7 +23,7 @@ export default function Account() {
       return;
     }
     if (form.new_password !== form.confirm) {
-      setError("As senhas nao conferem");
+      setError("As senhas não conferem");
       return;
     }
     setLoading(true);
@@ -43,25 +45,15 @@ export default function Account() {
     <div className="layout">
       <Header />
       <main className="content">
-        <div className="content-head">
-          <div>
-            <h2>Minha Conta</h2>
-            <p className="muted">Altere sua senha de acesso.</p>
-          </div>
-        </div>
+        <PageHeader title="Minha Conta" subtitle="Altere sua senha de acesso." />
 
         {message && (
-          <div className="alert alert-success" role="status">
+          <Alert variant="success" onDismiss={() => setMessage("")}>
             {message}
-            <button
-              aria-label="Fechar aviso"
-              style={{ marginLeft: "auto", background: "none", border: "none", color: "inherit", cursor: "pointer", fontSize: 14 }}
-              onClick={() => setMessage("")}
-            >✕</button>
-          </div>
+          </Alert>
         )}
 
-        <div className="card" style={{ maxWidth: 460 }}>
+        <div className="card narrow">
           <form onSubmit={onSubmit}>
             <div className="stack">
               <label className="field">
@@ -94,7 +86,7 @@ export default function Account() {
                   autoComplete="new-password"
                 />
               </label>
-              {error && <div className="error" style={{ margin: 0 }}>{error}</div>}
+              {error && <Alert variant="error">{error}</Alert>}
               <button className="btn primary block" disabled={loading}>
                 {loading ? "Salvando..." : "Alterar senha"}
               </button>

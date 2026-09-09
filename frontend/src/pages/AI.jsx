@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import Header from "../components/Header";
 import KnowledgeSummaryCard from "../components/KnowledgeSummaryCard";
+import Alert from "../components/ui/Alert";
+import Icon from "../components/ui/Icon";
+import PageHeader from "../components/ui/PageHeader";
 
 const PROVIDER_LABELS = { groq: "Groq", openai: "OpenAI", deepseek: "DeepSeek", mistral: "Mistral", ollama: "Ollama" };
 
@@ -16,7 +19,7 @@ const PRESETS = [
 Responda de forma cordial e profissional, mas com um toque humano.
 Use linguagem simples e acessível. Evite jargões técnicos.
 Se não souber algo, diga honestamente e ofereça transferir para um humano.`,
-    icon: "😊",
+    icon: "smile",
   },
   {
     name: "Vendedor Consultivo",
@@ -25,7 +28,7 @@ Escute primeiro, entenda a necessidade do cliente, e só depois apresente soluç
 Destaque benefícios, não características técnicas.
 Seja honesto sobre limitações. Nunca pressione — guie o cliente a melhor decisão.
 Ao final de cada interação, sugira uma ação concreta.`,
-    icon: "💼",
+    icon: "briefcase",
   },
   {
     name: "Suporte Técnico",
@@ -33,7 +36,7 @@ Ao final de cada interação, sugira uma ação concreta.`,
 Seja preciso, objetivo e eficiente. Use passos numerados quando explicar processos.
 Se o problema for complexo, colete informações antes de resolver.
 Sempre confirme se a solução funcionou. Documente o que foi feito.`,
-    icon: "🔧",
+    icon: "wrench",
   },
   {
     name: "Recepcionista Virtual",
@@ -41,7 +44,7 @@ Sempre confirme se a solução funcionou. Documente o que foi feito.`,
 Seu papel é acolher, informar e direcionar.
 Responda sobre horários, localização, serviços e FAQ.
 Seja breve mas calorosa. Encaminhe dúvidas específicas para o setor correto.`,
-    icon: "🏥",
+    icon: "heart-pulse",
   },
 ];
 
@@ -143,27 +146,30 @@ export default function AI() {
     <div className="layout">
       <Header />
       <main className="content">
-        <div className="content-head">
-          <div>
-            <h2>Gerenciador de IA</h2>
-            <p className="muted">Configure como sua IA responde aos clientes no WhatsApp.</p>
-          </div>
+        <PageHeader
+          title="Gerenciador de IA"
+          subtitle="Configure como sua IA responde aos clientes no WhatsApp."
+        >
           <button className="btn primary" onClick={handleSave} disabled={saving}>
             {saving ? "Salvando..." : "Salvar"}
           </button>
-        </div>
+        </PageHeader>
 
-        {error && <div className="error">{error}</div>}
-        {success && <div className="success-msg">{success}</div>}
+        {error && <Alert variant="error">{error}</Alert>}
+        {success && (
+          <Alert variant="success" onDismiss={() => setSuccess("")}>
+            {success}
+          </Alert>
+        )}
 
         {/* Status da IA */}
         <div className="ai-config">
           <div className="ai-status-bar">
             <span className={`ai-status-dot ${form.ai_on ? "on" : "off"}`} />
-            <span style={{ fontWeight: 600 }}>
+            <span className="u-strong">
               IA {form.ai_on ? "ativada" : "desativada"}
             </span>
-            <label className="toggle" style={{ marginLeft: "auto" }}>
+            <label className="toggle u-push">
               <input
                 type="checkbox"
                 checked={form.ai_on}
@@ -193,7 +199,10 @@ export default function AI() {
               {testing ? "Testando..." : "Testar conexão com IA"}
             </button>
             {testResult && (
-              <span style={{ fontSize: 13, color: testResult.ok ? "#22c55e" : "#ef4444", flex: 1 }}>
+              <span
+                className={testResult.ok ? "test-result-ok" : "test-result-err"}
+                style={{ fontSize: 13, flex: 1 }}
+              >
                 {testResult.detail}
               </span>
             )}
@@ -201,15 +210,15 @@ export default function AI() {
         </div>
 
         {config?.ai_credential_source === "missing" && (
-          <div className="error">
+          <Alert variant="error">
             {!form.ai_provider
               ? "Nenhum provedor de IA foi configurado pelo administrador da plataforma."
               : `Não há chave disponível para ${label(form.ai_provider)}. Peça ao administrador para cadastrar a chave.`
             }
-          </div>
+          </Alert>
         )}
         {config?.ai_credential_source === "platform" && (
-          <div className="success-msg">A chave deste provedor é administrada pela plataforma.</div>
+          <Alert variant="success">A chave deste provedor é administrada pela plataforma.</Alert>
         )}
 
         {/* Base de Conhecimento */}
@@ -224,14 +233,15 @@ export default function AI() {
 
           <div className="ai-presets">
             {PRESETS.map((preset) => (
-              <div
+              <button
                 key={preset.name}
+                type="button"
                 className={`ai-preset ${form.system_prompt === preset.prompt ? "active" : ""}`}
                 onClick={() => applyPreset(preset)}
               >
-                <h5>{preset.icon} {preset.name}</h5>
+                <h5><Icon name={preset.icon} size={18} /> {preset.name}</h5>
                 <p>{preset.prompt.slice(0, 60)}...</p>
-              </div>
+              </button>
             ))}
           </div>
 

@@ -1,20 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { api } from "../api";
 import Header from "../components/Header";
-
-function formatPhone(p) {
-  const d = (p || "").replace(/\D/g, "");
-  if (d.length === 13) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}`;
-  if (d.length === 12) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 8)}-${d.slice(8)}`;
-  return d;
-}
-
-const AVATAR_COLORS = ["#4f7cff", "#8b5cf6", "#06b6d4", "#22c55e", "#f59e0b", "#ec4899"];
-function avatarColor(seed) {
-  let h = 0;
-  for (const ch of String(seed || "")) h = (h * 31 + ch.charCodeAt(0)) % 997;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
-}
+import Alert from "../components/ui/Alert";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import PageHeader from "../components/ui/PageHeader";
+import EmptyState from "../components/ui/EmptyState";
+import Modal from "../components/ui/Modal";
+import Icon from "../components/ui/Icon";
+import { formatPhone, avatarColor } from "../utils/format";
 
 export default function Leads() {
   const [leads, setLeads] = useState([]);
@@ -28,6 +21,31 @@ export default function Leads() {
   const [bulkText, setBulkText] = useState("");
   const [sending, setSending] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmAll, setConfirmAll] = useState(false);
+
+  const exportRef = useRef(null);
+
+  const handleExportOutside = useCallback((e) => {
+    if (exportRef.current && !exportRef.current.contains(e.target)) {
+      setShowExportMenu(false);
+    }
+  }, []);
+
+  const handleExportKey = useCallback((e) => {
+    if (e.key === "Escape") setShowExportMenu(false);
+  }, []);
+
+  useEffect(() => {
+    if (showExportMenu) {
+      document.addEventListener("mousedown", handleExportOutside);
+      document.addEventListener("keydown", handleExportKey);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleExportOutside);
+      document.removeEventListener("keydown", handleExportKey);
+    };
+  }, [showExportMenu, handleExportOutside, handleExportKey]);
 
   useEffect(() => {
     let active = true;
@@ -72,8 +90,9 @@ export default function Leads() {
     }
   }
 
-  async function remove(id, name) {
-    if (!confirm(`Remover lead "${name}"? Isso apagará todas as conversas e mensagens.`)) return;
+  async function confirmRemoveLead() {
+    const { id } = confirmDelete;
+    setConfirmDelete(null);
     try {
       await api.deleteCustomer(id);
       setLeads((prev) => prev.filter((c) => c.id !== id));
@@ -97,6 +116,10 @@ export default function Leads() {
   async function sendBulk() {
     const text = bulkText.trim();
     if (!text) return;
+    if (selected.size === 0 && !confirmAll) {
+      setConfirmAll(true);
+      return;
+    }
     setSending(true);
     setError("");
     setSuccess("");
@@ -110,6 +133,7 @@ export default function Leads() {
       setBulkText("");
       setShowBulk(false);
       setSelected(new Set());
+      setConfirmAll(false);
     } catch (e) {
       setError(e.message || "Erro ao enviar");
     } finally {
@@ -117,43 +141,51 @@ export default function Leads() {
     }
   }
 
+  function closeBulk() {
+    setShowBulk(false);
+    setBulkText("");
+    setConfirmAll(false);
+  }
+
   return (
     <div className="layout">
       <Header />
       <main className="content">
-        <div className="content-head">
-          <div>
-            <h2>Leads</h2>
-            <p className="muted">{total} contatos no sistema</p>
-          </div>
-          <div className="leads-actions">
-            <div className="dropdown-wrap">
-              <button className="btn ghost" onClick={() => setShowExportMenu(!showExportMenu)}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Exportar
-              </button>
-              {showExportMenu && (
-                <div className="dropdown-menu">
-                  <button onClick={exportJson}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    JSON
-                  </button>
-                  <button onClick={exportXlsx}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="12" width="8" height="6" rx="1"/></svg>
-                    Excel (.xlsx)
-                  </button>
-                </div>
-              )}
-            </div>
-            <button className="btn primary" onClick={() => setShowBulk(true)}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-              Mensagem em massa
+        <PageHeader
+          title="Leads"
+          subtitle={`${total} contatos no sistema`}
+        >
+          <div className="dropdown-wrap" ref={exportRef}>
+            <button
+              className="btn ghost"
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              aria-haspopup="true"
+              aria-expanded={showExportMenu}
+            >
+              <Icon name="download" size={16} />
+              Exportar
             </button>
+            {showExportMenu && (
+              <div className="dropdown-menu">
+                <button onClick={exportJson}>
+                  <Icon name="file-text" size={14} />
+                  JSON
+                </button>
+                <button onClick={exportXlsx}>
+                  <Icon name="file-text" size={14} />
+                  Excel (.xlsx)
+                </button>
+              </div>
+            )}
           </div>
-        </div>
+          <button className="btn primary" onClick={() => setShowBulk(true)}>
+            <Icon name="send" size={16} />
+            Mensagem em massa
+          </button>
+        </PageHeader>
 
-        {error && <div className="error">{error}</div>}
-        {success && <div className="success">{success}</div>}
+        {error && <Alert variant="error" onDismiss={() => setError("")}>{error}</Alert>}
+        {success && <Alert variant="success" onDismiss={() => setSuccess("")}>{success}</Alert>}
 
         <div className="leads-search-row">
           <input
@@ -161,6 +193,7 @@ export default function Leads() {
             placeholder="Buscar por nome ou telefone..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            aria-label="Buscar leads"
           />
           {filtered.length > 0 && (
             <label className="leads-select-all">
@@ -175,16 +208,17 @@ export default function Leads() {
         </div>
 
         {loading ? (
-          <div className="leads-loading">
+          <div className="leads-loading" role="status">
             <div className="inbox-spinner" />
+            <span className="sr-only">Carregando...</span>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="empty">
-            <p>{ql ? "Nenhum lead encontrado para esta busca." : "Nenhum lead ainda."}</p>
-            <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
-              {!ql && "Leads são salvos automaticamente quando enviam mensagem pelo WhatsApp."}
-            </p>
-          </div>
+          <EmptyState
+            icon={<Icon name="users" size={40} />}
+            title={ql ? "Nenhum lead encontrado para esta busca." : "Nenhum lead ainda."}
+          >
+            {!ql && "Leads sao salvos automaticamente quando enviam mensagem pelo WhatsApp."}
+          </EmptyState>
         ) : (
           <div className="leads-grid">
             {filtered.map((c) => (
@@ -208,34 +242,30 @@ export default function Leads() {
                   <div className="lead-meta">
                     {c.email && (
                       <span className="lead-extra">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        <Icon name="mail" size={13} />
                         {c.email}
                       </span>
                     )}
                     {c.company && (
                       <span className="lead-extra">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1"/></svg>
+                        <Icon name="building" size={13} />
                         {c.company}
                       </span>
                     )}
                     {c.city && (
                       <span className="lead-extra">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <Icon name="globe" size={13} />
                         {c.city}
                       </span>
                     )}
                   </div>
                   <div className="lead-card-ops">
                     <span className="lead-conversations">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                      </svg>
+                      <Icon name="message-circle" size={14} />
                       {c.conversation_count} {c.conversation_count === 1 ? "conversa" : "conversas"}
                     </span>
-                    <button className="btn danger ghost small" onClick={() => remove(c.id, c.name || c.phone)} title="Remover lead">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                      </svg>
+                    <button className="btn danger ghost small" onClick={() => setConfirmDelete({ id: c.id, name: c.name || c.phone })} aria-label="Remover lead">
+                      <Icon name="trash" size={14} />
                     </button>
                   </div>
                 </div>
@@ -245,67 +275,68 @@ export default function Leads() {
         )}
       </main>
 
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Remover lead"
+          message={`Remover lead "${confirmDelete.name}"? Isso apagara todas as conversas e mensagens.`}
+          confirmLabel="Remover"
+          onConfirm={confirmRemoveLead}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+
       {showBulk && (
-        <div className="modal-overlay" onClick={() => { setShowBulk(false); setBulkText(""); }}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                Mensagem em Massa
-              </div>
-              <button className="modal-close" onClick={() => { setShowBulk(false); setBulkText(""); }}>&times;</button>
-            </div>
-
-            <div className="modal-body">
-              <div className="bulk-target">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                <span>
-                  {selected.size > 0
-                    ? `${selected.size} lead${selected.size > 1 ? "s" : ""} selecionado${selected.size > 1 ? "s" : ""}`
-                    : `Todos os ${leads.length} leads`}
-                </span>
-              </div>
-
-              <textarea
-                className="bulk-textarea"
-                rows="5"
-                placeholder="Digite a mensagem que deseja enviar para seus leads..."
-                value={bulkText}
-                onChange={(e) => setBulkText(e.target.value)}
-              />
-
-              <div className="bulk-preview">
-                <span className="bulk-preview-label">Pré-visualização</span>
-                <div className="bulk-preview-box">
-                  {bulkText || "Sua mensagem aparecerá aqui..."}
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="btn ghost" onClick={() => { setShowBulk(false); setBulkText(""); }}>
+        <Modal
+          title="Mensagem em Massa"
+          icon={<Icon name="send" size={20} />}
+          onClose={closeBulk}
+          footer={
+            <>
+              <button className="btn ghost" onClick={closeBulk} disabled={sending}>
                 Cancelar
               </button>
               <button
-                className="btn primary"
+                className={confirmAll ? "btn solid-danger" : "btn primary"}
                 onClick={sendBulk}
                 disabled={!bulkText.trim() || sending}
               >
-                {sending ? (
-                  <>
-                    <div className="spinner-small" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                    Enviar
-                  </>
-                )}
+                {sending ? "Enviando..." : confirmAll ? "Confirmar envio para todos" : "Enviar"}
               </button>
+            </>
+          }
+        >
+          <div className="bulk-target">
+            <Icon name="users" size={16} />
+            <span>
+              {selected.size > 0
+                ? `${selected.size} lead${selected.size > 1 ? "s" : ""} selecionado${selected.size > 1 ? "s" : ""}`
+                : `Todos os ${leads.length} leads`}
+            </span>
+          </div>
+
+          {confirmAll && selected.size === 0 && (
+            <Alert variant="error">
+              A mensagem sera enviada para <strong>TODOS os {leads.length} contatos</strong>.
+              Esta acao e irreversivel.
+            </Alert>
+          )}
+
+          <textarea
+            className="bulk-textarea"
+            rows="5"
+            placeholder="Digite a mensagem que deseja enviar para seus leads..."
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            aria-label="Mensagem em massa"
+          />
+
+          <div className="bulk-preview">
+            <span className="bulk-preview-label">Pre-visualizacao</span>
+            <div className="bulk-preview-box">
+              {bulkText || "Sua mensagem aparecera aqui..."}
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

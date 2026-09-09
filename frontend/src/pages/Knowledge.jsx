@@ -1,11 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { api } from "../api";
 import Header from "../components/Header";
+import Alert from "../components/ui/Alert";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import PageHeader from "../components/ui/PageHeader";
+import EmptyState from "../components/ui/EmptyState";
+import Icon from "../components/ui/Icon";
 
 export default function Knowledge() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", content: "" });
   const [saving, setSaving] = useState(false);
@@ -17,6 +23,9 @@ export default function Knowledge() {
   const [editingId, setEditingId] = useState(null);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const fileInputRef = useRef(null);
 
   async function load() {
     try {
@@ -62,7 +71,7 @@ export default function Knowledge() {
       return;
     }
     if (!form.name.trim() || (!editingId && !form.content.trim())) {
-      setError("Nome e conteúdo são obrigatórios");
+      setError("Nome e conteudo sao obrigatorios");
       return;
     }
     setSaving(true);
@@ -76,6 +85,7 @@ export default function Knowledge() {
         await api.createKnowledge(form);
       }
       resetForm();
+      setSuccess(editingId ? "Documento atualizado com sucesso!" : "Documento criado com sucesso!");
       load();
     } catch (e) {
       setError("Erro ao salvar: " + e.message);
@@ -91,6 +101,7 @@ export default function Knowledge() {
     try {
       await api.uploadKnowledge(uploadFile, form.name, form.description);
       resetForm();
+      setSuccess("Arquivo enviado e indexado com sucesso!");
       load();
     } catch (e) {
       setError("Erro no upload: " + e.message);
@@ -99,11 +110,13 @@ export default function Knowledge() {
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm("Excluir este documento e todos os chunks?")) return;
+  async function confirmDeleteDoc() {
+    const id = confirmDelete;
+    setConfirmDelete(null);
     try {
       await api.deleteKnowledge(id);
       if (selected === id) { setSelected(null); setDetail(null); }
+      setSuccess("Documento excluido com sucesso!");
       load();
     } catch (e) {
       setError("Erro ao excluir: " + e.message);
@@ -138,24 +151,19 @@ export default function Knowledge() {
     <div className="layout">
       <Header />
       <main className="content">
-        <div className="content-head">
-          <div>
-            <h2>Base de Conhecimento</h2>
-            <p className="muted">Adicione documentos para sua IA usar como referência nas respostas (RAG).</p>
-          </div>
-          <div className="btn-group">
-            <button className="btn ghost" onClick={() => { resetForm(); setSearchResults(null); }}>
-              {searchResults ? "Limpar busca" : "Buscar"}
-            </button>
-            <button className="btn primary" onClick={() => { resetForm(); setShowForm(!showForm); }}>
-              {showForm ? "Cancelar" : "+ Novo documento"}
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          title="Base de Conhecimento"
+          subtitle="Adicione documentos para sua IA usar como referencia nas respostas (RAG)."
+        >
+          <button className="btn primary" onClick={() => { resetForm(); setShowForm(!showForm); }}>
+            {showForm ? "Cancelar" : "+ Novo documento"}
+          </button>
+        </PageHeader>
 
-        {error && <div className="error">{error}</div>}
+        {error && <Alert variant="error" onDismiss={() => setError("")}>{error}</Alert>}
+        {success && <Alert variant="success" onDismiss={() => setSuccess("")}>{success}</Alert>}
 
-        {/* Formulário */}
+        {/* Formulario */}
         {showForm && (
           <form className="knowledge-form" onSubmit={handleSubmit}>
             <label className="field">
@@ -169,10 +177,10 @@ export default function Knowledge() {
               />
             </label>
             <label className="field">
-              <span>Descrição (opcional)</span>
+              <span>Descricao (opcional)</span>
               <input
                 type="text"
-                placeholder="Resumo do conteúdo"
+                placeholder="Resumo do conteudo"
                 value={form.description}
                 onChange={(e) => set("description", e.target.value)}
               />
@@ -181,32 +189,24 @@ export default function Knowledge() {
               <>
                 <div className="field">
                   <span>Arquivo</span>
-                  <div
-                    style={{
-                      border: "2px dashed #374151",
-                      borderRadius: 8,
-                      padding: "24px 16px",
-                      textAlign: "center",
-                      cursor: "pointer",
-                      background: uploadFile ? "#1a2332" : "transparent",
-                      marginTop: 4,
-                    }}
-                    onClick={() => document.getElementById("kb-file-input").click()}
+                  <label
+                    htmlFor="kb-file-input"
+                    className="knowledge-dropzone"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files[0]) setUploadFile(e.dataTransfer.files[0]); }}
                   >
                     <input
                       id="kb-file-input"
                       type="file"
+                      className="sr-only"
                       accept=".pdf,.docx,.doc,.txt,.csv,.md,.markdown,.json,.xml,.html"
-                      style={{ display: "none" }}
                       onChange={(e) => { if (e.target.files[0]) setUploadFile(e.target.files[0]); }}
                     />
                     {uploadFile ? (
                       <p style={{ margin: 0 }}>
                         <strong>{uploadFile.name}</strong>
                         <br />
-                        <small className="muted">{(uploadFile.size / 1024).toFixed(1)} KB · Clique para trocar</small>
+                        <small className="muted">{(uploadFile.size / 1024).toFixed(1)} KB - Clique para trocar</small>
                       </p>
                     ) : (
                       <p style={{ margin: 0 }}>
@@ -215,18 +215,18 @@ export default function Knowledge() {
                         <small className="muted">PDF, DOCX, TXT, CSV, Markdown (max 10MB)</small>
                       </p>
                     )}
-                  </div>
+                  </label>
                 </div>
                 <label className="field">
-                  <span>Ou cole o conteúdo como texto</span>
+                  <span>Ou cole o conteudo como texto</span>
                   <textarea
-                    placeholder="Se preferir, cole o conteúdo diretamente..."
+                    placeholder="Se preferir, cole o conteudo diretamente..."
                     value={form.content}
                     onChange={(e) => { set("content", e.target.value); if (e.target.value) setUploadFile(null); }}
                     rows={6}
                   />
                   <small className="field-help">
-                    O conteúdo será dividido em pedaços (chunks) para busca semântica.
+                    O conteudo sera dividido em pedacos (chunks) para busca semantica.
                   </small>
                 </label>
               </>
@@ -245,10 +245,16 @@ export default function Knowledge() {
               placeholder="Buscar no conhecimento..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Buscar no conhecimento"
             />
             <button className="btn secondary" type="submit" disabled={searching}>
               {searching ? "Buscando..." : "Buscar"}
             </button>
+            {searchResults && (
+              <button className="btn ghost" type="button" onClick={() => { setSearchResults(null); setSearchQuery(""); }}>
+                Limpar
+              </button>
+            )}
           </form>
         )}
 
@@ -257,13 +263,15 @@ export default function Knowledge() {
           <div className="search-results">
             <h3>Resultados da busca</h3>
             {searchResults.length === 0 ? (
-              <p className="muted">Nenhum resultado encontrado.</p>
+              <EmptyState icon={<Icon name="search" size={40} />} title="Nenhum resultado encontrado">
+                Tente outros termos de busca.
+              </EmptyState>
             ) : (
               <div className="chunks-list">
                 {searchResults.map((r, i) => (
-                  <div key={i} className="chunk-card">
+                  <div key={r.chunk_id || `${r.doc_name || ""}-${i}`} className="chunk-card">
                     <span className="muted">
-                      Similaridade: {(r.similarity * 100).toFixed(0)}% · {r.tokens} tokens
+                      Similaridade: {(r.similarity * 100).toFixed(0)}% - {r.tokens} tokens
                     </span>
                     <p>{r.content.substring(0, 300)}{r.content.length > 300 ? "..." : ""}</p>
                   </div>
@@ -277,37 +285,42 @@ export default function Knowledge() {
 
         {/* Lista de documentos */}
         {!loading && items.length === 0 && !showForm && !searchResults && (
-          <div className="empty">
-            <h3>Nenhum documento ainda</h3>
-            <p>Adicione documentos (PDF, Word, texto) ou cole conteúdo para sua IA usar como referência.</p>
-            <button className="btn primary" onClick={() => setShowForm(true)}>
-              + Adicionar primeiro documento
-            </button>
-          </div>
+          <EmptyState
+            icon={<Icon name="book-open" size={40} />}
+            title="Nenhum documento ainda"
+            action={
+              <button className="btn primary" onClick={() => setShowForm(true)}>
+                Adicionar primeiro documento
+              </button>
+            }
+          >
+            Adicione documentos (PDF, Word, texto) ou cole conteudo para sua IA usar como referencia.
+          </EmptyState>
         )}
 
         {!searchResults && (
           <div className="wf-grid">
             {items.map((item) => (
-              <div
+              <button
+                type="button"
                 key={item.id}
                 className={`wf-card ${selected === item.id ? "selected" : ""}`}
                 onClick={() => viewDetail(item.id)}
               >
                 <h3>{item.name}</h3>
-                <p>{item.description || "Sem descrição"}</p>
+                <p>{item.description || "Sem descricao"}</p>
                 <div className="wf-meta">
-                  <span className="muted">{item.chunk_count} chunks</span>
+                  <span className="muted">{item.chunk_count} pedacos</span>
                   <div className="btn-group">
-                    <button className="btn ghost small" onClick={(e) => { e.stopPropagation(); startEdit(item); }}>
+                    <button type="button" className="btn ghost small" onClick={(e) => { e.stopPropagation(); startEdit(item); }}>
                       Editar
                     </button>
-                    <button className="btn ghost small danger" onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}>
+                    <button type="button" className="btn ghost small danger" onClick={(e) => { e.stopPropagation(); setConfirmDelete(item.id); }}>
                       Excluir
                     </button>
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -329,11 +342,11 @@ export default function Knowledge() {
                 </button>
               </div>
             </div>
-            <h4>Pedidos ({detail.chunks.length})</h4>
+            <h4>Pedacos ({detail.chunks.length})</h4>
             <div className="chunks-list">
               {detail.chunks.map((ch) => (
                 <div key={ch.id} className="chunk-card">
-                  <span className="muted">#{ch.chunk_index} · {ch.tokens} tokens</span>
+                  <span className="muted">#{ch.chunk_index} - {ch.tokens} tokens</span>
                   <p>{ch.content.substring(0, 300)}{ch.content.length > 300 ? "..." : ""}</p>
                 </div>
               ))}
@@ -341,6 +354,16 @@ export default function Knowledge() {
           </div>
         )}
       </main>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Excluir documento"
+          message="Excluir este documento e todos os chunks? Esta acao nao pode ser desfeita."
+          confirmLabel="Excluir"
+          onConfirm={confirmDeleteDoc}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 }

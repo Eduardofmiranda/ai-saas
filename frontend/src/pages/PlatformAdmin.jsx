@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import Header from "../components/Header";
 import { api } from "../api";
+import Alert from "../components/ui/Alert";
+import Modal from "../components/ui/Modal";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import PageHeader from "../components/ui/PageHeader";
+import EmptyState from "../components/ui/EmptyState";
+import Icon from "../components/ui/Icon";
+import { avatarColor } from "../utils/format";
 
 const PROVIDERS = [
   { value: "groq", label: "Groq" },
@@ -72,20 +79,6 @@ export default function PlatformAdmin() {
   }
 
   useEffect(() => { load(); }, []);
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        setEditingUser(null);
-        setConfirmClearErrors(false);
-        setResetTarget(null);
-        setResetResult(null);
-        setCopied(false);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   useEffect(() => {
     if (tab === "errors" && !errorsLoaded && !errorsLoading) loadErrors(0);
@@ -279,29 +272,23 @@ export default function PlatformAdmin() {
     <div className="layout">
       <Header />
       <main className="content">
-        <div className="page-header page-header-row">
-          <div className="page-header">
-            <h1>Administração da Plataforma</h1>
-            <p className="muted">Visão global restrita ao operador. A administração comum continua isolada por empresa.</p>
-          </div>
+        <PageHeader
+          title="Administração da Plataforma"
+          subtitle="Visão global restrita ao operador. A administração comum continua isolada por empresa."
+        >
           <button className="btn ghost" onClick={load}>Atualizar dados</button>
-        </div>
+        </PageHeader>
 
         <div className="seg-tabs">
           <button className={tab === "overview" ? "active" : ""} onClick={() => setTab("overview")}>Visão geral</button>
           <button className={tab === "errors" ? "active" : ""} onClick={() => setTab("errors")}>Painel de Erros</button>
         </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <Alert variant="error">{error}</Alert>}
         {message && (
-          <div className="alert alert-success" role="status">
+          <Alert variant="success" onDismiss={() => setMessage("")}>
             {message}
-            <button
-              aria-label="Fechar aviso"
-              style={{ marginLeft: "auto", background: "none", border: "none", color: "inherit", cursor: "pointer", fontSize: 14 }}
-              onClick={() => setMessage("")}
-            >✕</button>
-          </div>
+          </Alert>
         )}
 
         {tab === "overview" && (
@@ -311,10 +298,10 @@ export default function PlatformAdmin() {
             ) : (
               <>
                 <div className="stat-grid">
-                  <StatCard icon="🏢" value={overview.companies} label="Empresas" />
-                  <StatCard icon="👥" value={overview.users} label="Usuários cadastrados" />
-                  <StatCard icon="⚙️" value={overview.workflows} label="Workflows" />
-                  <StatCard icon="❌" value={overview.executions_error} label="Execuções com erro" tone="red" />
+                  <StatCard icon="building" value={overview.companies} label="Empresas" />
+                  <StatCard icon="users" value={overview.users} label="Usuários cadastrados" />
+                  <StatCard icon="workflow" value={overview.workflows} label="Workflows" />
+                  <StatCard icon="x-circle" value={overview.executions_error} label="Execuções com erro" tone="red" />
                 </div>
 
                 <section className="ai-config">
@@ -353,16 +340,15 @@ export default function PlatformAdmin() {
                     <span>Provedores liberados</span>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
                       {PROVIDERS.map((p) => (
-                        <span
+                        <button
                           key={p.value}
-                          role="button"
-                          tabIndex={0}
+                          type="button"
+                          style={{ font: "inherit" }}
                           className={`provider-chip ${userForm.allowed_providers.includes(p.value) ? "on" : ""}`}
                           onClick={() => toggleProvider(p.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleProvider(p.value); } }}
                         >
                           {p.label}
-                        </span>
+                        </button>
                       ))}
                     </div>
                   </label>
@@ -402,7 +388,7 @@ export default function PlatformAdmin() {
                   return (
                     <div key={"policy-" + user.id} className="platform-user-row">
                       <div className="user-main">
-                        <span className="avatar-sm" style={{ background: "#4f7cff" }}>{(user.name || "?").charAt(0).toUpperCase()}</span>
+                        <span className="avatar-sm" style={{ background: avatarColor(user.name) }}>{(user.name || "?").charAt(0).toUpperCase()}</span>
                         <div>
                           <strong>{user.name}</strong>
                           <span>{user.email}</span>
@@ -430,7 +416,7 @@ export default function PlatformAdmin() {
                 {users.map((user) => (
                   <div key={"all-" + user.id} className="platform-user-row">
                     <div className="user-main">
-                      <span className="avatar-sm" style={{ background: "#6ea8ff" }}>{(user.name || "?").charAt(0).toUpperCase()}</span>
+                      <span className="avatar-sm" style={{ background: avatarColor(user.name) }}>{(user.name || "?").charAt(0).toUpperCase()}</span>
                       <div>
                         <strong>{user.name}</strong>
                         <span>{user.email}</span>
@@ -473,11 +459,12 @@ export default function PlatformAdmin() {
             {errorsLoading && <p className="muted" style={{ marginTop: 12 }}>Carregando erros...</p>}
 
             {!errorsLoading && errors.length === 0 && (
-              <div className="empty-state" style={{ marginTop: 12 }}>
-                <div className="empty-icon">✅</div>
-                <h3>Nenhum erro registrado</h3>
-                <p>Quando uma execução falhar, ela aparecerá aqui com detalhes para diagnóstico.</p>
-              </div>
+              <EmptyState
+                icon={<Icon name="check-circle" size={40} />}
+                title="Nenhum erro registrado"
+              >
+                Quando uma execução falhar, ela aparecerá aqui com detalhes para diagnóstico.
+              </EmptyState>
             )}
 
             {errors.length > 0 && (
@@ -496,7 +483,7 @@ export default function PlatformAdmin() {
                     <tbody>
                       {errors.map((e) => (
                         <tr key={e.id}>
-                          <td style={{ fontFamily: "Consolas, monospace" }}>#{e.id}</td>
+                          <td className="u-mono">#{e.id}</td>
                           <td>{e.company_name}</td>
                           <td>{e.workflow_name}</td>
                           <td style={{ maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={e.error}>{e.error}</td>
@@ -521,80 +508,69 @@ export default function PlatformAdmin() {
       </main>
 
       {confirmClearErrors && (
-        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setConfirmClearErrors(false); }}>
-          <div className="modal" role="dialog" aria-modal="true">
-            <div className="modal-header">
-              <div className="modal-title">Limpar erros</div>
-              <button className="modal-close" onClick={() => setConfirmClearErrors(false)} aria-label="Fechar">✕</button>
-            </div>
-            <div className="modal-body">
+        <ConfirmDialog
+          title="Limpar erros"
+          confirmLabel="Apagar tudo"
+          loading={errorsLoading}
+          onConfirm={clearErrors}
+          onCancel={() => setConfirmClearErrors(false)}
+          message={
+            <>
               <p style={{ margin: 0, lineHeight: 1.5 }}>
                 Tem certeza que deseja apagar <strong>TODOS os erros ({errorsTotal})</strong>?
               </p>
               <p className="muted" style={{ margin: "6px 0 0", fontSize: 13 }}>Esta ação não pode ser desfeita.</p>
-            </div>
-            <div className="modal-footer">
-              <button className="btn ghost" onClick={() => setConfirmClearErrors(false)} disabled={errorsLoading}>Cancelar</button>
-              <button className="btn solid-danger" onClick={clearErrors} disabled={errorsLoading}>
-                {errorsLoading ? "Removendo..." : "Apagar tudo"}
-              </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        />
       )}
 
       {resetTarget && (
-        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) closeResetModal(); }}>
-          <div className="modal" role="dialog" aria-modal="true">
-            <div className="modal-header">
-              <div className="modal-title">
-                {resetResult ? "Senha redefinida" : "Redefinir senha"}
-              </div>
-              <button className="modal-close" onClick={closeResetModal} aria-label="Fechar">✕</button>
-            </div>
-            {resetResult ? (
-              <>
-                <div className="modal-body">
-                  <p style={{ margin: 0, lineHeight: 1.5 }}>
-                    A senha provisória de <strong>{resetResult.name}</strong> é:
-                  </p>
-                  <div className="temp-password-box">
-                    <code>{resetResult.temporary_password}</code>
-                    <button className="btn ghost small" onClick={copyTemporaryPassword}>
-                      {copied ? "Copiada!" : "Copiar"}
-                    </button>
-                  </div>
-                  <p className="muted" style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
-                    Esta senha é exibida apenas agora. Envie ao usuário com segurança —
-                    ele pode trocá-la em <strong>Conta</strong> após o login.
-                  </p>
-                </div>
-                <div className="modal-footer">
-                  <button className="btn primary" onClick={closeResetModal}>Fechar</button>
-                </div>
-              </>
+        <Modal
+          title={resetResult ? "Senha redefinida" : "Redefinir senha"}
+          onClose={closeResetModal}
+          footer={
+            resetResult ? (
+              <button className="btn primary" onClick={closeResetModal}>Fechar</button>
             ) : (
               <>
-                <div className="modal-body">
-                  <p style={{ margin: 0, lineHeight: 1.5 }}>
-                    Gerar uma nova senha provisória para <strong>{resetTarget.name}</strong>{" "}
-                    ({resetTarget.email})?
-                  </p>
-                  <p className="muted" style={{ margin: "6px 0 0", fontSize: 13 }}>
-                    A senha atual deixará de funcionar imediatamente para o acesso
-                    pelo login.
-                  </p>
-                </div>
-                <div className="modal-footer">
-                  <button className="btn ghost" onClick={closeResetModal}>Cancelar</button>
-                  <button className="btn primary" onClick={generateNewPassword} disabled={resetLoading}>
-                    {resetLoading ? "Gerando..." : "Gerar nova senha"}
-                  </button>
-                </div>
+                <button className="btn ghost" onClick={closeResetModal}>Cancelar</button>
+                <button className="btn primary" onClick={generateNewPassword} disabled={resetLoading}>
+                  {resetLoading ? "Gerando..." : "Gerar nova senha"}
+                </button>
               </>
-            )}
-          </div>
-        </div>
+            )
+          }
+        >
+          {resetResult ? (
+            <>
+              <p style={{ margin: 0, lineHeight: 1.5 }}>
+                A senha provisória de <strong>{resetResult.name}</strong> é:
+              </p>
+              <div className="temp-password-box">
+                <code>{resetResult.temporary_password}</code>
+                <button className="btn ghost small" onClick={copyTemporaryPassword}>
+                  <Icon name="copy" size={14} /> {copied ? "Copiada!" : "Copiar"}
+                </button>
+              </div>
+              <p className="muted" style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+                Esta senha é exibida apenas agora. Envie ao usuário com segurança —
+                ele pode trocá-la em <strong>Conta</strong> após o login.
+              </p>
+            </>
+          ) : (
+            <>
+              <p style={{ margin: 0, lineHeight: 1.5 }}>
+                Gerar uma nova senha provisória para <strong>{resetTarget.name}</strong>{" "}
+                ({resetTarget.email})?
+              </p>
+              <p className="muted" style={{ margin: "6px 0 0", fontSize: 13 }}>
+                A senha atual deixará de funcionar imediatamente para o acesso
+                pelo login.
+              </p>
+            </>
+          )}
+        </Modal>
       )}
     </div>
   );
@@ -603,7 +579,7 @@ export default function PlatformAdmin() {
 function StatCard({ icon, value, label: title, tone = "" }) {
   return (
     <div className={`stat-card ${tone}`}>
-      <span className="stat-icon">{icon}</span>
+      <span className="stat-icon"><Icon name={icon} size={21} /></span>
       <div>
         <div className="stat-value">{value ?? 0}</div>
         <div className="stat-label">{title}</div>

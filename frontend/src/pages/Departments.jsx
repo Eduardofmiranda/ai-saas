@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import Header from "../components/Header";
-
-const AVATAR_COLORS = ["#4f7cff", "#6ea8ff", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#14b8a6"];
-
-function hashColor(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 997;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
-}
+import Alert from "../components/ui/Alert";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import EmptyState from "../components/ui/EmptyState";
+import Icon from "../components/ui/Icon";
+import Modal from "../components/ui/Modal";
+import PageHeader from "../components/ui/PageHeader";
+import { avatarColor } from "../utils/format";
 
 export default function Departments() {
   const [departments, setDepartments] = useState([]);
@@ -33,17 +32,6 @@ export default function Departments() {
   }
 
   useEffect(() => { load(); }, []);
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        setModal(null);
-        setConfirmDelete(null);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -105,45 +93,33 @@ export default function Departments() {
     <div className="layout">
       <Header />
       <main className="content">
-        <div className="page-header page-header-row">
-          <div className="page-header">
-            <h1>Setores</h1>
-            <p className="muted">
-              Organize o atendimento em setores para direcionar conversas e mensagens.
-            </p>
-          </div>
+        <PageHeader
+          title="Setores"
+          subtitle="Organize o atendimento em setores para direcionar conversas e mensagens."
+        >
           <button className="btn primary" onClick={openCreate}>+ Novo setor</button>
-        </div>
+        </PageHeader>
 
-        {error && <div className="alert alert-error">{error}</div>}
-        {ok && (
-          <div className="alert alert-success" role="status">
-            {ok}
-            <button
-              aria-label="Fechar aviso"
-              style={{ marginLeft: "auto", background: "none", border: "none", color: "inherit", cursor: "pointer", fontSize: 14 }}
-              onClick={() => setOk("")}
-            >✕</button>
-          </div>
-        )}
+        {error && <Alert variant="error">{error}</Alert>}
+        {ok && <Alert variant="success" onDismiss={() => setOk("")}>{ok}</Alert>}
 
         <div className="stat-grid">
           <div className="stat-card">
-            <span className="stat-icon">🗂️</span>
+            <span className="stat-icon"><Icon name="folder" size={21} /></span>
             <div>
               <div className="stat-value">{departments.length}</div>
               <div className="stat-label">Setores cadastrados</div>
             </div>
           </div>
           <div className="stat-card green">
-            <span className="stat-icon">📝</span>
+            <span className="stat-icon"><Icon name="file-text" size={21} /></span>
             <div>
               <div className="stat-value">{withDesc}</div>
               <div className="stat-label">Com descrição</div>
             </div>
           </div>
           <div className="stat-card amber">
-            <span className="stat-icon">💬</span>
+            <span className="stat-icon"><Icon name="message-circle" size={21} /></span>
             <div>
               <div className="stat-value">{departments.length ? departments.length : "—"}</div>
               <div className="stat-label">Disponíveis no encaminhamento</div>
@@ -153,7 +129,7 @@ export default function Departments() {
 
         <div className="toolbar">
           <div className="search-box grow">
-            <span className="search-icon">🔎</span>
+            <span className="search-icon"><Icon name="search" size={14} /></span>
             <input
               className="input"
               placeholder="Buscar setor por nome ou descrição..."
@@ -171,22 +147,21 @@ export default function Departments() {
             <p className="muted">Carregando setores...</p>
           </div>
         ) : departments.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">🗂️</div>
-            <h3>Nenhum setor configurado</h3>
-            <p>
-              Crie o primeiro setor para usar no encaminhamento de atendimento
-              entre agentes e equipes.
-            </p>
-            <button className="btn primary" onClick={openCreate}>+ Criar setor</button>
-          </div>
+          <EmptyState
+            icon={<Icon name="folder" size={40} />}
+            title="Nenhum setor configurado"
+            action={<button className="btn primary" onClick={openCreate}>+ Criar setor</button>}
+          >
+            Crie o primeiro setor para usar no encaminhamento de atendimento entre agentes e equipes.
+          </EmptyState>
         ) : filtered.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">🔎</div>
-            <h3>Nada encontrado</h3>
-            <p>Nenhum setor corresponde à busca "{query}".</p>
-            <button className="btn ghost" onClick={() => setQuery("")}>Limpar busca</button>
-          </div>
+          <EmptyState
+            icon={<Icon name="search" size={40} />}
+            title="Nada encontrado"
+            action={<button className="btn ghost" onClick={() => setQuery("")}>Limpar busca</button>}
+          >
+            Nenhum setor corresponde à busca "{query}".
+          </EmptyState>
         ) : (
           <div className="card" style={{ padding: 0, overflow: "hidden" }}>
             <table className="table">
@@ -204,7 +179,7 @@ export default function Departments() {
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <span
                           className="avatar-sm"
-                          style={{ background: hashColor(d.name || "?") }}
+                          style={{ background: avatarColor(d.name || "?") }}
                         >
                           {(d.name || "?").charAt(0).toUpperCase()}
                         </span>
@@ -232,79 +207,67 @@ export default function Departments() {
       </main>
 
       {modal && (
-        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget && !modal.saving) setModal(null); }}>
-          <div className="modal" role="dialog" aria-modal="true">
-            <div className="modal-header">
-              <div className="modal-title">
-                {modal.mode === "create" ? "Novo setor" : "Editar setor"}
-              </div>
-              <button className="modal-close" onClick={() => setModal(null)} aria-label="Fechar">✕</button>
+        <Modal
+          title={modal.mode === "create" ? "Novo setor" : "Editar setor"}
+          onClose={() => { if (!modal.saving) setModal(null); }}
+          footer={
+            <>
+              <button type="button" className="btn ghost" onClick={() => { if (!modal.saving) setModal(null); }} disabled={modal.saving}>
+                Cancelar
+              </button>
+              <button type="submit" form="dept-form" className="btn primary" disabled={!modal.name.trim() || modal.saving}>
+                {modal.saving ? "Salvando..." : modal.mode === "create" ? "Criar setor" : "Salvar"}
+              </button>
+            </>
+          }
+        >
+          <form id="dept-form" onSubmit={saveModal}>
+            <div className="stack">
+              <label className="field">
+                <span>Nome do setor</span>
+                <input
+                  className="input"
+                  placeholder="Ex.: Suporte, Vendas, Financeiro"
+                  value={modal.name}
+                  onChange={(e) => setModal({ ...modal, name: e.target.value })}
+                  autoFocus
+                  maxLength={80}
+                />
+              </label>
+              <label className="field">
+                <span>Descrição (opcional)</span>
+                <textarea
+                  className="input"
+                  rows="3"
+                  placeholder="Para que serve este setor?"
+                  value={modal.description}
+                  onChange={(e) => setModal({ ...modal, description: e.target.value })}
+                  maxLength={300}
+                />
+              </label>
             </div>
-            <form onSubmit={saveModal}>
-              <div className="modal-body">
-                <div className="stack">
-                  <label className="field">
-                    <span>Nome do setor</span>
-                    <input
-                      className="input"
-                      placeholder="Ex.: Suporte, Vendas, Financeiro"
-                      value={modal.name}
-                      onChange={(e) => setModal({ ...modal, name: e.target.value })}
-                      autoFocus
-                      maxLength={80}
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Descrição (opcional)</span>
-                    <textarea
-                      className="input"
-                      rows="3"
-                      placeholder="Para que serve este setor?"
-                      value={modal.description}
-                      onChange={(e) => setModal({ ...modal, description: e.target.value })}
-                      maxLength={300}
-                    />
-                  </label>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn ghost" onClick={() => setModal(null)} disabled={modal.saving}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn primary" disabled={!modal.name.trim() || modal.saving}>
-                  {modal.saving ? "Salvando..." : modal.mode === "create" ? "Criar setor" : "Salvar"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+          </form>
+        </Modal>
       )}
 
       {confirmDelete && (
-        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget && !confirmDelete.saving) setConfirmDelete(null); }}>
-          <div className="modal" role="dialog" aria-modal="true">
-            <div className="modal-header">
-              <div className="modal-title">Remover setor</div>
-              <button className="modal-close" onClick={() => setConfirmDelete(null)} aria-label="Fechar">✕</button>
-            </div>
-            <div className="modal-body">
+        <ConfirmDialog
+          title="Remover setor"
+          message={
+            <>
               <p style={{ margin: "0 0 6px", lineHeight: 1.5 }}>
                 Tem certeza que deseja remover o setor <strong>{confirmDelete.name}</strong>?
               </p>
               <p className="muted" style={{ margin: 0, fontSize: 13 }}>
                 Esta ação não pode ser desfeita.
               </p>
-            </div>
-            <div className="modal-footer">
-              <button className="btn ghost" onClick={() => setConfirmDelete(null)} disabled={confirmDelete.saving}>
-                Cancelar
-              </button>
-              <button className="btn solid-danger" onClick={confirmRemove} disabled={confirmDelete.saving}>
-                {confirmDelete.saving ? "Removendo..." : "Remover"}
-              </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+          confirmLabel="Remover"
+          loading={confirmDelete.saving}
+          onConfirm={confirmRemove}
+          onCancel={() => { if (!confirmDelete.saving) setConfirmDelete(null); }}
+        />
       )}
     </div>
   );

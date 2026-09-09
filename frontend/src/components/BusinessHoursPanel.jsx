@@ -1,28 +1,10 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-
-const DAYS = [
-  ["mon", "Segunda"],
-  ["tue", "Terça"],
-  ["wed", "Quarta"],
-  ["thu", "Quinta"],
-  ["fri", "Sexta"],
-  ["sat", "Sábado"],
-  ["sun", "Domingo"],
-];
-
-const TIMEZONES = [
-  "America/Sao_Paulo",
-  "America/Manaus",
-  "America/Cuiaba",
-  "America/Fortaleza",
-  "America/Recife",
-  "America/Santarem",
-  "UTC",
-];
+import Alert from "../components/ui/Alert";
+import { DAYS, TIMEZONES } from "../utils/constants";
 
 function emptySchedule() {
-  return Object.fromEntries(DAYS.map(([key]) => [key, ["09:00", "18:00"]]));
+  return Object.fromEntries(DAYS.map((d) => [d.key, ["09:00", "18:00"]]));
 }
 
 export default function BusinessHoursPanel() {
@@ -36,10 +18,10 @@ export default function BusinessHoursPanel() {
     try {
       const bh = await api.getBusinessHours();
       const schedule = emptySchedule();
-      for (const [key] of DAYS) {
-        const window = bh.schedule?.[key];
-        if (Array.isArray(window) && window.length === 2) schedule[key] = window;
-        else schedule[key] = ["", ""];
+      for (const d of DAYS) {
+        const window = bh.schedule?.[d.key];
+        if (Array.isArray(window) && window.length === 2) schedule[d.key] = window;
+        else schedule[d.key] = ["", ""];
       }
       setData({
         enabled: Boolean(bh.enabled),
@@ -84,9 +66,9 @@ export default function BusinessHoursPanel() {
     setOk("");
     try {
       const schedule = {};
-      for (const [key] of DAYS) {
-        const [start, end] = data.schedule[key];
-        schedule[key] = start && end ? [start, end] : [];
+      for (const d of DAYS) {
+        const [start, end] = data.schedule[d.key];
+        schedule[d.key] = start && end ? [start, end] : [];
       }
       const saved = await api.updateBusinessHours({
         enabled: data.enabled,
@@ -117,7 +99,7 @@ export default function BusinessHoursPanel() {
           <input
             type="checkbox"
             checked={data.enabled}
-            onChange={(e) => setData((d) => ({ ...d, enabled: e.target.checked, ok: "" }))}
+            onChange={(e) => setData((d) => ({ ...d, enabled: e.target.checked }))}
           />
           <span>Respeitar horário</span>
         </label>
@@ -137,31 +119,33 @@ export default function BusinessHoursPanel() {
         </label>
 
         <div className="bh-days">
-          {DAYS.map(([key, label]) => {
-            const [start, end] = data.schedule[key];
+          {DAYS.map((d) => {
+            const [start, end] = data.schedule[d.key];
             const active = !!(start && end);
             return (
-              <div key={key} className={`bh-day ${active ? "active" : ""}`}>
+              <div key={d.key} className={`bh-day ${active ? "active" : ""}`}>
                 <label className="bh-day-toggle">
                   <input
                     type="checkbox"
                     checked={active}
-                    onChange={(e) => toggleDay(key, e.target.checked)}
+                    onChange={(e) => toggleDay(d.key, e.target.checked)}
                   />
-                  <span>{label}</span>
+                  <span>{d.label}</span>
                 </label>
                 {active && (
                   <div className="bh-day-times">
+                    <span className="sr-only">Início</span>
                     <input
                       type="time"
                       value={start}
-                      onChange={(e) => setSchedule(key, 0, e.target.value)}
+                      onChange={(e) => setSchedule(d.key, 0, e.target.value)}
                     />
                     <span>até</span>
+                    <span className="sr-only">Fim</span>
                     <input
                       type="time"
                       value={end}
-                      onChange={(e) => setSchedule(key, 1, e.target.value)}
+                      onChange={(e) => setSchedule(d.key, 1, e.target.value)}
                     />
                   </div>
                 )}
@@ -171,7 +155,7 @@ export default function BusinessHoursPanel() {
         </div>
 
         {data.enabled && !hasConfiguredDay() && (
-          <p className="bh-warning">Marque pelos menos um dia de atendimento para o horário valer.</p>
+          <Alert variant="info">Marque pelo menos um dia de atendimento para o horário valer.</Alert>
         )}
 
         <label className="bh-message">
@@ -185,8 +169,8 @@ export default function BusinessHoursPanel() {
         </label>
       </div>
 
-      {error && <div className="error">{error}</div>}
-      {ok && <div className="bh-ok">{ok}</div>}
+      {error && <Alert variant="error">{error}</Alert>}
+      {ok && <Alert variant="success" onDismiss={() => setOk("")}>{ok}</Alert>}
 
       <div className="bh-actions">
         <button className="btn primary" onClick={handleSave} disabled={saving}>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import Header from "../components/Header";
+import { PageHeader, Alert, Icon, EmptyState } from "../components/ui";
 
 const STATE_LABELS = {
   not_configured: "Não configurado",
@@ -47,14 +48,14 @@ export default function Dashboard() {
   const isEmpty = (data?.workflows_total || 0) === 0;
 
   const cards = [
-    ["Fluxos", data?.workflows_total || 0, "workflows", `/fluxos`, "⚙️", ""],
-    ["Fluxos ativos", data?.workflows_active || 0, "ativos", null, "▶️", "kpi-green"],
+    ["Fluxos", data?.workflows_total || 0, "workflows", `/fluxos`, "workflow", ""],
+    ["Fluxos ativos", data?.workflows_active || 0, "ativos", null, "play", "kpi-green"],
     ["Conversas", data?.conversations || 0,
       (data?.pending_conversations || 0) > 0 ? `${data.pending_conversations} aguardando` : "abertas",
-      `/conversas`, "💬", "kpi-amber"],
-    ["Clientes", data?.customers || 0, "cadastrados", null, "👤", ""],
-    ["Mensagens", data?.messages || 0, "trocadas", null, "✉️", "kpi-green"],
-    ["Execuções", data?.executions_total || 0, "totais", null, "🔄", ""],
+      `/conversas`, "message-circle", "kpi-amber"],
+    ["Clientes", data?.customers || 0, "cadastrados", null, "user", ""],
+    ["Mensagens", data?.messages || 0, "trocadas", null, "mail", "kpi-green"],
+    ["Execuções", data?.executions_total || 0, "totais", null, "refresh-cw", ""],
   ];
 
   const execOk = data?.executions_success || 0;
@@ -64,15 +65,11 @@ export default function Dashboard() {
     <div className="layout">
       <Header />
       <main className="content">
-        <div className="content-head">
-          <div>
-            <h2>Painel</h2>
-            <p className="muted">Visão geral do seu atendimento com IA.</p>
-          </div>
+        <PageHeader title="Painel" subtitle="Visão geral do seu atendimento com IA.">
           <button className="btn primary" onClick={() => navigate("/fluxos")}>+ Novo fluxo</button>
-        </div>
+        </PageHeader>
 
-        {error && <div className="error">{error}</div>}
+        {error && <Alert variant="error" onDismiss={() => setError("")}>{error}</Alert>}
 
         {/* Status WhatsApp */}
         <div className="wa-banner">
@@ -103,34 +100,47 @@ export default function Dashboard() {
         )}
 
         {isEmpty ? (
-          <div className="empty dash-empty">
-            <h3>Comece criando seu primeiro fluxo</h3>
-            <p>
-              Um fluxo conecta o WhatsApp ao seu atendente de IA: a mensagem chega, a IA responde
-              e você acompanha tudo aqui.
-            </p>
-            <div className="btn-group" style={{ marginTop: 12 }}>
-              <button className="btn primary" onClick={() => navigate("/fluxos")}>Criar fluxo</button>
-              <button className="btn ghost" onClick={() => navigate("/whatsapp")}>Conectar WhatsApp</button>
-            </div>
-          </div>
+          <EmptyState
+            icon={<Icon name="workflow" size={40} />}
+            title="Comece criando seu primeiro fluxo"
+            action={
+              <div className="btn-group">
+                <button className="btn primary" onClick={() => navigate("/fluxos")}>Criar fluxo</button>
+                <button className="btn ghost" onClick={() => navigate("/whatsapp")}>Conectar WhatsApp</button>
+              </div>
+            }
+          >
+            Um fluxo conecta o WhatsApp ao seu atendente de IA: a mensagem chega, a IA responde
+            e você acompanha tudo aqui.
+          </EmptyState>
         ) : (
           <div className="kpi-grid">
-            {cards.map(([label, value, sub, to, icon, tone]) => (
-              <div
-                key={label}
-                className={`kpi-card ${tone || ""}`}
-                onClick={to ? () => navigate(to) : undefined}
-                style={to ? { cursor: "pointer" } : undefined}
-              >
-                <span className="kpi-icon">{icon}</span>
-                <div className="kpi-body">
-                  <div className="kpi-value">{value}</div>
-                  <div className="kpi-label">{label}</div>
-                  <div className="kpi-sub">{sub}</div>
+            {cards.map(([label, value, sub, to, icon, tone]) =>
+              to ? (
+                <button
+                  key={label}
+                  type="button"
+                  className={`kpi-card ${tone || ""}`}
+                  onClick={() => navigate(to)}
+                >
+                  <span className="kpi-icon"><Icon name={icon} size={21} /></span>
+                  <span className="kpi-body">
+                    <span className="kpi-value">{value}</span>
+                    <span className="kpi-label">{label}</span>
+                    <span className="kpi-sub">{sub}</span>
+                  </span>
+                </button>
+              ) : (
+                <div key={label} className={`kpi-card ${tone || ""}`}>
+                  <span className="kpi-icon"><Icon name={icon} size={21} /></span>
+                  <span className="kpi-body">
+                    <span className="kpi-value">{value}</span>
+                    <span className="kpi-label">{label}</span>
+                    <span className="kpi-sub">{sub}</span>
+                  </span>
                 </div>
-              </div>
-            ))}
+              )
+            )}
           </div>
         )}
 

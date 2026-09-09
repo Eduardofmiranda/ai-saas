@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
 import Header from "../components/Header";
+import Alert from "../components/ui/Alert";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import EmptyState from "../components/ui/EmptyState";
+import Icon from "../components/ui/Icon";
+import PageHeader from "../components/ui/PageHeader";
 
 const ROLE_LABELS = {
   owner: "Dono",
@@ -20,9 +25,14 @@ export default function Admin() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "agent" });
+  const [confirmTarget, setConfirmTarget] = useState(null);
+  const [removing, setRemoving] = useState(false);
+  const [roleChange, setRoleChange] = useState(null);
+  const [changingRole, setChangingRole] = useState(false);
 
   const isManager = user?.role === "owner" || user?.role === "admin";
 
@@ -47,7 +57,7 @@ export default function Admin() {
   async function handleAdd(e) {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim() || !form.password) {
-      setError("Nome, email e senha sao obrigatorios");
+      setError("Nome, email e senha são obrigatórios");
       return;
     }
     setSaving(true);
@@ -55,6 +65,7 @@ export default function Admin() {
       await api.createUser(form);
       setForm({ name: "", email: "", password: "", role: "agent" });
       setShowForm(false);
+      setSuccess("Membro adicionado com sucesso.");
       load();
     } catch (e) {
       setError("Erro ao adicionar: " + e.message);
@@ -63,22 +74,36 @@ export default function Admin() {
     }
   }
 
-  async function changeRole(id, role) {
+  function askRoleChange(member, role) {
+    if (role === member.role) return;
+    setRoleChange({ member, role });
+  }
+
+  async function confirmRoleChange() {
+    if (!roleChange) return;
+    setChangingRole(true);
     try {
-      await api.updateUser(id, { role });
+      await api.updateUser(roleChange.member.id, { role: roleChange.role });
       load();
     } catch (e) {
       setError("Erro ao alterar cargo: " + e.message);
+    } finally {
+      setChangingRole(false);
+      setRoleChange(null);
     }
   }
 
-  async function remove(id) {
-    if (!confirm("Remover este membro da empresa?")) return;
+  async function confirmRemove() {
+    if (!confirmTarget) return;
+    setRemoving(true);
     try {
-      await api.deleteUser(id);
+      await api.deleteUser(confirmTarget.id);
       load();
     } catch (e) {
       setError("Erro ao remover: " + e.message);
+    } finally {
+      setRemoving(false);
+      setConfirmTarget(null);
     }
   }
 
@@ -86,52 +111,69 @@ export default function Admin() {
     <div className="layout">
       <Header />
       <main className="content">
-        <div className="content-head">
-          <div>
-            <h2>Administração da Empresa</h2>
-            <p className="muted">Gerencie os membros com acesso a esta empresa.</p>
-          </div>
+        <PageHeader
+          title="Administração da Empresa"
+          subtitle="Gerencie os membros com acesso a esta empresa."
+        >
           {isManager && (
             <button className="btn primary" onClick={() => setShowForm(!showForm)}>
               {showForm ? "Cancelar" : "+ Adicionar membro"}
             </button>
           )}
-        </div>
+        </PageHeader>
 
-        {error && <div className="error">{error}</div>}
+        {error && <Alert variant="error">{error}</Alert>}
+        {success && (
+          <Alert variant="success" onDismiss={() => setSuccess("")}>
+            {success}
+          </Alert>
+        )}
 
         {!isManager && (
-          <div className="notice">
+          <Alert variant="info">
             Apenas administradores (Dono/Administrador) podem alterar a equipe.
-          </div>
+          </Alert>
         )}
 
         {showForm && isManager && (
           <form className="member-form" onSubmit={handleAdd}>
-            <input
-              type="text"
-              placeholder="Nome"
-              value={form.name}
-              onChange={(e) => set("name", e.target.value)}
-              required
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={form.email}
-              onChange={(e) => set("email", e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Senha inicial"
-              value={form.password}
-              onChange={(e) => set("password", e.target.value)}
-              required
-            />
-            <select value={form.role} onChange={(e) => set("role", e.target.value)}>
-              {ROLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
+            <label className="field">
+              <span>Nome</span>
+              <input
+                type="text"
+                placeholder="Nome"
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+                required
+              />
+            </label>
+            <label className="field">
+              <span>Email</span>
+              <input
+                type="email"
+                placeholder="Email"
+                value={form.email}
+                onChange={(e) => set("email", e.target.value)}
+                required
+              />
+            </label>
+            <label className="field">
+              <span>Senha inicial</span>
+              <input
+                type="password"
+                placeholder="Senha inicial"
+                value={form.password}
+                onChange={(e) => set("password", e.target.value)}
+                required
+                autoComplete="new-password"
+              />
+            </label>
+            <label className="field">
+              <span>Papel</span>
+              <select value={form.role} onChange={(e) => set("role", e.target.value)}>
+                {ROLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </label>
             <button className="btn primary" type="submit" disabled={saving}>
               {saving ? "Salvando..." : "Adicionar"}
             </button>
@@ -139,6 +181,15 @@ export default function Admin() {
         )}
 
         {loading && <p className="muted">Carregando equipe...</p>}
+
+        {!loading && users.length === 0 && (
+          <EmptyState
+            icon={<Icon name="users" />}
+            title="Nenhum membro na equipe"
+          >
+            Adicione membros para que outras pessoas da empresa possam acessar a plataforma.
+          </EmptyState>
+        )}
 
         <div className="member-list">
           {users.map((u) => (
@@ -152,7 +203,8 @@ export default function Admin() {
                 <select
                   className="member-role"
                   value={u.role}
-                  onChange={(e) => changeRole(u.id, e.target.value)}
+                  onChange={(e) => askRoleChange(u, e.target.value)}
+                  aria-label={`Papel de ${u.name}`}
                 >
                   {ROLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
@@ -161,12 +213,35 @@ export default function Admin() {
               )}
 
               {isManager && u.id !== user?.id && u.role !== "owner" && (
-                <button className="btn ghost small danger" onClick={() => remove(u.id)}>Remover</button>
+                <button className="btn ghost small danger" onClick={() => setConfirmTarget(u)}>Remover</button>
               )}
               {u.id === user?.id && <span className="muted">(você)</span>}
             </div>
           ))}
         </div>
+
+        {confirmTarget && (
+          <ConfirmDialog
+            title="Remover membro"
+            message={`Remover ${confirmTarget.name} da empresa? Esta ação não pode ser desfeita.`}
+            confirmLabel="Remover"
+            loading={removing}
+            onConfirm={confirmRemove}
+            onCancel={() => setConfirmTarget(null)}
+          />
+        )}
+
+        {roleChange && (
+          <ConfirmDialog
+            title="Alterar papel"
+            message={`Alterar papel de ${roleChange.member.name} de ${ROLE_LABELS[roleChange.member.role] || roleChange.member.role} para ${ROLE_LABELS[roleChange.role] || roleChange.role}?`}
+            confirmLabel="Alterar"
+            danger={false}
+            loading={changingRole}
+            onConfirm={confirmRoleChange}
+            onCancel={() => setRoleChange(null)}
+          />
+        )}
       </main>
     </div>
   );

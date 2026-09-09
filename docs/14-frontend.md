@@ -17,7 +17,8 @@
   (`POST /auth/forgot-password`, mensagem genérica).
 - Validacao minima de senha (6 caracteres) no cadastro; `autocomplete`/`autoFocus` por campo.
 - Redireciona para `/` apos login.
-- Erros/avisos via `.alert alert-error` / `.alert alert-success`.
+- Erros/avisos via componente `Alert` (`components/ui/Alert.jsx`); features do hero
+  usam icones do `Icon` (zap/cpu/bar-chart) e marca com `bot`.
 
 ### `/reset-password`
 - Rota **publica** (sem necessidade de sessao)
@@ -91,7 +92,10 @@ Pagina: `frontend/src/pages/Leads.jsx`. Rota `/leads` em `App.jsx`.
 - **Novo agendamento** via modal (`POST /agenda/appointments`, `origin=manual`):
   data + grade de horários livres (`GET /agenda/availability?date=`), fim
   calculado pela duração padrão, telefone obrigatório.
-- Gestores editar configuracao; demais usuarios apenas visualizam/criam/cancelam.
+- Gestores editar configuracao e cancelar/alterar qualquer compromisso;
+  atendentes apenas visualizam/criam e cancelam/alteram **os compromissos que
+  eles próprios criaram** (o botão Cancelar é oculto nos demais; compromissos de
+  WhatsApp ficam restritos à gestão — 403 se forçado).
 
 ### `/plataforma`
 - Rota protegida por `is_platform_admin`.
@@ -121,12 +125,13 @@ Pagina: `frontend/src/pages/PlatformAdmin.jsx`. Rota `/plataforma` em `App.jsx`.
   `GET /conversations/`.
 - **Painel 2 — Thread + resposta:** historico de mensagens com bolhas distintas
   (cliente/bot/agent) e envio de **resposta manual** por `Enter` ou botao
-  (`POST /messages/conversation/{id}/reply`). Botao contextual:
-  **Assumir conversa** (quando status=`pending_agent`, PATCH → `open`),
-  Fechar conversa (open→closed) ou Reabrir conversa (closed→open).
+  (`POST /messages/conversation/{id}/reply`). Matriz de acoes por status (PATCH
+  `conversations/{id}` com `{status}`): `open`→Fechar (closed);
+  `pending_agent`→Assumir (agent) + Fechar (closed); `agent`→Liberar (open) +
+  Fechar (closed); `closed`→Reabrir (open).
 - **Painel 3 — Contexto:** nome, telefone, status, inicio e total de mensagens do
   cliente + **Histórico de transferências** (action, quem agiu, quando).
-- **Polling:** atualiza a lista e as mensagens da conversa selecionada a cada 8s.
+- **Polling:** atualiza a lista e as mensagens da conversa selecionada a cada 5s.
 
 Pagina: `frontend/src/pages/Conversations.jsx`. Rota `/conversas` em `App.jsx`.
 
@@ -145,13 +150,24 @@ src/
 ├── App.jsx              # Rotas
 ├── main.jsx             # Entry point
 ├── api.js               # API client (fetch wrapper, prefixo /api)
-├── index.css            # Estilos globais
+├── index.css            # Estilos globais + tokens do design system
 ├── components/
 │   ├── Header.jsx            # Navegacao do topo (sticky, avatar + role chip)
 │   ├── BusinessHoursPanel.jsx# Horario de atendimento (painel do WhatsApp)
-│   └── KnowledgeSummaryCard.jsx
+│   ├── KnowledgeSummaryCard.jsx
+│   └── ui/                   # Design system (componentes compartilhados)
+│       ├── Icon.jsx          # Icones SVG fixos (substituem emojis de UI)
+│       ├── Alert.jsx         # Feedback erro/sucesso/info (com onDismiss)
+│       ├── Modal.jsx         # Modal acessivel (role/aria/Escape/overlay)
+│       ├── ConfirmDialog.jsx # Confirmacao destrutiva (substitui confirm())
+│       ├── PageHeader.jsx    # h1 + subtitulo + acoes
+│       ├── EmptyState.jsx    # Estado vazio (icone + titulo + acao)
+│       └── index.js          # Re-export (importar de "../components/ui")
 ├── context/
 │   └── AuthContext.jsx  # Context de autenticacao
+├── utils/
+│   ├── format.js        # formatPhone, avatarColor (paleta unica de avatares)
+│   └── constants.js     # DAYS, TIMEZONES (compartilhados)
 └── pages/
     ├── Login.jsx            # Login
     ├── ResetPassword.jsx    # Redefinir senha (rota publica)
@@ -214,6 +230,35 @@ Cada tipo de node tem:
 | Backspace | Deletar node selecionado |
 | Delete | Deletar node selecionado |
 | Escape | Desselecionar node |
+
+## Design System (componentes compartilhados)
+
+**Implementado.** Padroes unificados criados na reforma de UI (agosto/2026),
+aplicados em todas as paginas exceto o Editor (`Editor.jsx`, mantido como esta):
+
+- **Icones**: usar **sempre** `<Icon name="..." size={16} />` de `components/ui/Icon.jsx`
+  em vez de emojis/`<svg>` soltos. Conjunto fechado de nomes (ver `Icon.jsx`).
+  Decorativos por padrao (`aria-hidden`); `label` so quando o icone carrega significado.
+- **Alert** (`<Alert variant="error|success|info" onDismiss={...}>`): substitui
+  `.error`, `.success`, `.alert alert-*`, `.bh-ok`/`.bh-warning`, `.notice`.
+  Eg : botao de dispensar "um" com `aria-label`.
+- **Modal** (`<Modal title onClose footer width>`): substitui modais manuais —
+  Escape/overlay/role/aria ja implementados internamente. Nao duplicar useEffects.
+- **ConfirmDialog** (`ConfirmDialog` com `confirmLabel`, `loading`, `danger`):
+  substitui **todos** os `confirm()`/`window.confirm()` nativos.
+  `danger=true` (default) → `btn solid-danger` (acao irreversivel);
+  `danger=false` → `btn primary` (reversivel).
+- **PageHeader** (`title`, `subtitle`, acoes via children): `<h1>` unico por pagina.
+- **EmptyState** (`icon={<Icon size={40}/>}`, `title`, `action`): substitui `.empty`.
+- **Utils**: `formatPhone`, `avatarColor` (`utils/format.js`) e `DAYS`/`TIMEZONES`
+  (`utils/constants.js`) — nao duplicar localmente nas paginas.
+- **Botoes de perigo**: reversivel = `btn ghost small danger` (inline no card);
+  irreversivel com confirmacao = `btn solid-danger` (no ConfirmDialog).
+- **Tokens de contraste**: `--accent-strong (#3b63e0)`/`--accent-strong-hover`
+  para fundos de botao/tab/filtro ativos (WCAG ~4.9:1); `--accent`/`--accent2`
+  para texto/link/acento claro.
+- **Acessibilidade**: `:focus-visible` global; `.sr-only` para labels de inputs que
+  dependem de placeholder; remover emojis de UI (mantidos em conteudos, ex.: avatares).
 
 ## CSS
 

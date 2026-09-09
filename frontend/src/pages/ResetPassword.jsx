@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
+import Alert from "../components/ui/Alert";
 
 export default function ResetPassword() {
   const [params] = useSearchParams();
@@ -20,7 +21,7 @@ export default function ResetPassword() {
       return;
     }
     if (password !== confirm) {
-      setError("As senhas nao conferem");
+      setError("As senhas não conferem");
       return;
     }
     setLoading(true);
@@ -43,10 +44,10 @@ export default function ResetPassword() {
         </div>
 
         {!token ? (
-          <p className="muted">Link de recuperacao invalido ou ausente.</p>
+          <p className="muted">Link de recuperação inválido ou ausente.</p>
         ) : done ? (
           <>
-            <p className="muted">Senha redefinida com sucesso. Faca login com a nova senha.</p>
+            <p className="muted">Senha redefinida com sucesso. Faça login com a nova senha.</p>
             <button className="btn primary block" onClick={() => navigate("/login")}>
               Ir para o login
             </button>
@@ -60,6 +61,7 @@ export default function ResetPassword() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="new-password"
               />
             </label>
             <label className="field">
@@ -69,9 +71,10 @@ export default function ResetPassword() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 required
+                autoComplete="new-password"
               />
             </label>
-            {error && <div className="error">{error}</div>}
+            {error && <Alert variant="error">{error}</Alert>}
             <button className="btn primary block" disabled={loading}>
               {loading ? "Aguarde..." : "Redefinir senha"}
             </button>
