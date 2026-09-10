@@ -10,7 +10,8 @@ from app.schemas.department_schema import (
     DepartmentResponse,
     DepartmentUpdate,
 )
-from app.services.deps import get_current_user
+from app.services.deps import get_current_user, require_company_manager
+from app.services import access_rules
 
 router = APIRouter(
     prefix="/departments",
@@ -23,19 +24,18 @@ def get_departments(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    departments = (
-        db.query(Department)
-        .filter(Department.company_id == current_user.company_id)
-        .order_by(Department.name)
-        .all()
-    )
+    query = db.query(Department).filter(Department.company_id == current_user.company_id)
+    department_ids = access_rules.user_department_ids(db, current_user)
+    if department_ids is not None:
+        query = query.filter(Department.id.in_(department_ids))
+    departments = query.order_by(Department.name).all()
     return [DepartmentResponse.model_validate(d) for d in departments]
 
 
 @router.post("/", response_model=DepartmentResponse)
 def create_department(
     data: DepartmentCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_company_manager),
     db: Session = Depends(get_db),
 ):
     existing = (
@@ -64,7 +64,7 @@ def create_department(
 def update_department(
     department_id: int,
     data: DepartmentUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_company_manager),
     db: Session = Depends(get_db),
 ):
     dept = (
@@ -92,7 +92,7 @@ def update_department(
 @router.delete("/{department_id}")
 def delete_department(
     department_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_company_manager),
     db: Session = Depends(get_db),
 ):
     dept = (
@@ -108,7 +108,15 @@ def delete_department(
 
     db.query(UserDepartment).filter(UserDepartment.department_id == dept.id).delete()
     from app.models.conversation import Conversation
+    from app.models.knowledge import Knowledge
+    from app.models.workflow import Workflow
     db.query(Conversation).filter(Conversation.department_id == dept.id).update({Conversation.department_id: None})
+    db.query(Workflow).filter(Workflow.department_id == dept.id).update(
+        {Workflow.department_id: None}, synchronize_session=False
+    )
+    db.query(Knowledge).filter(Knowledge.department_id == dept.id).update(
+        {Knowledge.department_id: None}, synchronize_session=False
+    )
     db.delete(dept)
     db.commit()
     return {"message": "Setor removido com sucesso"}

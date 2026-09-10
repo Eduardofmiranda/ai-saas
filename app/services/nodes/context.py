@@ -45,6 +45,7 @@ class NodeContext:
         config: CompanyConfig,
         dry_run: bool = False,
         user_id: int | None = None,
+        department_id: int | None = None,
     ):
         self.db = db
         self.company_id = company_id
@@ -57,6 +58,7 @@ class NodeContext:
         self.dry_run = dry_run
         self.config = config
         self.user_id = user_id
+        self.department_id = department_id
         # log da execucao
         self.logs: list[str] = []
 

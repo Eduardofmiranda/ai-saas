@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { api } from "../api";
+import { useAuth } from "../context/AuthContext";
 import Header from "../components/Header";
 import Alert from "../components/ui/Alert";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
@@ -12,6 +13,8 @@ import Pagination from "../components/ui/Pagination";
 const PAGE_SIZE = 12;
 
 export default function Knowledge() {
+  const { user } = useAuth();
+  const isManager = user?.role === "owner" || user?.role === "admin";
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -163,9 +166,11 @@ export default function Knowledge() {
           title="Base de Conhecimento"
           subtitle="Adicione documentos para sua IA usar como referencia nas respostas (RAG)."
         >
-          <button className="btn primary" onClick={() => { resetForm(); setShowForm(!showForm); }}>
-            {showForm ? "Cancelar" : "+ Novo documento"}
-          </button>
+          {isManager && (
+            <button className="btn primary" onClick={() => { resetForm(); setShowForm(!showForm); }}>
+              {showForm ? "Cancelar" : "+ Novo documento"}
+            </button>
+          )}
         </PageHeader>
 
         {error && <Alert variant="error" onDismiss={() => setError("")}>{error}</Alert>}
@@ -339,14 +344,16 @@ export default function Knowledge() {
                 <p>{item.description || "Sem descricao"}</p>
                 <div className="wf-meta">
                   <span className="muted">{item.chunk_count} pedacos</span>
-                  <div className="btn-group">
-                    <button type="button" className="btn ghost small" onClick={(e) => { e.stopPropagation(); startEdit(item); }}>
-                      Editar
-                    </button>
-                    <button type="button" className="btn ghost small danger" onClick={(e) => { e.stopPropagation(); setConfirmDelete(item.id); }}>
-                      Excluir
-                    </button>
-                  </div>
+                  {isManager && (
+                    <div className="btn-group">
+                      <button type="button" className="btn ghost small" onClick={(e) => { e.stopPropagation(); startEdit(item); }}>
+                        Editar
+                      </button>
+                      <button type="button" className="btn ghost small danger" onClick={(e) => { e.stopPropagation(); setConfirmDelete(item.id); }}>
+                        Excluir
+                      </button>
+                    </div>
+                  )}
                 </div>
               </button>
             ))}

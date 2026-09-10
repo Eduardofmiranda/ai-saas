@@ -121,6 +121,7 @@ async def execute_workflow(
         config=config,
         dry_run=dry_run,
         user_id=workflow.user_id,
+        department_id=workflow.department_id,
     )
 
     node_map = {n.get("id"): n for n in nodes}
@@ -255,6 +256,7 @@ async def resume_workflow(db: Session, *, pending: PendingFlow, payload: dict, c
         data=merged,
         config=config,
         user_id=workflow.user_id,
+        department_id=workflow.department_id,
     )
 
     try:

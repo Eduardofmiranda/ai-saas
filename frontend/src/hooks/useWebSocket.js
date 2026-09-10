@@ -16,9 +16,11 @@ export function useWebSocket(companyId, onEvent) {
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
-    const url = `${protocol}//${host}/ws?token=${token}`;
+    const url = `${protocol}//${host}/ws`;
 
-    const ws = new WebSocket(url);
+    // Browsers nao permitem header Authorization no handshake WebSocket.
+    // O subprotocolo evita expor o JWT em URLs e logs de acesso do proxy.
+    const ws = new WebSocket(url, ["access-token", token]);
     wsRef.current = ws;
 
     ws.onmessage = (e) => {

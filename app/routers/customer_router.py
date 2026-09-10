@@ -21,7 +21,7 @@ from app.schemas.customer_schema import (
     CustomerResponse,
 )
 from app.services.config_service import get_or_create_config
-from app.services.deps import get_current_user
+from app.services.deps import get_current_user, require_company_manager
 from app.routers.config_router import _evo_config
 from app.services import evolution
 
@@ -240,7 +240,7 @@ def _send_bulk_background(company_id: int, phones: list[str], text: str) -> None
 @router.post("/bulk-message")
 def bulk_message(
     data: dict,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_company_manager),
     db: Session = Depends(get_db),
     background_tasks: BackgroundTasks = None,
 ):

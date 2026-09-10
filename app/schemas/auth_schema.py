@@ -1,11 +1,11 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class RegisterRequest(BaseModel):
     company_name: str
     name: str
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8, max_length=128)
 
 
 class LoginResponse(BaseModel):
@@ -21,12 +21,12 @@ class LoginResponse(BaseModel):
 
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 class RefreshRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str = Field(min_length=20, max_length=4096)
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -34,8 +34,8 @@ class ForgotPasswordRequest(BaseModel):
 
 
 class ResetPasswordRequest(BaseModel):
-    token: str
-    new_password: str
+    token: str = Field(min_length=20, max_length=512)
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 class WebhookEvent(BaseModel):

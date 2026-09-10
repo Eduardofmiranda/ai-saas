@@ -75,33 +75,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AI SaaS - Atendimento WhatsApp", lifespan=lifespan)
 
-# OpenAPI security scheme para API key
-app.openapi_schema = None
-
-def custom_openapi():
-    if app.openapi_schema:
-        return app.openapi_schema
-    from fastapi.openapi.utils import get_openapi
-    schema = get_openapi(
-        title=app.title,
-        version="1.0.0",
-        routes=app.routes,
-    )
-    schema["components"] = schema.get("components", {})
-    schema["components"]["securitySchemes"] = {
-        "ApiKeyAuth": {
-            "type": "apiKey",
-            "in": "header",
-            "name": "X-API-Key",
-            "description": "API key para acesso externo. Obtenha em /admin.",
-        }
-    }
-    schema["security"] = [{"ApiKeyAuth": []}]
-    app.openapi_schema = schema
-    return schema
-
-app.openapi = custom_openapi
-
 # CORS configurado via variavel de ambiente
 _origins = get_secret("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
 allow_origins = [o.strip() for o in _origins.split(",") if o.strip()]

@@ -123,6 +123,9 @@ def get_message(
     )
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
+    conversation = db.query(Conversation).filter(Conversation.id == message.conversation_id).first()
+    if not access_rules.can_view(db, current_user, conversation):
+        raise HTTPException(status_code=403, detail="Voce nao tem acesso a esta mensagem")
     return message
 
 

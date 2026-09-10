@@ -75,6 +75,9 @@ async def run_rag_node(ctx: NodeContext, node: dict) -> dict:
         embedding_model=embedding_config["model"],
         base_url=embedding_config["base_url"],
         top_k=top_k,
+        # Um workflow global usa apenas conhecimento global. Um workflow de
+        # setor combina conhecimento global com o do proprio setor.
+        department_ids=({ctx.department_id} if ctx.department_id is not None else set()),
     )
 
     context_parts = [

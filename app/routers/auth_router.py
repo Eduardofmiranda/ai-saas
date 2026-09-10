@@ -56,8 +56,9 @@ def _as_utc(dt):
 
 
 def _build_login_response(user: User) -> LoginResponse:
-    access = create_access_token(str(user.id), {"company_id": user.company_id})
-    refresh = create_refresh_token(str(user.id), {"company_id": user.company_id})
+    claims = {"company_id": user.company_id, "auth_version": int(user.auth_version or 0)}
+    access = create_access_token(str(user.id), claims)
+    refresh = create_refresh_token(str(user.id), claims)
     return LoginResponse(
         access_token=access,
         refresh_token=refresh,
@@ -145,9 +146,8 @@ def change_password(
     """Altera a senha do usuario logado (exige a senha atual)."""
     if not verify_password(data.current_password, current_user.password_hash):
         raise HTTPException(status_code=400, detail="Senha atual incorreta")
-    if len(data.new_password) < 6:
-        raise HTTPException(status_code=400, detail="A nova senha deve ter pelo menos 6 caracteres")
     current_user.set_password(data.new_password)
+    current_user.auth_version = int(current_user.auth_version or 0) + 1
     db.commit()
 
     log_action(db, current_user.company_id, current_user.id, "auth.change_password",
@@ -165,9 +165,23 @@ def refresh(
     payload = decode_access_token(data.refresh_token)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Refresh token invalido")
-    user = db.query(User).filter(User.id == int(payload["sub"])).first()
-    if not user:
+    try:
+        user_id = int(payload.get("sub"))
+    except (TypeError, ValueError):
         raise HTTPException(status_code=401, detail="Refresh token invalido")
+    # Serializa renovacoes concorrentes: somente a primeira pode consumir a
+    # versao atual; as demais passam a carregar uma versao ja revogada.
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .with_for_update()
+        .first()
+    )
+    if not user or payload.get("auth_version") != int(user.auth_version or 0):
+        raise HTTPException(status_code=401, detail="Refresh token invalido")
+    user.auth_version = int(user.auth_version or 0) + 1
+    db.commit()
+    db.refresh(user)
     return _build_login_response(user)
 
 
@@ -229,14 +243,12 @@ def reset_password(
     now = datetime.now(timezone.utc)
     if _as_utc(record.expires_at) < now:
         raise HTTPException(status_code=400, detail="Este link expirou")
-    if len(data.new_password) < 6:
-        raise HTTPException(status_code=400, detail="A nova senha deve ter pelo menos 6 caracteres")
-
     user = db.query(User).filter(User.id == record.user_id).first()
     if not user:
         raise HTTPException(status_code=400, detail="Usuario nao encontrado")
 
     user.set_password(data.new_password)
+    user.auth_version = int(user.auth_version or 0) + 1
     record.used_at = now
     db.commit()
 

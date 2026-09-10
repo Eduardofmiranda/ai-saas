@@ -23,7 +23,9 @@ services:
   redis:
     image: redis:7-alpine
     container_name: ai-saas-redis
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    # Filas Celery nao podem ser descartadas silenciosamente sob pressao de memoria.
+    # Com noeviction, o produtor recebe erro explicito e pode aplicar retry/alerta.
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction
     volumes:
       - redis_data:/data
     healthcheck:
@@ -66,7 +68,8 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      # A API publica e acessada pelo nginx via rede Docker; no host, somente loopback.
+      - "127.0.0.1:8000:8000"
     networks:
       - ai-saas-network
     restart: unless-stopped

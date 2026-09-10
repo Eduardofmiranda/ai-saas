@@ -1,5 +1,6 @@
 import logging
 
+from sqlalchemy import case, or_
 from sqlalchemy.orm import Session
 
 from app.config import get_secret
@@ -487,8 +488,15 @@ async def handle_incoming_workflow(
             Workflow.company_id == company_id,
             Workflow.active.is_(True),
             Workflow.trigger_type == "message",
+            or_(
+                Workflow.department_id == conversation.department_id,
+                Workflow.department_id.is_(None),
+            ),
         )
-        .order_by(Workflow.id.asc())
+        .order_by(
+            case((Workflow.department_id == conversation.department_id, 0), else_=1),
+            Workflow.id.asc(),
+        )
         .first()
     )
     if not wf:

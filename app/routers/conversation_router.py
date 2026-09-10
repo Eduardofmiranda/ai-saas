@@ -354,6 +354,9 @@ def delete_conversation(
 ):
     conversation = _get_conversation(db, conversation_id, current_user.company_id)
 
+    if not access_rules.can_attend(db, current_user, conversation):
+        raise HTTPException(status_code=403, detail="Voce nao pode excluir conversas deste setor")
+
     db.delete(conversation)
     db.commit()
     return {"message": "Conversation deleted successfully"}

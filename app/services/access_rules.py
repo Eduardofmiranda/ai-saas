@@ -30,20 +30,39 @@ def _user_levels(db: Session, user: User) -> dict[int, int]:
     return {r.department_id: _LEVEL_ORDER.get(r.level, _ATTEND) for r in rows}
 
 
+def user_department_ids(db: Session, user: User) -> set[int] | None:
+    """Setores visiveis; None representa acesso irrestrito legado/gestor."""
+    if has_full_access(user):
+        return None
+    levels = _user_levels(db, user)
+    return set(levels) if levels else None
+
+
+def visible_department_condition(model, db: Session, user: User):
+    """Condicao reutilizavel para recursos opcionais vinculados a setor."""
+    department_ids = user_department_ids(db, user)
+    if department_ids is None:
+        return None
+    return or_(
+        model.department_id.is_(None),
+        model.department_id.in_(department_ids),
+    )
+
+
+def can_view_department(db: Session, user: User, department_id: int | None) -> bool:
+    """Valida acesso de leitura a um recurso global ou de um setor."""
+    if department_id is None:
+        return True
+    department_ids = user_department_ids(db, user)
+    return department_ids is None or department_id in department_ids
+
+
 def visible_condition(conv_model, db: Session, user: User):
     """Condicao SQL para restringir conversas por setor; None = todas.
 
     Atendente com setores ve: conversas dos seus setores OU conversas sem setor.
     """
-    if has_full_access(user):
-        return None
-    levels = _user_levels(db, user)
-    if not levels:
-        return None
-    return or_(
-        conv_model.department_id.is_(None),
-        conv_model.department_id.in_(list(levels)),
-    )
+    return visible_department_condition(conv_model, db, user)
 
 
 def can_view(db: Session, user: User, conversation) -> bool:

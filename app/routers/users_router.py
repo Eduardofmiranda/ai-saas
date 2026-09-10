@@ -16,6 +16,7 @@ from app.schemas.user_schema import (
 )
 from app.services.audit import log_action
 from app.services.deps import get_current_user
+from app.services.platform_access import is_platform_admin
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -116,6 +117,9 @@ def create_user(
     """Adiciona um novo membro a empresa (apenas admin/owner)."""
     _require_manager(current_user)
 
+    if data.role == "owner" and current_user.role != "owner":
+        raise HTTPException(status_code=403, detail="Apenas o dono pode criar outro dono")
+
     existing = db.query(User).filter(User.email == data.email).first()
     if existing:
         # Se o email ja existe em OUTRA empresa, nao permitir
@@ -161,12 +165,25 @@ def update_user(
     # Nao deixar remover/alterar o owner por um admin
     if user.role == "owner" and current_user.role != "owner":
         raise HTTPException(status_code=403, detail="Apenas o dono pode alterar o dono")
+    if is_platform_admin(user) and not is_platform_admin(current_user):
+        raise HTTPException(status_code=403, detail="Conta da plataforma protegida")
 
     updates = data.model_dump(exclude_unset=True)
+    requested_role = updates.get("role")
+    if requested_role == "owner" and current_user.role != "owner":
+        raise HTTPException(status_code=403, detail="Apenas o dono pode promover outro dono")
+    if user.role == "owner" and requested_role and requested_role != "owner":
+        owner_count = db.query(User).filter(
+            User.company_id == current_user.company_id, User.role == "owner",
+        ).count()
+        if owner_count <= 1:
+            raise HTTPException(status_code=409, detail="A empresa deve manter pelo menos um dono")
     if "role" in updates and updates["role"]:
         user.role = updates["role"]
     if "password" in updates and updates["password"]:
         user.set_password(updates["password"])
+    if "role" in updates or ("password" in updates and updates["password"]):
+        user.auth_version = int(user.auth_version or 0) + 1
     if "departments" in updates:
         _set_user_departments(db, current_user.company_id, user, data.departments)
 
@@ -199,6 +216,14 @@ def delete_user(
 
     if user.role == "owner" and current_user.role != "owner":
         raise HTTPException(status_code=403, detail="Apenas o dono pode remover o dono")
+    if is_platform_admin(user) and not is_platform_admin(current_user):
+        raise HTTPException(status_code=403, detail="Conta da plataforma protegida")
+    if user.role == "owner":
+        owner_count = db.query(User).filter(
+            User.company_id == current_user.company_id, User.role == "owner",
+        ).count()
+        if owner_count <= 1:
+            raise HTTPException(status_code=409, detail="A empresa deve manter pelo menos um dono")
 
     db.delete(user)
     db.commit()

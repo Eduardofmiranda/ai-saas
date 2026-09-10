@@ -9,6 +9,7 @@ celery_app = Celery(
     include=[
         "app.tasks.workflow_tasks",
         "app.tasks.agenda_tasks",
+        "app.tasks.campaign_tasks",
     ],
 )
 
@@ -35,6 +36,10 @@ celery_app.conf.update(
         "agenda-send-reminders-every-15min": {
             "task": "app.tasks.agenda_tasks.send_agenda_reminders",
             "schedule": crontab(minute="*/15"),
+        },
+        "campaign-recover-pending-every-5min": {
+            "task": "app.tasks.campaign_tasks.recover_pending_campaigns",
+            "schedule": crontab(minute="*/5"),
         },
     },
 )

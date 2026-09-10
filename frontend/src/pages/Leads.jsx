@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { api } from "../api";
+import { useAuth } from "../context/AuthContext";
 import Header from "../components/Header";
 import Alert from "../components/ui/Alert";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
@@ -13,6 +14,8 @@ import { formatPhone, avatarColor } from "../utils/format";
 const PAGE_SIZE = 50;
 
 export default function Leads() {
+  const { user } = useAuth();
+  const isManager = user?.role === "owner" || user?.role === "admin";
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -177,10 +180,12 @@ export default function Leads() {
               </div>
             )}
           </div>
-          <button className="btn primary" onClick={() => setShowBulk(true)}>
-            <Icon name="send" size={16} />
-            Mensagem em massa
-          </button>
+          {isManager && (
+            <button className="btn primary" onClick={() => setShowBulk(true)}>
+              <Icon name="send" size={16} />
+              Mensagem em massa
+            </button>
+          )}
         </PageHeader>
 
         {error && <Alert variant="error" onDismiss={() => setError("")}>{error}</Alert>}
@@ -270,9 +275,11 @@ export default function Leads() {
                       <Icon name="message-circle" size={14} />
                       {c.conversation_count} {c.conversation_count === 1 ? "conversa" : "conversas"}
                     </span>
-                    <button className="btn danger ghost small" onClick={() => setConfirmDelete({ id: c.id, name: c.name || c.phone })} aria-label="Remover lead">
-                      <Icon name="trash" size={14} />
-                    </button>
+                    {isManager && (
+                      <button className="btn danger ghost small" onClick={() => setConfirmDelete({ id: c.id, name: c.name || c.phone })} aria-label="Remover lead">
+                        <Icon name="trash" size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

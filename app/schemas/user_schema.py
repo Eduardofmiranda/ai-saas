@@ -1,8 +1,9 @@
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 ACCESS_LEVELS = Literal["view", "attend", "manage"]
+USER_ROLES = Literal["owner", "admin", "agent"]
 
 
 class UserDepartmentIn(BaseModel):
@@ -18,14 +19,14 @@ class UserDepartmentOut(BaseModel):
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
-    password: str
-    role: str = "agent"
+    password: str = Field(min_length=8, max_length=128)
+    role: USER_ROLES = "agent"
     departments: list[UserDepartmentIn] = []
 
 
 class UserUpdate(BaseModel):
-    role: str | None = None
-    password: str | None = None
+    role: USER_ROLES | None = None
+    password: str | None = Field(default=None, min_length=8, max_length=128)
     departments: list[UserDepartmentIn] | None = None
 
 

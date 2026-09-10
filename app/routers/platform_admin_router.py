@@ -181,6 +181,7 @@ def reset_user_password(
 
     temporary_password = secrets.token_urlsafe(12)
     user.set_password(temporary_password)
+    user.auth_version = int(user.auth_version or 0) + 1
     db.commit()
 
     log_action(db, admin.company_id, admin.id, "platform.reset_password",

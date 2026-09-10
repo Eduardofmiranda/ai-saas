@@ -1,7 +1,7 @@
 import json
 import logging
 
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
 from app.services.embedding import (
@@ -110,6 +110,7 @@ async def search_similar(
     embedding_model: str = "text-embedding-3-small",
     base_url: str = "",
     top_k: int = 5,
+    department_ids: set[int] | None = None,
 ) -> list[dict]:
     query_embedding = await generate_single_embedding_safe(
         query, provider, api_key, embedding_model, base_url
@@ -118,25 +119,31 @@ async def search_similar(
         return []
 
     if _has_pgvector(db):
-        rows = db.execute(
-            text(
-                "SELECT id, knowledge_id, content, tokens, "
-                "1 - (embedding_vector <=> CAST(:query_embedding AS vector)) AS similarity "
-                "FROM knowledge_chunks "
-                "WHERE company_id = :cid AND embedding_vector IS NOT NULL "
-                "AND embedding_model = :embedding_model "
-                "AND embedding_dimensions = :embedding_dimensions "
-                "ORDER BY embedding_vector <=> CAST(:query_embedding AS vector) "
+        scope_sql = ""
+        params = {
+            "cid": company_id,
+            "query_embedding": _vector_literal(query_embedding),
+            "embedding_model": embedding_model,
+            "embedding_dimensions": len(query_embedding),
+            "top_k": top_k,
+        }
+        if department_ids is not None:
+            scope_sql = " AND (k.department_id IS NULL OR k.department_id IN :department_ids)"
+            params["department_ids"] = list(department_ids)
+        statement = text(
+                "SELECT kc.id AS id, kc.knowledge_id, kc.content, kc.tokens, "
+                "1 - (kc.embedding_vector <=> CAST(:query_embedding AS vector)) AS similarity "
+                "FROM knowledge_chunks kc JOIN knowledge k ON k.id = kc.knowledge_id "
+                "WHERE kc.company_id = :cid AND kc.embedding_vector IS NOT NULL "
+                "AND kc.embedding_model = :embedding_model "
+                "AND kc.embedding_dimensions = :embedding_dimensions "
+                + scope_sql + " "
+                "ORDER BY kc.embedding_vector <=> CAST(:query_embedding AS vector) "
                 "LIMIT :top_k"
-            ),
-            {
-                "cid": company_id,
-                "query_embedding": _vector_literal(query_embedding),
-                "embedding_model": embedding_model,
-                "embedding_dimensions": len(query_embedding),
-                "top_k": top_k,
-            },
-        ).fetchall()
+        )
+        if department_ids is not None:
+            statement = statement.bindparams(bindparam("department_ids", expanding=True))
+        rows = db.execute(statement, params).fetchall()
         return [
             {
                 "chunk_id": row.id,
@@ -148,13 +155,19 @@ async def search_similar(
             for row in rows
         ]
 
-    rows = db.execute(
-        text(
-            "SELECT id, knowledge_id, content, embedding, tokens, embedding_model "
-            "FROM knowledge_chunks WHERE company_id = :cid AND embedding IS NOT NULL"
-        ),
-        {"cid": company_id},
-    ).fetchall()
+    scope_sql = ""
+    params = {"cid": company_id}
+    if department_ids is not None:
+        scope_sql = " AND (k.department_id IS NULL OR k.department_id IN :department_ids)"
+        params["department_ids"] = list(department_ids)
+    statement = text(
+        "SELECT kc.id, kc.knowledge_id, kc.content, kc.embedding, kc.tokens, kc.embedding_model "
+        "FROM knowledge_chunks kc JOIN knowledge k ON k.id = kc.knowledge_id "
+        "WHERE kc.company_id = :cid AND kc.embedding IS NOT NULL" + scope_sql
+    )
+    if department_ids is not None:
+        statement = statement.bindparams(bindparam("department_ids", expanding=True))
+    rows = db.execute(statement, params).fetchall()
 
     results = []
     for row in rows:

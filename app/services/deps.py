@@ -31,7 +31,7 @@ def get_current_user(
     except (TypeError, ValueError):
         raise credentials_exc
     user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    if not user or payload.get("auth_version") != int(user.auth_version or 0):
         raise credentials_exc
     return user
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { useAuth } from "../context/AuthContext";
 import Header from "../components/Header";
 import KnowledgeSummaryCard from "../components/KnowledgeSummaryCard";
 import Alert from "../components/ui/Alert";
@@ -50,6 +51,8 @@ Seja breve mas calorosa. Encaminhe dúvidas específicas para o setor correto.`,
 ];
 
 export default function AI() {
+  const { user } = useAuth();
+  const isManager = user?.role === "owner" || user?.role === "admin";
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -151,9 +154,11 @@ export default function AI() {
           title="Gerenciador de IA"
           subtitle="Configure como sua IA responde aos clientes no WhatsApp."
         >
-          <button className="btn primary" onClick={handleSave} disabled={saving}>
-            {saving ? "Salvando..." : "Salvar"}
-          </button>
+          {isManager && (
+            <button className="btn primary" onClick={handleSave} disabled={saving}>
+              {saving ? "Salvando..." : "Salvar"}
+            </button>
+          )}
         </PageHeader>
 
         {error && <Alert variant="error">{error}</Alert>}

@@ -4,6 +4,7 @@ from typing import Optional
 
 from app.database.session import get_db
 from app.models.execution import Execution
+from app.models.department import Department
 from app.models.user import User
 from app.models.workflow import Workflow
 from app.models.workflow_version import WorkflowVersion
@@ -14,7 +15,8 @@ from app.schemas.workflow_schema import (
 )
 from app.schemas.execution_schema import ExecutionResponse, TestRunRequest
 from app.services.audit import log_action
-from app.services.deps import get_current_user
+from app.services.deps import get_current_user, require_company_manager
+from app.services import access_rules
 from app.services.nodes import registry
 from app.services.workflow_validation import WorkflowValidationError, ensure_valid_workflow_graph
 from app.services.workflow_engine import WorkflowEngineError, execute_workflow
@@ -22,18 +24,31 @@ from app.services.workflow_engine import WorkflowEngineError, execute_workflow
 router = APIRouter(prefix="/workflows", tags=["Workflows"])
 
 
-def _get_owned_workflow(db: Session, workflow_id: int, company_id: int) -> Workflow:
+def _get_owned_workflow(db: Session, workflow_id: int, user: User) -> Workflow:
     wf = (
         db.query(Workflow)
         .filter(
             Workflow.id == workflow_id,
-            Workflow.company_id == company_id,
+            Workflow.company_id == user.company_id,
         )
         .first()
     )
     if not wf:
         raise HTTPException(status_code=404, detail="Workflow not found")
+    if not access_rules.can_view_department(db, user, wf.department_id):
+        raise HTTPException(status_code=404, detail="Workflow not found")
     return wf
+
+
+def _validate_department(db: Session, company_id: int, department_id: int | None) -> None:
+    if department_id is None:
+        return
+    exists = db.query(Department.id).filter(
+        Department.id == department_id,
+        Department.company_id == company_id,
+    ).first()
+    if not exists:
+        raise HTTPException(status_code=422, detail="Setor invalido para esta empresa")
 
 
 @router.get("/node-types")
@@ -51,6 +66,9 @@ def list_workflows(
     offset: int = 0,
 ):
     query = db.query(Workflow).filter(Workflow.company_id == current_user.company_id)
+    visible = access_rules.visible_department_condition(Workflow, db, current_user)
+    if visible is not None:
+        query = query.filter(visible)
     if q and q.strip():
         query = query.filter(Workflow.name.ilike(f"%{q.strip()}%"))
     total = query.count()
@@ -61,10 +79,11 @@ def list_workflows(
 @router.post("/", response_model=WorkflowResponse)
 def create_workflow(
     data: WorkflowCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_company_manager),
     db: Session = Depends(get_db),
     request: Request = None,
 ):
+    _validate_department(db, current_user.company_id, data.department_id)
     wf = Workflow(
         company_id=current_user.company_id,
         user_id=current_user.id,
@@ -73,6 +92,7 @@ def create_workflow(
         data=data.data or {"nodes": [], "edges": []},
         trigger_type=data.trigger_type or "message",
         trigger_config=data.trigger_config or {},
+        department_id=data.department_id,
     )
     db.add(wf)
     db.commit()
@@ -90,19 +110,21 @@ def get_workflow(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return _get_owned_workflow(db, workflow_id, current_user.company_id)
+    return _get_owned_workflow(db, workflow_id, current_user)
 
 
 @router.patch("/{workflow_id}", response_model=WorkflowResponse)
 def update_workflow(
     workflow_id: int,
     data: WorkflowUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_company_manager),
     db: Session = Depends(get_db),
     request: Request = None,
 ):
-    wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
+    wf = _get_owned_workflow(db, workflow_id, current_user)
     updates = data.model_dump(exclude_unset=True)
+    if "department_id" in updates:
+        _validate_department(db, current_user.company_id, updates["department_id"])
 
     if updates.get("active") is True:
         graph = updates.get("data", wf.data)
@@ -140,6 +162,12 @@ def update_workflow(
         updates.get("trigger_type", wf.trigger_type) == "message"
     )
     if will_activate_message:
+        target_department_id = updates.get("department_id", wf.department_id)
+        same_department = (
+            Workflow.department_id.is_(None)
+            if target_department_id is None
+            else Workflow.department_id == target_department_id
+        )
         (
             db.query(Workflow)
             .filter(
@@ -147,6 +175,7 @@ def update_workflow(
                 Workflow.id != wf.id,
                 Workflow.trigger_type == "message",
                 Workflow.active.is_(True),
+                same_department,
             )
             .update({Workflow.active: False}, synchronize_session=False)
         )
@@ -165,11 +194,11 @@ def update_workflow(
 @router.delete("/{workflow_id}")
 def delete_workflow(
     workflow_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_company_manager),
     db: Session = Depends(get_db),
     request: Request = None,
 ):
-    wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
+    wf = _get_owned_workflow(db, workflow_id, current_user)
     # Remove execucoes vinculadas antes de apagar o fluxo (evita violacao de FK).
     from app.models.execution import Execution
     db.query(Execution).filter(Execution.workflow_id == wf.id).delete(synchronize_session=False)
@@ -185,10 +214,10 @@ def delete_workflow(
 @router.post("/{workflow_id}/duplicate", response_model=WorkflowResponse)
 def duplicate_workflow(
     workflow_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_company_manager),
     db: Session = Depends(get_db),
 ):
-    wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
+    wf = _get_owned_workflow(db, workflow_id, current_user)
     new_wf = Workflow(
         company_id=current_user.company_id,
         user_id=current_user.id,
@@ -198,6 +227,7 @@ def duplicate_workflow(
         trigger_type=wf.trigger_type or "message",
         trigger_config=wf.trigger_config or {},
         active=False,
+        department_id=wf.department_id,
     )
     db.add(new_wf)
     db.commit()
@@ -209,12 +239,12 @@ def duplicate_workflow(
 async def run_workflow(
     workflow_id: int,
     body: TestRunRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_company_manager),
     db: Session = Depends(get_db),
     request: Request = None,
 ):
     """Executa teste em modo seguro por padrao e retorna o resultado."""
-    wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
+    wf = _get_owned_workflow(db, workflow_id, current_user)
     from app.services.config_service import get_or_create_config
     config = get_or_create_config(db, current_user.company_id)
 
@@ -235,7 +265,7 @@ def list_executions(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
+    wf = _get_owned_workflow(db, workflow_id, current_user)
     return (
         db.query(Execution)
         .filter(Execution.workflow_id == wf.id)
@@ -251,7 +281,7 @@ def list_versions(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _get_owned_workflow(db, workflow_id, current_user.company_id)
+    _get_owned_workflow(db, workflow_id, current_user)
     return (
         db.query(WorkflowVersion)
         .filter(WorkflowVersion.workflow_id == workflow_id)
@@ -265,11 +295,11 @@ def list_versions(
 def rollback_version(
     workflow_id: int,
     version_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_company_manager),
     db: Session = Depends(get_db),
     request: Request = None,
 ):
-    wf = _get_owned_workflow(db, workflow_id, current_user.company_id)
+    wf = _get_owned_workflow(db, workflow_id, current_user)
     version = (
         db.query(WorkflowVersion)
         .filter(WorkflowVersion.id == version_id, WorkflowVersion.workflow_id == workflow_id)

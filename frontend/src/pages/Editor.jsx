@@ -15,6 +15,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { api } from "../api";
+import { useAuth } from "../context/AuthContext";
 import Header from "../components/Header";
 import { Alert, ConfirmDialog, Icon } from "../components/ui";
 import { activationChecklist, connectionIssue, integrationChecklist, nodeData, suggestedPrompt, workflowGuidance } from "../workflowGraph";
@@ -166,6 +167,8 @@ export default function Editor() {
   const [editorError, setEditorError] = useState("");
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const [showActivationChecklist, setShowActivationChecklist] = useState(false);
+  const { user } = useAuth();
+  const isManager = user?.role === "owner" || user?.role === "admin";
   const [integrationChecks, setIntegrationChecks] = useState(null);
   const [checkingIntegrations, setCheckingIntegrations] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -446,18 +449,22 @@ export default function Editor() {
         </div>
         <div className="ed-actions">
           <button className="btn ghost" onClick={() => navigate("/fluxos")}>Voltar</button>
-          <button className={wf?.active ? "btn ghost" : "btn secondary"} onClick={() => save(!wf?.active)} disabled={saving || running}>
-            {wf?.active ? "Desativar" : "Ativar"}
-          </button>
-          <button className="btn secondary" onClick={() => setShowTestModal(true)} disabled={saving || running}>
-            {running ? "Testando..." : "Rodar teste"}
-          </button>
-          <button className="btn ghost" onClick={() => { setShowVersions(!showVersions); if (!showVersions) loadVersions(); }}>
-            Versoes
-          </button>
-          <button className="btn primary" onClick={() => save()} disabled={saving || running}>
-            {saving ? "Salvando..." : "Salvar"}
-          </button>
+          {isManager && (
+            <>
+              <button className={wf?.active ? "btn ghost" : "btn secondary"} onClick={() => save(!wf?.active)} disabled={saving || running}>
+                {wf?.active ? "Desativar" : "Ativar"}
+              </button>
+              <button className="btn secondary" onClick={() => setShowTestModal(true)} disabled={saving || running}>
+                {running ? "Testando..." : "Rodar teste"}
+              </button>
+              <button className="btn ghost" onClick={() => { setShowVersions(!showVersions); if (!showVersions) loadVersions(); }}>
+                Versoes
+              </button>
+              <button className="btn primary" onClick={() => save()} disabled={saving || running}>
+                {saving ? "Salvando..." : "Salvar"}
+              </button>
+            </>
+          )}
         </div>
       </Header>
 

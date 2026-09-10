@@ -186,45 +186,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ==================== DEPLOY TO RAILWAY ====================
-  deploy-railway:
-    name: Deploy to Railway
-    needs: [build-backend, build-frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Login to Railway
-        run: railway login --token ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Link project
-        run: railway link ${{ secrets.RAILWAY_PROJECT_ID }}
-
-      - name: Deploy Backend
-        run: |
-          railway up --service backend --detach
-        env:
-          RAILWAY_SERVICE: backend
-
-      - name: Deploy Frontend
-        run: |
-          railway up --service frontend --detach
-        env:
-          RAILWAY_SERVICE: frontend
-
-      - name: Run migrations
-        run: |
-          railway run --service backend alembic upgrade head
-
   # ==================== NOTIFY ====================
   notify:
     name: Notify
-    needs: [build-backend, build-frontend, deploy-railway]
+    needs: [build-backend, build-frontend]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -236,5 +201,5 @@ jobs:
       - name: Success notification
         if: success()
         run: |
-          echo "✅ Pipeline succeeded - deployed to Railway"
+          echo "✅ Pipeline succeeded - images published; VPS deployment remains explicit"
           # Add Slack/Discord webhook here

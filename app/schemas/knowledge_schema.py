@@ -8,12 +8,14 @@ class KnowledgeCreate(BaseModel):
     name: str
     description: str = ""
     content: str
+    department_id: Optional[int] = None
 
 
 class KnowledgeUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     content: Optional[str] = None
+    department_id: Optional[int] = None
 
 
 class KnowledgeResponse(BaseModel):
@@ -22,6 +24,7 @@ class KnowledgeResponse(BaseModel):
     name: str
     description: str
     source_type: str
+    department_id: Optional[int] = None
     chunk_count: int = 0
     created_at: datetime
     updated_at: datetime
@@ -36,6 +39,7 @@ class KnowledgeDetail(BaseModel):
     name: str
     description: str
     source_type: str
+    department_id: Optional[int] = None
     chunks: list[dict] = []
     created_at: datetime
     updated_at: datetime

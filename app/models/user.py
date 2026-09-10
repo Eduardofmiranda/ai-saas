@@ -31,6 +31,9 @@ class User(Base):
     # Papel de plataforma separado dos papeis internos de uma empresa.
     is_platform_admin = Column(Boolean, nullable=False, default=False)
 
+    # Invalidates JWTs after password/role changes and refresh rotation.
+    auth_version = Column(Integer, nullable=False, default=0)
+
     company = relationship("Company")
     departments = relationship(
         "UserDepartment",
